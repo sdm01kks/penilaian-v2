@@ -1,0 +1,2916 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seed Siswa — Tahsin-Tahfizh</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:var(--bg-light);color:var(--ink)}
+  .wrap{max-width:560px;margin:0 auto;padding:40px 20px}
+  h1{font-size:19px;color:var(--green-deep);margin:0 0 6px}
+  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 20px;line-height:1.6}
+  .stat-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .stat-chip{background:var(--green-pale);color:var(--green-dark);font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px}
+  .log{
+    background:#10201a;color:#c8e6d8;font-family:monospace;font-size:12px;
+    border-radius:12px;padding:14px;margin-top:16px;max-height:340px;overflow-y:auto;
+    white-space:pre-wrap;line-height:1.7;
+  }
+  .log .ok{color:#6fe3a3}
+  .log .err{color:#ff8a7a}
+  .warn-box{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:20px;line-height:1.6;
+  }
+  .progress{height:8px;border-radius:5px;background:var(--border);overflow:hidden;margin-top:14px}
+  .progress-fill{height:100%;background:var(--green-mid);width:0%;transition:width .2s ease}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Seed Data Siswa</h1>
+  <p class="sub">
+    Utilitas sekali-jalan untuk mengisi Firestore dengan data siswa kelas 1–5
+    hasil migrasi dari sistem lama (kelas 6 tidak diikutkan karena sudah lulus).
+    Aman dijalankan berkali-kali — memakai NIS sebagai ID dokumen, jadi
+    menimpa (bukan menduplikasi) data yang sama.
+  </p>
+
+  <div class="stat-row" id="statRow"></div>
+
+  <div class="warn-box" id="demoWarn" style="display:none">
+    Mode pratinjau aktif — belum tersambung Firebase. Jalankan halaman ini
+    lagi setelah <code>assets/firebase.js</code> diisi config asli.
+  </div>
+
+  <button class="btn btn-primary-light" id="btnSeed" style="width:auto;padding:12px 24px">
+    Tulis 351 Siswa ke Firestore
+  </button>
+
+  <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="log" id="log">Menunggu…</div>
+</div>
+
+<script type="module">
+  import { DEMO_MODE } from '../assets/firebase.js';
+
+  const SISWA_SEED = [
+  {
+    "id": "2627010002",
+    "nama": "Abdurrahman Ukasyah",
+    "nis": "2627010002",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010001",
+    "nama": "Aifa Safwana Fauzi",
+    "nis": "2627010001",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010003",
+    "nama": "Aleeya Salma Medhavi",
+    "nis": "2627010003",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010004",
+    "nama": "Ayunda Nafeesa Janitra",
+    "nis": "2627010004",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010005",
+    "nama": "Azmah Shofiah",
+    "nis": "2627010005",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010006",
+    "nama": "Daniyal Alfarizi Suhendra",
+    "nis": "2627010006",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010007",
+    "nama": "Faiz Kenzie Hamizan",
+    "nis": "2627010007",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010008",
+    "nama": "Fathir Ahmad Azami",
+    "nis": "2627010008",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010009",
+    "nama": "Ghifari Al Fahrezi",
+    "nis": "2627010009",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010010",
+    "nama": "Grizelda Mecca Asyari",
+    "nis": "2627010010",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010011",
+    "nama": "Hamida Hurumil Qodah",
+    "nis": "2627010011",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010012",
+    "nama": "Haziq Irsyaddin Alhanan",
+    "nis": "2627010012",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010013",
+    "nama": "Kalula Almahyra",
+    "nis": "2627010013",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010014",
+    "nama": "Malika Alfathunnisa Syahidah",
+    "nis": "2627010014",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010015",
+    "nama": "Muhammad Adzra Azzhafran",
+    "nis": "2627010015",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010016",
+    "nama": "Muhammad Ammar Abdurrahman",
+    "nis": "2627010016",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010017",
+    "nama": "Muhammad Faaz Aldien",
+    "nis": "2627010017",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010018",
+    "nama": "Muhammad Fatih Alfarizi",
+    "nis": "2627010018",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010019",
+    "nama": "Muhammad Ibrahim Wirakusuma",
+    "nis": "2627010019",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010020",
+    "nama": "Muhammad Syafi'i",
+    "nis": "2627010020",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010021",
+    "nama": "Olivia Aqsha Kirana",
+    "nis": "2627010021",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010022",
+    "nama": "Sada Binar Kelana Prameswari",
+    "nis": "2627010022",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010023",
+    "nama": "Salma Inara Ramadhani",
+    "nis": "2627010023",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010024",
+    "nama": "Salwa Elok Perdana",
+    "nis": "2627010024",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010025",
+    "nama": "Sheryl Kirana Putri Pratama",
+    "nis": "2627010025",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010026",
+    "nama": "Yazid Alfahrezi Azgefa",
+    "nis": "2627010026",
+    "kelas": "1A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010027",
+    "nama": "Abqary Said Ramadhan",
+    "nis": "2627010027",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010028",
+    "nama": "Adyaksa Setianto Herlambang",
+    "nis": "2627010028",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010029",
+    "nama": "Ahmad Emran Ghifari",
+    "nis": "2627010029",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010030",
+    "nama": "Amr Mikairo Mahika",
+    "nis": "2627010030",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010031",
+    "nama": "Ariq Yusuf Khautal Sandi",
+    "nis": "2627010031",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010032",
+    "nama": "Clarissa Nur Argity",
+    "nis": "2627010032",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010033",
+    "nama": "Dahayu Aksara Sajani Al Rasyid",
+    "nis": "2627010033",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010034",
+    "nama": "Degesita Anju Rafsanjani",
+    "nis": "2627010034",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010035",
+    "nama": "Dhio Arkana Syahid",
+    "nis": "2627010035",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010036",
+    "nama": "Fathan Daniyal Raqqilla",
+    "nis": "2627010036",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010037",
+    "nama": "Felisha Zia Almahyra",
+    "nis": "2627010037",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010038",
+    "nama": "Ghefira Alfathunnisa",
+    "nis": "2627010038",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010039",
+    "nama": "Gibraltar Parsa Hakim",
+    "nis": "2627010039",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010040",
+    "nama": "Kaina Mala Lufias",
+    "nis": "2627010040",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010041",
+    "nama": "Karen Freya Olivia",
+    "nis": "2627010041",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010042",
+    "nama": "Keandra Athalla Herdis",
+    "nis": "2627010042",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010043",
+    "nama": "Kiyomi Shafiyatunnisa",
+    "nis": "2627010043",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010091",
+    "nama": "Mahesa Tegar",
+    "nis": "2627010091",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010044",
+    "nama": "Mikazuki Fazzura Reina",
+    "nis": "2627010044",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010046",
+    "nama": "Muhammad Dhuha Fahreza",
+    "nis": "2627010046",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010047",
+    "nama": "Muhammad Dzakwan Alfarizqi",
+    "nis": "2627010047",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010048",
+    "nama": "Muhammad Hanif Husaini",
+    "nis": "2627010048",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010081",
+    "nama": "Muhammad Izzul Hanif",
+    "nis": "2627010081",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010049",
+    "nama": "Rasya Malik Akbar",
+    "nis": "2627010049",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010050",
+    "nama": "Saffana Nesya Zhafira",
+    "nis": "2627010050",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010051",
+    "nama": "Taqiah Khalisa",
+    "nis": "2627010051",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010074",
+    "nama": "Yazid Ahsan Hamizan",
+    "nis": "2627010074",
+    "kelas": "1B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010052",
+    "nama": "Aleena Ros Aini",
+    "nis": "2627010052",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010053",
+    "nama": "Alena Naadhira Adtyana",
+    "nis": "2627010053",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010054",
+    "nama": "Almeera Shaqueena Azzahra",
+    "nis": "2627010054",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010055",
+    "nama": "Ashadiya Maryam Ariefa",
+    "nis": "2627010055",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010056",
+    "nama": "Auristella Shalimar Azzahra",
+    "nis": "2627010056",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010057",
+    "nama": "Daffa Atharrazka Malik",
+    "nis": "2627010057",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010058",
+    "nama": "Fathian Zidan Al Farezi",
+    "nis": "2627010058",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010059",
+    "nama": "Fawwaz Hisan Zakkiya",
+    "nis": "2627010059",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010060",
+    "nama": "Ghania Saufa Fahrizka",
+    "nis": "2627010060",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010061",
+    "nama": "Hanna Althafunnisa Praseptie",
+    "nis": "2627010061",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010075",
+    "nama": "Khandra Gavin Dareendra",
+    "nis": "2627010075",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010062",
+    "nama": "Kyra Yumna Vanri",
+    "nis": "2627010062",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010063",
+    "nama": "Mohammad Nur Fazli Anwar",
+    "nis": "2627010063",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010064",
+    "nama": "Mohammad Zahran Arif",
+    "nis": "2627010064",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010065",
+    "nama": "Muhammad Fathan Al Ghazali",
+    "nis": "2627010065",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010066",
+    "nama": "Muhammad Nazif Iqra Nasution",
+    "nis": "2627010066",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010068",
+    "nama": "Narendra Dirga Alhafiz",
+    "nis": "2627010068",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010069",
+    "nama": "Navya Kananta",
+    "nis": "2627010069",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010070",
+    "nama": "Pijar Lentera Kaukibi",
+    "nis": "2627010070",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010071",
+    "nama": "Qianu Uwais Bayuntara",
+    "nis": "2627010071",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010072",
+    "nama": "Raffandra Ali Arasy",
+    "nis": "2627010072",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010073",
+    "nama": "Sarah Almira",
+    "nis": "2627010073",
+    "kelas": "1C",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010059",
+    "nama": "Abdullah Fatih Fatoni",
+    "nis": "2526010059",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010003",
+    "nama": "Alesha Putri Rezdia",
+    "nis": "2526010003",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010062",
+    "nama": "Almer Ayyasy Ibrahim",
+    "nis": "2526010062",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010004",
+    "nama": "Aminah Nur Rahman",
+    "nis": "2526010004",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010028",
+    "nama": "Arshiyla Ceisya Dharma",
+    "nis": "2526010028",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010051",
+    "nama": "Arsyila Qurrotu'aini Wahyudi",
+    "nis": "2526010051",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010042",
+    "nama": "Cattleya Shazia",
+    "nis": "2526010042",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010057",
+    "nama": "Citra Nahda Rafanda",
+    "nis": "2526010057",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010035",
+    "nama": "Dzaky Abyan Askara",
+    "nis": "2526010035",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010029",
+    "nama": "Fatimah Nurul Khansa",
+    "nis": "2526010029",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010010",
+    "nama": "Gemila Namira Sakti",
+    "nis": "2526010010",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010006",
+    "nama": "Hafizh Obdeen Mahardika",
+    "nis": "2526010006",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010024",
+    "nama": "Kemilau Senja Prameswari",
+    "nis": "2526010024",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010022",
+    "nama": "Kenzi Syafiq Alfatih",
+    "nis": "2526010022",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010023",
+    "nama": "Khadija",
+    "nis": "2526010023",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010012",
+    "nama": "Kidwa Yasafesa Ligarcita",
+    "nis": "2526010012",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010025",
+    "nama": "Maezurra Anaking Ekasetya",
+    "nis": "2526010025",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010014",
+    "nama": "Meydita Salwa Setyawan",
+    "nis": "2526010014",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010032",
+    "nama": "Miftahul Roziqoh Ibrahim",
+    "nis": "2526010032",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010046",
+    "nama": "Milana Birru Dhyana",
+    "nis": "2526010046",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010048",
+    "nama": "Moch. Hisyam Satria Akhdan",
+    "nis": "2526010048",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010009",
+    "nama": "Muhammad Rafif Sava",
+    "nis": "2526010009",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010018",
+    "nama": "Narendra Shidqi Adli",
+    "nis": "2526010018",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010061",
+    "nama": "Qiana Omera Ferdian",
+    "nis": "2526010061",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010008",
+    "nama": "Qiandra Khairani Safitri",
+    "nis": "2526010008",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010047",
+    "nama": "Sakhi Abdan Syakuro",
+    "nis": "2526010047",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010033",
+    "nama": "Shanum Ayesha Kurniawan",
+    "nis": "2526010033",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010050",
+    "nama": "Syakirah Raniah Almeramekka",
+    "nis": "2526010050",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010041",
+    "nama": "Umar Aidan Alfarizqy",
+    "nis": "2526010041",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010016",
+    "nama": "Vinna Atifa Zhafirah",
+    "nis": "2526010016",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010043",
+    "nama": "Ziya Izzatunnisa",
+    "nis": "2526010043",
+    "kelas": "2A",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010036",
+    "nama": "Adifa Nafiza Prabaswara Hadiyan",
+    "nis": "2526010036",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010001",
+    "nama": "Adreena Mikayla Sasmita",
+    "nis": "2526010001",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010044",
+    "nama": "Adresia Mukhbita Rachnu",
+    "nis": "2526010044",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010021",
+    "nama": "Aisyah Ayudia Inara",
+    "nis": "2526010021",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010020",
+    "nama": "Alesha Khafiyya Yasirli",
+    "nis": "2526010020",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010060",
+    "nama": "Alesha Malaika Nur Ryanti",
+    "nis": "2526010060",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010002",
+    "nama": "Anaya Khumaira Liberty",
+    "nis": "2526010002",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010054",
+    "nama": "Aqilla Mumtaz Mufida",
+    "nis": "2526010054",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010019",
+    "nama": "Aysha Farzana Rahma",
+    "nis": "2526010019",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010005",
+    "nama": "Daniyal Riza Murphy",
+    "nis": "2526010005",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010065",
+    "nama": "Daviandra Fathaan Putra",
+    "nis": "2526010065",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010056",
+    "nama": "Farzana Naina Putri Hidayatulloh",
+    "nis": "2526010056",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010058",
+    "nama": "Ghani Mulya Putra Jauhari",
+    "nis": "2526010058",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010007",
+    "nama": "Ghaziya Airina Maulidya",
+    "nis": "2526010007",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010038",
+    "nama": "Gumaisha Kyara",
+    "nis": "2526010038",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010064",
+    "nama": "Hanif Imran Affan",
+    "nis": "2526010064",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010013",
+    "nama": "Keenan Zayn Partama",
+    "nis": "2526010013",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010031",
+    "nama": "Malikha Khawla Alfathunisa",
+    "nis": "2526010031",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010039",
+    "nama": "Mikayla Azzahra Arkaputri",
+    "nis": "2526010039",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010040",
+    "nama": "Muhammad Abidzar Calief",
+    "nis": "2526010040",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010026",
+    "nama": "Nabila Nur Sabrina",
+    "nis": "2526010026",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010055",
+    "nama": "Naladhipa Tsabit Qeis",
+    "nis": "2526010055",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010011",
+    "nama": "Nusaibah Az Zahra",
+    "nis": "2526010011",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010045",
+    "nama": "Omar Zhafran Alfatih",
+    "nis": "2526010045",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010049",
+    "nama": "Raden Ersya Nurramadhani Djaen",
+    "nis": "2526010049",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010030",
+    "nama": "Razanah Zahida Aggi",
+    "nis": "2526010030",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010015",
+    "nama": "Reyndra Harya Pambudi",
+    "nis": "2526010015",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010052",
+    "nama": "Sabrina Atha Tabina Kandow",
+    "nis": "2526010052",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2627010076",
+    "nama": "Shafiyah Alika Kesuma",
+    "nis": "2627010076",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010027",
+    "nama": "Sulthan Akmal Keenan",
+    "nis": "2526010027",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010037",
+    "nama": "Zhafira Hanan Rifa'i",
+    "nis": "2526010037",
+    "kelas": "2B",
+    "jenjang": "iqro",
+    "aktif": true
+  },
+  {
+    "id": "2526010068",
+    "nama": "Abiyyu Khaleev Fadiyanto",
+    "nis": "2526010068",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010010",
+    "nama": "Adlyna Qaireen Suhermanto",
+    "nis": "2425010010",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010051",
+    "nama": "Ahmad Syauqi",
+    "nis": "2425010051",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010023",
+    "nama": "Alfariq Dwi Ramadhan",
+    "nis": "2425010023",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010004",
+    "nama": "Alika Anjani Santosa",
+    "nis": "2425010004",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010031",
+    "nama": "Ammar Zafran Rafassya Dianto",
+    "nis": "2425010031",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010012",
+    "nama": "Aushaf Sharkan Kurniawan",
+    "nis": "2425010012",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010007",
+    "nama": "Embun Naza Azzahra",
+    "nis": "2425010007",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010039",
+    "nama": "Faeyza Ihsan Andhika",
+    "nis": "2425010039",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010083",
+    "nama": "Farra Alula Inaranti",
+    "nis": "2425010083",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010085",
+    "nama": "Faza Abdullah Lullail",
+    "nis": "2425010085",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010017",
+    "nama": "Gerald Muhammad Eezar",
+    "nis": "2425010017",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010077",
+    "nama": "Hanan Nafis Hidayat",
+    "nis": "2425010077",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010040",
+    "nama": "Humaira Zahwa",
+    "nis": "2425010040",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010080",
+    "nama": "Jihan Aprilia Sutrisno",
+    "nis": "2425010080",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010034",
+    "nama": "Kamadiya Kenar Adiluhung",
+    "nis": "2425010034",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010022",
+    "nama": "Kamadiya Maldini Ridwan",
+    "nis": "2425010022",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010062",
+    "nama": "Muhammad Azzam Khalif",
+    "nis": "2425010062",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010030",
+    "nama": "Nadhifah Aisha Faiha",
+    "nis": "2425010030",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010036",
+    "nama": "Putra Taqi Hamizan",
+    "nis": "2425010036",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010053",
+    "nama": "Ratu Latifa Qotrunnada",
+    "nis": "2425010053",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010020",
+    "nama": "Reinissa Zalfa Ashalina",
+    "nis": "2425010020",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010024",
+    "nama": "Rumaisha Fatimah Azzahra",
+    "nis": "2425010024",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010005",
+    "nama": "Sora Nareswara Putra",
+    "nis": "2425010005",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010014",
+    "nama": "Syakira Aulia Putri",
+    "nis": "2425010014",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010048",
+    "nama": "Zhafira Taqiyya",
+    "nis": "2425010048",
+    "kelas": "3A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010046",
+    "nama": "Abdullah Fahreza",
+    "nis": "2425010046",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010055",
+    "nama": "Adzkiyya Aryuni Maksum",
+    "nis": "2425010055",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010074",
+    "nama": "Aisyah Adibah Abqariah",
+    "nis": "2425010074",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010084",
+    "nama": "Aiyra Khansa Nasywa",
+    "nis": "2425010084",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010041",
+    "nama": "Aluna Yasmin Arizki",
+    "nis": "2425010041",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010081",
+    "nama": "Aqila Putri Darmawan",
+    "nis": "2425010081",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010065",
+    "nama": "Arka Prabu Albifardzan",
+    "nis": "2425010065",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010059",
+    "nama": "Azeeza Shakeela Abad",
+    "nis": "2425010059",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010070",
+    "nama": "Fathan Ali Rahman",
+    "nis": "2425010070",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010057",
+    "nama": "Genta Danishwira Adyatama Ramdhani",
+    "nis": "2425010057",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010066",
+    "nama": "Hanifah Wafdan Wahyudhi",
+    "nis": "2526010066",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010043",
+    "nama": "Jazeel Atha Prianto",
+    "nis": "2425010043",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010028",
+    "nama": "Kaizan Albirru Said",
+    "nis": "2425010028",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010089",
+    "nama": "Kanzia Nadheera Rican",
+    "nis": "2425010089",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010006",
+    "nama": "Keenandra Gibran Arshaka",
+    "nis": "2425010006",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010060",
+    "nama": "Keysha Syakila Farizki",
+    "nis": "2425010060",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010013",
+    "nama": "Khairi Rayyan Alfarizky",
+    "nis": "2425010013",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010038",
+    "nama": "Muhammad Al Fatih Rahman",
+    "nis": "2425010038",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010075",
+    "nama": "Muhammad Sholahuddin Syarief",
+    "nis": "2425010075",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2627010079",
+    "nama": "Nada Azkiya Adtyana",
+    "nis": "2627010079",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2627010080",
+    "nama": "Naurah Shofiyyah",
+    "nis": "2627010080",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010052",
+    "nama": "Nayyara Almahyra Salwa",
+    "nis": "2425010052",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010049",
+    "nama": "Nizar Arshad Ramadhan",
+    "nis": "2425010049",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010071",
+    "nama": "Olivia Saleha",
+    "nis": "2425010071",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010003",
+    "nama": "Saffana Aulia Refrin",
+    "nis": "2425010003",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010042",
+    "nama": "Zafran Fatih Raqila",
+    "nis": "2425010042",
+    "kelas": "3B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010027",
+    "nama": "Adeeva Salsabilla Dzahin",
+    "nis": "2425010027",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010025",
+    "nama": "Almeera Nadhifa Alfathunnissa",
+    "nis": "2425010025",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010079",
+    "nama": "Altan Kayyas Muttaqi",
+    "nis": "2425010079",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010035",
+    "nama": "Arsyila Gemintang Fazandra",
+    "nis": "2425010035",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010067",
+    "nama": "Aurelino Nizar Alfarizi",
+    "nis": "2425010067",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010068",
+    "nama": "Azkadina Syakira Ramadhani",
+    "nis": "2425010068",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010073",
+    "nama": "Azril Raqila Ramadhan",
+    "nis": "2425010073",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010018",
+    "nama": "Faariq Ghaisullah Santoso",
+    "nis": "2425010018",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010011",
+    "nama": "Fikra Tajusa Aksa",
+    "nis": "2425010011",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010019",
+    "nama": "Jihan Khasyafarina Mecca",
+    "nis": "2425010019",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010058",
+    "nama": "Kayyis Alfarizqi",
+    "nis": "2425010058",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010032",
+    "nama": "Khalif Althaf Muttaqin",
+    "nis": "2425010032",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010066",
+    "nama": "Kynan Aurellio Ahzafani",
+    "nis": "2425010066",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010009",
+    "nama": "Muhammad Damar Falah",
+    "nis": "2425010009",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010061",
+    "nama": "Muhammad Sakha Syaikhan",
+    "nis": "2425010061",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010026",
+    "nama": "Mutiara Putri",
+    "nis": "2425010026",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010044",
+    "nama": "Nayyira Anisa Rasyanda",
+    "nis": "2425010044",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010077",
+    "nama": "Novita Putri Lestari",
+    "nis": "2526010077",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010056",
+    "nama": "Olivia Tribhuwana Zaffara",
+    "nis": "2425010056",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010021",
+    "nama": "Pradipa Aka Al Khalifi",
+    "nis": "2425010021",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010054",
+    "nama": "Queenzha Aqila Fariza",
+    "nis": "2425010054",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010037",
+    "nama": "Rahma Pramudita Wijayanto",
+    "nis": "2425010037",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010033",
+    "nama": "Syifa Fahira Taqwa",
+    "nis": "2425010033",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010016",
+    "nama": "Umar Syafiq Rasyid",
+    "nis": "2425010016",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010050",
+    "nama": "Umar Yusuf Bayuntara",
+    "nis": "2425010050",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010078",
+    "nama": "Zein Mu'ammar Khadafi",
+    "nis": "2425010078",
+    "kelas": "3C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010041",
+    "nama": "Adila Anissa",
+    "nis": "2324010041",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010003",
+    "nama": "Ahmad Karim Rajendra",
+    "nis": "2324010003",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010010",
+    "nama": "Akbar Kendra Jusuf",
+    "nis": "2324010010",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010029",
+    "nama": "Artzeta Sabilla Yasin",
+    "nis": "2324010029",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010071",
+    "nama": "Arumi Misha Shafana",
+    "nis": "2526010071",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010055",
+    "nama": "Askayra Yasna Shakayla",
+    "nis": "2324010055",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010038",
+    "nama": "Aztan Khairi",
+    "nis": "2324010038",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010075",
+    "nama": "Denis Fathian Fauzi",
+    "nis": "2526010075",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010059",
+    "nama": "Dilla Adistia",
+    "nis": "2324010059",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010062",
+    "nama": "Fathimah Nurul Chosilah",
+    "nis": "2324010062",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010035",
+    "nama": "Hafidz Alfarezel Javier",
+    "nis": "2324010035",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010063",
+    "nama": "Hanania Malika Fitri",
+    "nis": "2324010063",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010015",
+    "nama": "Hanifa Fathiyya Rahma",
+    "nis": "2324010015",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010034",
+    "nama": "Hassan Effendi Siddiq",
+    "nis": "2324010034",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010057",
+    "nama": "Iffatu Inaayatin Izzatunnisa",
+    "nis": "2324010057",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010001",
+    "nama": "Izzam Al Khwarizmi",
+    "nis": "2324010001",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010040",
+    "nama": "Kanaya Fathimah Abdul",
+    "nis": "2324010040",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010066",
+    "nama": "Maulana Nur Muhammad",
+    "nis": "2324010066",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010019",
+    "nama": "Mikail Rayan Sakti",
+    "nis": "2324010019",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010025",
+    "nama": "Moch Arkana Lauda Favian",
+    "nis": "2324010025",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010052",
+    "nama": "Muhamad Rasyad Muharam",
+    "nis": "2324010052",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010048",
+    "nama": "Muhammad Fathir Alrasyid",
+    "nis": "2324010048",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010042",
+    "nama": "Muhammad Hafiz Azzamy",
+    "nis": "2324010042",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010016",
+    "nama": "Muhammad Khalif Alfarabi",
+    "nis": "2324010016",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010036",
+    "nama": "Muhammad Omar Abrisam",
+    "nis": "2324010036",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010032",
+    "nama": "Nadillah Arapah Lota Lova",
+    "nis": "2324010032",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010013",
+    "nama": "Naura Safwa Haniya",
+    "nis": "2324010013",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010054",
+    "nama": "Nayla Adelia Putri",
+    "nis": "2324010054",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010045",
+    "nama": "Raksi Nuansafesa Citarahagi",
+    "nis": "2324010045",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010026",
+    "nama": "Reva Qirani Aslamah",
+    "nis": "2324010026",
+    "kelas": "4A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010007",
+    "nama": "Adinda Shaqueena Humaira",
+    "nis": "2324010007",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010027",
+    "nama": "Aisyah Najma Alifah",
+    "nis": "2324010027",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010090",
+    "nama": "Alifaningtyas Tri Suseno",
+    "nis": "2425010090",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010014",
+    "nama": "Alika Laras Anjani",
+    "nis": "2324010014",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010065",
+    "nama": "Anas Zhafran Praseptie",
+    "nis": "2324010065",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010028",
+    "nama": "Arsyila Ayra Prayuda",
+    "nis": "2324010028",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010060",
+    "nama": "Ayra Cahaya Malika",
+    "nis": "2324010060",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010051",
+    "nama": "Fahrizi Abbiyu Salam",
+    "nis": "2324010051",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010053",
+    "nama": "Fathian Rasyid Suryamsyah",
+    "nis": "2324010053",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2627010078",
+    "nama": "Fathir Ahmad Azzami",
+    "nis": "2627010078",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010050",
+    "nama": "Fathir Al Zunnah",
+    "nis": "2324010050",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010006",
+    "nama": "Fatimatuzzahra Yameena Fadhil",
+    "nis": "2324010006",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2627010077",
+    "nama": "Hafiz Edsel Kesuma",
+    "nis": "2627010077",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010022",
+    "nama": "Hafizh Muhyiddin Syamil",
+    "nis": "2324010022",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010018",
+    "nama": "Ibnu Zhafran Akbarian",
+    "nis": "2324010018",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010012",
+    "nama": "Karim Abgary Wyreztiyo",
+    "nis": "2324010012",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010021",
+    "nama": "Keiichi Maher Az-zumar",
+    "nis": "2324010021",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010024",
+    "nama": "Kidung Senja Kilia Al Rasyid",
+    "nis": "2324010024",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010044",
+    "nama": "Kinanti Lituhayu Anak Hamid",
+    "nis": "2324010044",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010067",
+    "nama": "Mufia Zareen Humaira",
+    "nis": "2324010067",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010061",
+    "nama": "Muhammad Alkhalifi Subadio",
+    "nis": "2324010061",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010058",
+    "nama": "Muhammad Arfan Asshidiq",
+    "nis": "2324010058",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010011",
+    "nama": "Muhammad Aydin Raka",
+    "nis": "2324010011",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010039",
+    "nama": "Muhammad Hisyam Alfatich",
+    "nis": "2324010039",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010076",
+    "nama": "Muhammad Rayyan Safwan",
+    "nis": "2526010076",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010043",
+    "nama": "Muhammad Rifat Alfatih",
+    "nis": "2324010043",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010069",
+    "nama": "Naufal Fatih Putra",
+    "nis": "2526010069",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010033",
+    "nama": "Raisha Revalina Saragih",
+    "nis": "2324010033",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010064",
+    "nama": "Raline Ayesha Azkadina",
+    "nis": "2324010064",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010037",
+    "nama": "Sajiva Arundaya Tsabit",
+    "nis": "2324010037",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010020",
+    "nama": "Syifa Fadila Abida",
+    "nis": "2324010020",
+    "kelas": "4B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301083",
+    "nama": "Abdurrahman Ar Ribery",
+    "nis": "222301083",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301055",
+    "nama": "Abyan Nandana Khalif",
+    "nis": "222301055",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301042",
+    "nama": "Adskhan Ibran Elfatih",
+    "nis": "222301042",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301028",
+    "nama": "Afiya Nur Ataya Sandi",
+    "nis": "222301028",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2526010070",
+    "nama": "Aisyah Afqohunnisa",
+    "nis": "2526010070",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301075",
+    "nama": "Akhdan Ziyad",
+    "nis": "222301075",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301008",
+    "nama": "Alam Rayyan Fiyanto",
+    "nis": "222301008",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301074",
+    "nama": "Arsyila Almahyira Azgefa",
+    "nis": "222301074",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301020",
+    "nama": "Athifa Nur Pelangi",
+    "nis": "222301020",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301001",
+    "nama": "Fairel Atharizz Calief",
+    "nis": "222301001",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301090",
+    "nama": "Fatih Pratama Basuki",
+    "nis": "222301090",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301073",
+    "nama": "Flora Baby Queen",
+    "nis": "222301073",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301064",
+    "nama": "Gilang Aditya Ramadhan",
+    "nis": "222301064",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301017",
+    "nama": "Ilham Ibrahim",
+    "nis": "222301017",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301003",
+    "nama": "Inara Huwaida Ardhani",
+    "nis": "222301003",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301022",
+    "nama": "Kinara Adisti Salsabila",
+    "nis": "222301022",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301036",
+    "nama": "Kirana Hafizah Iqra Nasution",
+    "nis": "222301036",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301050",
+    "nama": "Latifa Rafanda",
+    "nis": "222301050",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301039",
+    "nama": "Meshya Belliza Utama",
+    "nis": "222301039",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010072",
+    "nama": "Muhammad Ali Alfarizi",
+    "nis": "2425010072",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301016",
+    "nama": "Nayla Latifa",
+    "nis": "222301016",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301007",
+    "nama": "Quenzino Satria Hadika",
+    "nis": "222301007",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301005",
+    "nama": "Reynand Pratama",
+    "nis": "222301005",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301079",
+    "nama": "Shakila Qiyana Shadiqah",
+    "nis": "222301079",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301060",
+    "nama": "Shanum Meyra Rosadi",
+    "nis": "222301060",
+    "kelas": "5A",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301031",
+    "nama": "Abdullah Hanif",
+    "nis": "222301031",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301014",
+    "nama": "Almeera Faiza Azzahra",
+    "nis": "222301014",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010088",
+    "nama": "Alzam Khairuddin Yulianto",
+    "nis": "2425010088",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301057",
+    "nama": "Ayesya Aghnia Nurul Qonitat",
+    "nis": "222301057",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301061",
+    "nama": "Azalea Savina Zareen Mulya",
+    "nis": "222301061",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301037",
+    "nama": "Dafa Yusouf Suherman",
+    "nis": "222301037",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010087",
+    "nama": "Dzaqy Miftah Syauqi",
+    "nis": "2425010087",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301021",
+    "nama": "Gibran Hanan Athaya",
+    "nis": "222301021",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301041",
+    "nama": "Hafidza Nurqiana Pradani",
+    "nis": "222301041",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301002",
+    "nama": "Hasna Zurmiya Mecca",
+    "nis": "222301002",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301049",
+    "nama": "Khanza Putri Tsani",
+    "nis": "222301049",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301019",
+    "nama": "Kimi Zia Azahra",
+    "nis": "222301019",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301025",
+    "nama": "Muhammad Alfatih Haidar",
+    "nis": "222301025",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010015",
+    "nama": "Muhammad Gemilang Brahmantyo",
+    "nis": "2425010015",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301063",
+    "nama": "Muhammad Jundi Kaisan",
+    "nis": "222301063",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301088",
+    "nama": "Naufal Alfian Febriansyah",
+    "nis": "222301088",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010001",
+    "nama": "Qaisara Hanna Ariefa",
+    "nis": "2425010001",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301030",
+    "nama": "Qaiser Ataullah Al Hakiim",
+    "nis": "222301030",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301011",
+    "nama": "Rafa Araya Partama",
+    "nis": "222301011",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301044",
+    "nama": "Razqya Shaynala Elshanum",
+    "nis": "222301044",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301035",
+    "nama": "Shakila Arsyfa Purnama",
+    "nis": "222301035",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301033",
+    "nama": "Syafira Putri Ramadhanti",
+    "nis": "222301033",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324020074",
+    "nama": "Syahdan Abdul Wafar",
+    "nis": "2324020074",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "242503090",
+    "nama": "Thalita Tri Kamilah",
+    "nis": "242503090",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301084",
+    "nama": "Zaara Ufaira Azka",
+    "nis": "222301084",
+    "kelas": "5B",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301012",
+    "nama": "Abdul Abid Putra Ruslan",
+    "nis": "222301012",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010008",
+    "nama": "Abdullah Syamil",
+    "nis": "2324010008",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301069",
+    "nama": "Adam Azzahidi Damarjati",
+    "nis": "222301069",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301015",
+    "nama": "Aisha Zahwa Attahira",
+    "nis": "222301015",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301023",
+    "nama": "Anindya Rachma",
+    "nis": "222301023",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2425010082",
+    "nama": "Athmar Abdillah Avindra Putra",
+    "nis": "2425010082",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "232402077",
+    "nama": "Bilqis Siffa Agustin",
+    "nis": "232402077",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301065",
+    "nama": "Cleo Agatha Arief Siregar",
+    "nis": "222301065",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301048",
+    "nama": "Dafa Abyasa Akram",
+    "nis": "222301048",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301009",
+    "nama": "Drew Lathief Malik",
+    "nis": "222301009",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301045",
+    "nama": "Hadiyya Gevherhan Rezdia",
+    "nis": "222301045",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301068",
+    "nama": "Herjuno Kastara",
+    "nis": "222301068",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301077",
+    "nama": "Ishana Maliqa Zhafira",
+    "nis": "222301077",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301040",
+    "nama": "Karen Azkiya Pasha",
+    "nis": "222301040",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301052",
+    "nama": "Kayyisa Lubna Sakhi",
+    "nis": "222301052",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301029",
+    "nama": "Kirana Aleen Anak Hamid",
+    "nis": "222301029",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301006",
+    "nama": "Mahreza Abdillah Karim",
+    "nis": "222301006",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301078",
+    "nama": "Muhammad Fahlevi Rezqiano",
+    "nis": "222301078",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "2324010009",
+    "nama": "Muhammad Gibran Ghifari",
+    "nis": "2324010009",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301047",
+    "nama": "Muhammad Ichsan Al Fatih",
+    "nis": "222301047",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301058",
+    "nama": "Nazmi Juna",
+    "nis": "222301058",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301038",
+    "nama": "Nilna Minnasuke Mayda",
+    "nis": "222301038",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301054",
+    "nama": "Shabira Azalia Fauzi",
+    "nis": "222301054",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301026",
+    "nama": "Syahquitta Kayla Azzahra",
+    "nis": "222301026",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  },
+  {
+    "id": "222301034",
+    "nama": "Zenith Qori Arasy Isnaini",
+    "nis": "222301034",
+    "kelas": "5C",
+    "jenjang": "quran",
+    "aktif": true
+  }
+];
+
+  const logEl = document.getElementById('log');
+  function log(msg, cls) {
+    const span = document.createElement('div');
+    if (cls) span.className = cls;
+    span.textContent = msg;
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Ringkasan per kelas
+  const perKelas = {};
+  SISWA_SEED.forEach(s => { perKelas[s.kelas] = (perKelas[s.kelas]||0) + 1; });
+  document.getElementById('statRow').innerHTML = Object.keys(perKelas).sort().map(k =>
+    `<span class="stat-chip">${k}: ${perKelas[k]}</span>`
+  ).join('') + `<span class="stat-chip" style="background:var(--green-dark);color:#fff">Total: ${SISWA_SEED.length}</span>`;
+
+  if (DEMO_MODE) {
+    document.getElementById('demoWarn').style.display = 'block';
+    document.getElementById('btnSeed').disabled = true;
+  }
+
+  document.getElementById('btnSeed').addEventListener('click', async () => {
+    logEl.innerHTML = '';
+    document.getElementById('btnSeed').disabled = true;
+    const fill = document.getElementById('progressFill');
+    try {
+      const { db, fsMod } = window.__fb;
+      const batch = fsMod.writeBatch(db);
+      SISWA_SEED.forEach(s => {
+        const { id, ...data } = s;
+        batch.set(fsMod.doc(db, 'siswa', id), data);
+      });
+      log(`Menulis ${SISWA_SEED.length} dokumen dalam satu batch…`);
+      await batch.commit();
+      fill.style.width = '100%';
+      log(`✓ Selesai — ${SISWA_SEED.length} siswa tersimpan ke koleksi "siswa".`, 'ok');
+      log('\nAnda bisa tinggalkan halaman ini sekarang.', 'ok');
+    } catch (err) {
+      console.error(err);
+      log('✗ Gagal: ' + err.message, 'err');
+      log('Pastikan Anda sudah login (buka login.html dulu di tab lain) dan Firestore Rules mengizinkan tulis ke koleksi "siswa".', 'err');
+    } finally {
+      document.getElementById('btnSeed').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
