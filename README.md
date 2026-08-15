@@ -53,7 +53,8 @@ penilaian-v2/
 │   └── apple-touch-icon.png
 └── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
     ├── login.html
-    ├── input-setoran.html
+    ├── input-setoran.html   # Membaca + Menghapal (harian, per antrean)
+    ├── catat-menulis.html   # Menulis (berkala, bukan per antrean)
     ├── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
     └── riwayat-siswa.html   # (menyusul)
 ```
@@ -122,6 +123,26 @@ jenis kesalahannya), status hafalan, dan catatan guru. Laporan periodik
 (progres juz/surah, tren kualitas bacaan, konsistensi setoran) akan
 dihasilkan otomatis dari akumulasi data ini di modul Riwayat Siswa /
 Rapor — bukan diinput manual per sesi.
+
+## Catatan Desain: Tiga Kompetensi Terpisah
+
+Penilaian tahsin-tahfizh sebenarnya mencakup tiga kompetensi yang
+berbeda sifatnya, jadi sengaja dipisah alurnya, bukan dipaksa jadi satu
+form:
+
+| Kompetensi | Alur | Frekuensi |
+|---|---|---|
+| **Membaca** Al-Qur'an | `input-setoran.html` → Baca & Tandai | Per sesi antrean harian |
+| **Menghapal** Al-Qur'an | `input-setoran.html` → Ziyadah/Muroja'ah + status hafalan | Per sesi antrean harian |
+| **Menulis** Al-Qur'an | `catat-menulis.html` | Berkala (mingguan/bulanan), dari buku salinan fisik siswa |
+
+Menulis sengaja **tidak** dimasukkan ke antrean harian — kompetensi ini
+butuh waktu review fokus per anak, bukan penilaian sekilas di sela
+antrean (yang selama ini justru membuatnya jadi kegiatan mengisi
+waktu, bukan kompetensi yang benar-benar diajar & dinilai). Fase
+sekarang: sekadar tercatat rutin (halaman yang disalin sejak terakhir
+diperiksa). Penilaian kualitas tulisan menyusul di tahap berikutnya,
+setelah pencatatan rutin ini terbiasa dipakai.
 
 ## Kontribusi & Alur Kerja
 

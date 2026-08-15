@@ -54,6 +54,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---- menulis_log/{id} ---------------------------------------------------
+    // Catatan pemeriksaan berkala buku salinan Al-Qur'an (bukan per-sesi
+    // antrean harian). Sama aturannya seperti setoran.
+    match /menulis_log/{id} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;
