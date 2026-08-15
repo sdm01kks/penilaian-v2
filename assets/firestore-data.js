@@ -172,3 +172,46 @@ export async function getRiwayatSetoran(siswaId) {
   const snap = await fsMod.getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
+/* ==========================================================================
+   Menulis — log progres menyalin Al-Qur'an (pemeriksaan berkala,
+   bukan per-sesi antrean). Fase awal: sekadar tercatat rutin,
+   belum menilai kualitas tulisan.
+   ========================================================================== */
+
+const DEMO_MENULIS_KEY = 'tt_demo_menulis';
+
+export async function saveMenulisLog(payload) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 350));
+    const list = JSON.parse(localStorage.getItem(DEMO_MENULIS_KEY) || '[]');
+    const record = { id: 'demo-' + Date.now(), ...payload, createdAt: new Date().toISOString() };
+    list.unshift(record);
+    localStorage.setItem(DEMO_MENULIS_KEY, JSON.stringify(list));
+    return record;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  const docRef = await fsMod.addDoc(fsMod.collection(db, 'menulis_log'), {
+    ...payload,
+    createdBy: auth.currentUser?.uid || null,
+    createdAt: fsMod.serverTimestamp(),
+  });
+  return { id: docRef.id, ...payload };
+}
+
+/** Riwayat catatan menulis seorang siswa, terbaru dulu. */
+export async function getMenulisLog(siswaId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = JSON.parse(localStorage.getItem(DEMO_MENULIS_KEY) || '[]');
+    return list.filter(s => s.siswaId === siswaId);
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'menulis_log'),
+    fsMod.where('siswaId', '==', siswaId),
+    fsMod.orderBy('createdAt', 'desc')
+  );
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
