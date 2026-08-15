@@ -64,6 +64,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
               <input type="text" id="siswaSearch" placeholder="Cari nama atau NIS siswa…" autocomplete="off">
             </div>
+            <div class="kelas-chip-row" id="kelasChipRow"></div>
             <div class="siswa-result-list" id="siswaResultList"></div>
           </div>
         </div>
@@ -162,15 +163,20 @@
             <div id="aspekList"></div>
           </div>
 
-          <!-- ============ DETAIL PER AYAT ============ -->
+          <!-- ============ BACA & TANDAI ============ -->
           <div id="ayatDetailSection" class="hidden">
-            <div class="section-label"><span class="bar"></span>Detail Per Ayat <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-muted)">(opsional)</span></div>
+            <div class="section-label"><span class="bar"></span>Baca &amp; Tandai</div>
             <div class="card">
-              <div class="ayat-toggle-header" id="ayatToggleHeader">
-                <div class="ayat-summary-line" style="margin:0" id="ayatSummaryLine">Belum diisi</div>
-                <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+              <div class="baca-stat-bar" id="bacaStatBar">
+                <span class="stat-chip stat-tajwid"><span id="statTajwid">0</span> Tajwid</span>
+                <span class="stat-chip stat-makhroj"><span id="statMakhroj">0</span> Makhroj</span>
+                <span class="stat-chip stat-lulus"><span id="statLulus">0</span> Lulus</span>
+                <span class="stat-chip stat-gagal"><span id="statGagal">0</span> Perlu Diulang</span>
               </div>
-              <div class="ayat-list hidden" id="ayatList"></div>
+              <div class="baca-legend">
+                Ketuk kata yang salah: sekali = <span class="legend-dot tajwid"></span>Tajwid, dua kali = <span class="legend-dot makhroj"></span>Makhroj, tiga kali = bersih lagi.
+              </div>
+              <div id="ayatList"></div>
             </div>
           </div>
 
@@ -210,6 +216,7 @@
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
   import { getSiswaList, getKktpConfig, saveSetoran, levelDariNilai } from '../assets/firestore-data.js';
   import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
+  import { fetchSurahText } from '../assets/quran-text.js';
 
   const $ = (id) => document.getElementById(id);
 
@@ -228,7 +235,13 @@
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
 
-  $('btnBack').addEventListener('click', () => { window.location.href = '../index.html'; });
+  $('btnBack').addEventListener('click', () => {
+    if (selectedSiswa) {
+      $('btnGantiSiswa').click(); // kembali ke daftar siswa, bukan keluar aplikasi
+    } else {
+      window.location.href = '../index.html';
+    }
+  });
 
   function showToast(msg, isError = false) {
     $('toastMsg').textContent = msg;
@@ -251,12 +264,14 @@
      1. Pilih Siswa
      --------------------------------------------------------------------- */
   let siswaCache = [];
+  let kelasFilter = null;
 
   async function loadSiswaList() {
     $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Memuat daftar siswa…</div>`;
     try {
       siswaCache = await getSiswaList();
-      renderSiswaResults(siswaCache);
+      renderKelasChips();
+      renderSiswaResults();
     } catch (err) {
       console.error(err);
       $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Gagal memuat daftar siswa.</div>`;
@@ -267,13 +282,66 @@
     return nama.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
   }
 
-  function renderSiswaResults(list) {
+  function daftarKelas() {
+    return [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+  }
+
+  function renderKelasChips() {
+    const kelasList = daftarKelas();
+    $('kelasChipRow').innerHTML = kelasList.map(k => `
+      <button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>
+    `).join('');
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        kelasFilter = (kelasFilter === chip.dataset.kelas) ? null : chip.dataset.kelas;
+        $('siswaSearch').value = '';
+        renderKelasChips();
+        renderSiswaResults();
+      });
+    });
+    // tandai chip aktif
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.kelas === kelasFilter);
+    });
+  }
+
+  function renderSiswaResults() {
     const wrap = $('siswaResultList');
-    if (!list.length) {
+    const q = $('siswaSearch').value.trim().toLowerCase();
+
+    let scoped = kelasFilter ? siswaCache.filter(s => s.kelas === kelasFilter) : siswaCache;
+    if (q) scoped = scoped.filter(s => s.nama.toLowerCase().includes(q) || s.nis.includes(q));
+
+    // Belum pilih kelas & belum mengetik apa pun — jangan tampilkan 400 nama sekaligus.
+    if (!kelasFilter && !q) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Pilih kelas di atas, atau ketik nama/NIS untuk mencari langsung.</div>`;
+      return;
+    }
+    if (!scoped.length) {
       wrap.innerHTML = `<div class="siswa-empty-note">Siswa tidak ditemukan.</div>`;
       return;
     }
-    wrap.innerHTML = list.map(s => `
+
+    // Kalau sedang mencari lintas kelas (tanpa filter kelas), kelompokkan per kelas
+    // supaya tetap mudah dipindai.
+    if (!kelasFilter && q) {
+      const byKelas = {};
+      scoped.forEach(s => { (byKelas[s.kelas] ||= []).push(s); });
+      wrap.innerHTML = Object.keys(byKelas).sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map(k => `
+        <div class="siswa-group-label">Kelas ${k}</div>
+        ${byKelas[k].map(siswaItemHtml).join('')}
+      `).join('');
+    } else {
+      wrap.innerHTML = scoped.map(siswaItemHtml).join('');
+    }
+
+    wrap.querySelectorAll('.siswa-result-item').forEach(el => {
+      el.addEventListener('click', () => selectSiswa(el.dataset.id));
+    });
+  }
+
+  function siswaItemHtml(s) {
+    return `
       <div class="siswa-result-item" data-id="${s.id}">
         <div class="avatar-circle">${initials(s.nama)}</div>
         <div>
@@ -281,19 +349,10 @@
           <div class="meta">${s.nis} • Kelas ${s.kelas}</div>
         </div>
       </div>
-    `).join('');
-    wrap.querySelectorAll('.siswa-result-item').forEach(el => {
-      el.addEventListener('click', () => selectSiswa(el.dataset.id));
-    });
+    `;
   }
 
-  $('siswaSearch').addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    const filtered = !q ? siswaCache : siswaCache.filter(s =>
-      s.nama.toLowerCase().includes(q) || s.nis.includes(q)
-    );
-    renderSiswaResults(filtered);
-  });
+  $('siswaSearch').addEventListener('input', () => renderSiswaResults());
 
   async function selectSiswa(id) {
     const s = siswaCache.find(x => x.id === id);
@@ -326,7 +385,8 @@
     $('materiSection').classList.add('hidden');
     $('footerBlock').classList.add('hidden');
     $('siswaSearch').value = '';
-    renderSiswaResults(siswaCache);
+    renderKelasChips();
+    renderSiswaResults(); // kelasFilter tetap dipertahankan — guru biasanya lanjut input siswa lain di kelas yang sama
   });
 
   /* ---------------------------------------------------------------------
@@ -460,20 +520,37 @@
   }
 
   /* ---------------------------------------------------------------------
-     4. Detail Per Ayat (opsional — hanya jika surah awal = surah akhir)
+     4. Baca & Tandai — teks Arab per-ayat, tandai kata (tajwid/makhroj)
+        dan status lulus/gagal per ayat. Hanya untuk rentang dalam satu
+        surah (sama seperti pembatasan sebelumnya).
      --------------------------------------------------------------------- */
-  function rebuildAyatList() {
+  let surahTextCache = null; // { nomorAyat: teksArab }
+
+  async function rebuildAyatList() {
     ayatDetail = {};
+    surahTextCache = null;
+
     if (quranState.surahAwal !== quranState.surahAkhir) {
-      $('ayatList').innerHTML = `<div class="siswa-empty-note">Detail per-ayat hanya tersedia untuk rentang dalam satu surah.</div>`;
-      $('ayatSummaryLine').textContent = 'Tidak tersedia untuk rentang lintas surah';
+      $('ayatList').innerHTML = `<div class="siswa-empty-note">Baca &amp; Tandai hanya tersedia untuk rentang dalam satu surah.</div>`;
+      updateBacaStat();
       return;
     }
+
     for (let n = quranState.ayatMulai; n <= quranState.ayatAkhir; n++) {
-      ayatDetail[n] = { status: null, catatan: '' };
+      ayatDetail[n] = { status: null, words: {} };
     }
-    renderAyatList();
-    updateAyatSummary();
+
+    $('ayatList').innerHTML = `<div class="skeleton" style="height:90px;margin-bottom:10px"></div><div class="skeleton" style="height:90px"></div>`;
+    updateBacaStat();
+
+    try {
+      const fullSurah = await fetchSurahText(quranState.surahAwal);
+      surahTextCache = Object.fromEntries(fullSurah.map(a => [a.nomorAyat, a.teksArab]));
+      renderAyatList();
+    } catch (err) {
+      console.error(err);
+      $('ayatList').innerHTML = `<div class="siswa-empty-note">Gagal memuat teks ayat. Periksa koneksi internet, lalu ganti rentang ayat sedikit untuk memuat ulang.</div>`;
+    }
   }
 
   function renderAyatList() {
@@ -482,22 +559,38 @@
       $('ayatList').innerHTML = `<div class="siswa-empty-note">Tentukan rentang ayat terlebih dahulu.</div>`;
       return;
     }
-    $('ayatList').innerHTML = nums.map(n => `
-      <div class="ayat-row-wrap">
-        <div class="ayat-row">
-          <span class="ayat-num">${n}</span>
-          <span style="font-size:12.5px;font-weight:600;color:var(--ink-mid)">Ayat ${n}</span>
-          <div class="ayat-status-btns">
-            <button type="button" class="lulus" data-n="${n}" data-status="lulus" aria-label="Lulus">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
-            </button>
-            <button type="button" class="gagal" data-n="${n}" data-status="gagal" aria-label="Perlu diulang">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
+
+    $('ayatList').innerHTML = nums.map(n => {
+      const teks = surahTextCache?.[n] || '';
+      const words = teks.split(' ').filter(Boolean);
+      const wordSpans = words.map((w, i) => {
+        const mark = ayatDetail[n].words[i];
+        const cls = mark ? ` word-${mark}` : '';
+        return `<span class="ayat-word${cls}" data-n="${n}" data-i="${i}">${w}</span>`;
+      }).join(' ');
+
+      const jumlahSalah = Object.keys(ayatDetail[n].words).length;
+      const kritis = jumlahSalah >= 3;
+      const status = ayatDetail[n].status;
+
+      return `
+        <div class="ayat-card ${status === 'lulus' ? 'st-lulus' : status === 'gagal' ? 'st-gagal' : ''}">
+          <div class="ayat-card-head">
+            <span class="ayat-num">${n}</span>
+            <div class="ayat-status-btns">
+              <button type="button" class="lulus ${status === 'lulus' ? 'active' : ''}" data-n="${n}" data-status="lulus" aria-label="Lulus">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="gagal ${status === 'gagal' ? 'active' : ''}" data-n="${n}" data-status="gagal" aria-label="Perlu diulang">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
           </div>
+          <div class="ayat-arab" dir="rtl">${wordSpans || '<span class="siswa-empty-note">Teks tidak tersedia</span>'}</div>
+          ${kritis ? `<div class="ayat-kritis-badge">⚠ Ayat kritis — kesalahan ≥ 3</div>` : ''}
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     $('ayatList').querySelectorAll('.ayat-status-btns button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -505,33 +598,37 @@
         const status = btn.dataset.status;
         ayatDetail[n].status = ayatDetail[n].status === status ? null : status;
         renderAyatList();
-        updateAyatSummary();
+        updateBacaStat();
       });
     });
 
-    // Set active state setelah render ulang
-    nums.forEach(n => {
-      const status = ayatDetail[n].status;
-      if (!status) return;
-      const btn = $('ayatList').querySelector(`button[data-n="${n}"][data-status="${status}"]`);
-      if (btn) btn.classList.add('active');
+    $('ayatList').querySelectorAll('.ayat-word').forEach(span => {
+      span.addEventListener('click', () => {
+        const n = span.dataset.n;
+        const i = span.dataset.i;
+        const current = ayatDetail[n].words[i] || null;
+        const next = current === null ? 'tajwid' : current === 'tajwid' ? 'makhroj' : null;
+        if (next === null) delete ayatDetail[n].words[i];
+        else ayatDetail[n].words[i] = next;
+        renderAyatList();
+        updateBacaStat();
+      });
     });
   }
 
-  function updateAyatSummary() {
+  function updateBacaStat() {
     const vals = Object.values(ayatDetail);
-    const lulus = vals.filter(v => v.status === 'lulus').length;
-    const gagal = vals.filter(v => v.status === 'gagal').length;
-    const belum = vals.length - lulus - gagal;
-    $('ayatSummaryLine').innerHTML = vals.length
-      ? `<span class="lulus-count">${lulus} lulus</span> • <span class="gagal-count">${gagal} perlu diulang</span> • ${belum} belum ditandai`
-      : 'Belum diisi';
+    let tajwid = 0, makhroj = 0, lulus = 0, gagal = 0;
+    vals.forEach(v => {
+      Object.values(v.words).forEach(m => { if (m === 'tajwid') tajwid++; else if (m === 'makhroj') makhroj++; });
+      if (v.status === 'lulus') lulus++;
+      if (v.status === 'gagal') gagal++;
+    });
+    $('statTajwid').textContent = tajwid;
+    $('statMakhroj').textContent = makhroj;
+    $('statLulus').textContent = lulus;
+    $('statGagal').textContent = gagal;
   }
-
-  $('ayatToggleHeader').addEventListener('click', () => {
-    $('ayatToggleHeader').classList.toggle('open');
-    $('ayatList').classList.toggle('hidden');
-  });
 
   /* ---------------------------------------------------------------------
      5. Simpan
@@ -563,8 +660,12 @@
 
     const detailAyat = (!isIqro && quranState.surahAwal === quranState.surahAkhir)
       ? Object.entries(ayatDetail)
-          .filter(([, v]) => v.status)
-          .map(([n, v]) => ({ ayat: +n, status: v.status, catatan: v.catatan || '' }))
+          .filter(([, v]) => v.status || Object.keys(v.words).length)
+          .map(([n, v]) => ({
+            ayat: +n,
+            status: v.status,
+            kataSalah: Object.entries(v.words).map(([idx, jenis]) => ({ index: +idx, jenis })),
+          }))
       : [];
 
     return {
