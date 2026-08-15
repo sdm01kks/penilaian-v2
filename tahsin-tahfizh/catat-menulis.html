@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catat Menulis — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .intro-note{
+    font-size:12px;color:var(--ink-muted);line-height:1.6;font-weight:600;
+    background:var(--green-ghost);border-radius:12px;padding:11px 13px;margin-bottom:16px;
+  }
+
+  .riwayat-item{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .riwayat-item:last-child{border-bottom:none}
+  .riwayat-dot{
+    width:8px;height:8px;border-radius:50%;background:var(--green-mid);
+    margin-top:6px;flex-shrink:0;
+  }
+  .riwayat-body{flex:1;min-width:0}
+  .riwayat-tanggal{font-size:11.5px;font-weight:700;color:var(--ink-muted)}
+  .riwayat-halaman{font-size:13.5px;font-weight:700;color:var(--ink);margin-top:1px}
+  .riwayat-catatan{font-size:12px;color:var(--ink-mid);margin-top:3px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Catat Menulis</div>
+            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data siswa &amp; catatan masih tiruan.</span>
+        </div>
+
+        <div class="intro-note">
+          Untuk pemeriksaan berkala buku salinan Al-Qur'an — bukan per hari.
+          Cukup catat halaman yang sudah disalin sejak terakhir diperiksa.
+          Penilaian kualitas tulisan menyusul di tahap berikutnya.
+        </div>
+
+        <!-- ============ SISWA ============ -->
+        <div class="section-label"><span class="bar"></span>Siswa</div>
+        <div class="card">
+          <div id="siswaSelectedBlock" class="hidden">
+            <div class="siswa-selected">
+              <div class="avatar-circle" id="siswaAvatar">--</div>
+              <div class="info">
+                <div class="nama" id="siswaNama">-</div>
+                <div class="meta" id="siswaMeta">-</div>
+              </div>
+              <button class="btn-ganti" id="btnGantiSiswa" aria-label="Ganti siswa">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="siswaPickerBlock">
+            <div class="search-field">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="siswaSearch" placeholder="Cari nama atau NIS siswa…" autocomplete="off">
+            </div>
+            <div class="kelas-chip-row" id="kelasChipRow"></div>
+            <div class="siswa-result-list" id="siswaResultList"></div>
+          </div>
+        </div>
+
+        <!-- ============ FORM ============ -->
+        <div id="formSection" class="hidden">
+          <div class="section-label"><span class="bar"></span>Progres Menyalin</div>
+          <div class="card">
+            <div class="field-label">Tanggal Periksa</div>
+            <input type="date" class="select-field" id="tanggalPeriksa" style="margin-bottom:12px">
+
+            <div class="field-row-2">
+              <div>
+                <div class="stepper-label">Halaman Mulai</div>
+                <div class="stepper">
+                  <button type="button" data-step="halMulai" data-dir="-1">−</button>
+                  <span class="val" id="halMulaiVal">1</span>
+                  <button type="button" data-step="halMulai" data-dir="1">+</button>
+                </div>
+              </div>
+              <div>
+                <div class="stepper-label">Halaman Akhir</div>
+                <div class="stepper">
+                  <button type="button" data-step="halAkhir" data-dir="-1">−</button>
+                  <span class="val" id="halAkhirVal">1</span>
+                  <button type="button" data-step="halAkhir" data-dir="1">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="total-materi-note" id="totalHalNote">Total: 1 halaman sejak terakhir diperiksa</div>
+
+            <div class="field-label" style="margin-top:14px">Catatan (opsional)</div>
+            <textarea class="field-textarea" id="catatanMenulis" placeholder="Mis. tulisan makin rapi, perlu perhatikan sambungan huruf…" style="min-height:60px"></textarea>
+          </div>
+
+          <div class="section-label"><span class="bar"></span>Riwayat Pemeriksaan</div>
+          <div class="card">
+            <div id="riwayatList"><div class="siswa-empty-note">Memuat riwayat…</div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footerBlock" class="sticky-footer hidden">
+        <button class="btn btn-primary-light" id="btnSimpan">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+          <span id="btnSimpanLabel">Simpan Catatan</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaList, saveMenulisLog, getMenulisLog } from '../assets/firestore-data.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('guruLabel').textContent = session.nama;
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('btnBack').addEventListener('click', () => {
+    if (selectedSiswa) $('btnGantiSiswa').click();
+    else window.location.href = 'input-setoran.html';
+  });
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  $('tanggalPeriksa').valueAsDate = new Date();
+
+  /* ---- Siswa (sama seperti Input Setoran) ---- */
+  let selectedSiswa = null;
+  let siswaCache = [];
+  let kelasFilter = null;
+
+  async function loadSiswaList() {
+    $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Memuat daftar siswa…</div>`;
+    try {
+      siswaCache = await getSiswaList();
+      renderKelasChips();
+      renderSiswaResults();
+    } catch (err) {
+      console.error(err);
+      $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Gagal memuat daftar siswa.</div>`;
+    }
+  }
+
+  function initials(nama) {
+    return nama.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function daftarKelas() {
+    return [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+  }
+
+  function renderKelasChips() {
+    const kelasList = daftarKelas();
+    $('kelasChipRow').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        kelasFilter = (kelasFilter === chip.dataset.kelas) ? null : chip.dataset.kelas;
+        $('siswaSearch').value = '';
+        renderKelasChips();
+        renderSiswaResults();
+      });
+      chip.classList.toggle('active', chip.dataset.kelas === kelasFilter);
+    });
+  }
+
+  function renderSiswaResults() {
+    const wrap = $('siswaResultList');
+    const q = $('siswaSearch').value.trim().toLowerCase();
+    let scoped = kelasFilter ? siswaCache.filter(s => s.kelas === kelasFilter) : siswaCache;
+    if (q) scoped = scoped.filter(s => s.nama.toLowerCase().includes(q) || s.nis.includes(q));
+
+    if (!kelasFilter && !q) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Pilih kelas di atas, atau ketik nama/NIS untuk mencari langsung.</div>`;
+      return;
+    }
+    if (!scoped.length) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Siswa tidak ditemukan.</div>`;
+      return;
+    }
+    if (!kelasFilter && q) {
+      const byKelas = {};
+      scoped.forEach(s => { (byKelas[s.kelas] ||= []).push(s); });
+      wrap.innerHTML = Object.keys(byKelas).sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map(k => `
+        <div class="siswa-group-label">Kelas ${k}</div>
+        ${byKelas[k].map(siswaItemHtml).join('')}
+      `).join('');
+    } else {
+      wrap.innerHTML = scoped.map(siswaItemHtml).join('');
+    }
+    wrap.querySelectorAll('.siswa-result-item').forEach(el => el.addEventListener('click', () => selectSiswa(el.dataset.id)));
+  }
+
+  function siswaItemHtml(s) {
+    return `
+      <div class="siswa-result-item" data-id="${s.id}">
+        <div class="avatar-circle">${initials(s.nama)}</div>
+        <div>
+          <div class="nama">${s.nama}</div>
+          <div class="meta">${s.nis} • Kelas ${s.kelas}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  $('siswaSearch').addEventListener('input', () => renderSiswaResults());
+
+  async function selectSiswa(id) {
+    const s = siswaCache.find(x => x.id === id);
+    if (!s) return;
+    selectedSiswa = s;
+
+    $('siswaAvatar').textContent = initials(s.nama);
+    $('siswaNama').textContent = s.nama;
+    $('siswaMeta').textContent = `${s.nis} • Kelas ${s.kelas}`;
+    $('siswaSelectedBlock').classList.remove('hidden');
+    $('siswaPickerBlock').classList.add('hidden');
+    $('formSection').classList.remove('hidden');
+    $('footerBlock').classList.remove('hidden');
+
+    iqroLikeState.halMulai = 1; iqroLikeState.halAkhir = 1;
+    refreshHalaman();
+    $('catatanMenulis').value = '';
+
+    await loadRiwayat(s.id);
+    window.scrollTo(0, 0);
+  }
+
+  $('btnGantiSiswa').addEventListener('click', () => {
+    selectedSiswa = null;
+    $('siswaSelectedBlock').classList.add('hidden');
+    $('siswaPickerBlock').classList.remove('hidden');
+    $('formSection').classList.add('hidden');
+    $('footerBlock').classList.add('hidden');
+    $('siswaSearch').value = '';
+    renderKelasChips();
+    renderSiswaResults();
+  });
+
+  /* ---- Stepper halaman ---- */
+  const iqroLikeState = { halMulai: 1, halAkhir: 1 };
+  function refreshHalaman() {
+    if (iqroLikeState.halAkhir < iqroLikeState.halMulai) iqroLikeState.halAkhir = iqroLikeState.halMulai;
+    $('halMulaiVal').textContent = iqroLikeState.halMulai;
+    $('halAkhirVal').textContent = iqroLikeState.halAkhir;
+    const total = iqroLikeState.halAkhir - iqroLikeState.halMulai + 1;
+    $('totalHalNote').textContent = `Total: ${total} halaman sejak terakhir diperiksa`;
+  }
+  document.querySelectorAll('[data-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.step;
+      const dir = +btn.dataset.dir;
+      iqroLikeState[key] = Math.max(1, iqroLikeState[key] + dir);
+      refreshHalaman();
+    });
+  });
+
+  /* ---- Riwayat ---- */
+  async function loadRiwayat(siswaId) {
+    $('riwayatList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
+    try {
+      const list = await getMenulisLog(siswaId);
+      if (!list.length) {
+        $('riwayatList').innerHTML = `<div class="siswa-empty-note">Belum ada catatan pemeriksaan.</div>`;
+        return;
+      }
+      $('riwayatList').innerHTML = list.map(r => `
+        <div class="riwayat-item">
+          <div class="riwayat-dot"></div>
+          <div class="riwayat-body">
+            <div class="riwayat-tanggal">${formatTanggal(r.tanggalPeriksa)}</div>
+            <div class="riwayat-halaman">Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
+            ${r.catatan ? `<div class="riwayat-catatan">${escapeHtml(r.catatan)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+      $('riwayatList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
+    }
+  }
+
+  function formatTanggal(iso) {
+    try {
+      return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return iso; }
+  }
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  /* ---- Simpan ---- */
+  $('btnSimpan').addEventListener('click', async () => {
+    if (!selectedSiswa) { showToast('Pilih siswa terlebih dahulu.', true); return; }
+    const btn = $('btnSimpan');
+    btn.disabled = true;
+    $('btnSimpanLabel').textContent = 'Menyimpan…';
+    try {
+      await saveMenulisLog({
+        siswaId: selectedSiswa.id,
+        siswaNama: selectedSiswa.nama,
+        kelas: selectedSiswa.kelas,
+        tanggalPeriksa: $('tanggalPeriksa').value,
+        halamanMulai: iqroLikeState.halMulai,
+        halamanAkhir: iqroLikeState.halAkhir,
+        catatan: $('catatanMenulis').value.trim(),
+      });
+      showToast(`Catatan menulis ${selectedSiswa.nama.split(' ')[0]} tersimpan.`);
+      $('catatanMenulis').value = '';
+      await loadRiwayat(selectedSiswa.id);
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal menyimpan catatan. Coba lagi.', true);
+    } finally {
+      btn.disabled = false;
+      $('btnSimpanLabel').textContent = 'Simpan Catatan';
+    }
+  });
+
+  loadSiswaList();
+</script>
+</body>
+</html>
