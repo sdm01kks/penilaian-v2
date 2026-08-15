@@ -474,3 +474,61 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--ink-muted)}
 .empty-state svg{width:40px;height:40px;margin-bottom:10px;opacity:.4}
 .empty-state p{font-size:13px;font-weight:600}
+
+/* ---- Chip filter kelas (Input Setoran) ---- */
+.kelas-chip-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.kelas-chip{
+  padding:7px 13px;border-radius:20px;border:1.5px solid var(--border);
+  background:var(--surface);font-family:inherit;font-size:12px;font-weight:700;
+  color:var(--ink-mid);cursor:pointer;transition:all .15s ease;
+}
+.kelas-chip:hover{border-color:var(--green-light)}
+.kelas-chip.active{
+  background:var(--green-dark);border-color:var(--green-dark);color:#fff;
+}
+.siswa-group-label{
+  font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--ink-muted);padding:8px 4px 2px;
+}
+.siswa-group-label:first-child{padding-top:2px}
+
+/* ---- Baca & Tandai ---- */
+.baca-stat-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.baca-stat-bar .stat-chip{
+  font-size:11px;font-weight:800;padding:5px 10px;border-radius:20px;
+  background:var(--bg-light);color:var(--ink-mid);
+}
+.baca-stat-bar .stat-tajwid{background:#fdf3d8;color:#8a6a0c}
+.baca-stat-bar .stat-makhroj{background:var(--red-light);color:var(--red)}
+.baca-stat-bar .stat-lulus{background:var(--green-pale);color:var(--green-dark)}
+.baca-stat-bar .stat-gagal{background:#f3e6e4;color:#8a3f34}
+
+.baca-legend{font-size:11px;color:var(--ink-muted);line-height:1.6;margin-bottom:14px;font-weight:600}
+.legend-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 2px;vertical-align:middle}
+.legend-dot.tajwid{background:#f5c542}
+.legend-dot.makhroj{background:#e0604f}
+
+.ayat-card{
+  border-radius:14px;border:1.5px solid var(--border);background:var(--bg-light);
+  padding:12px 12px 10px;margin-bottom:10px;transition:border-color .15s ease, background .15s ease;
+}
+.ayat-card.st-lulus{border-color:var(--green-mid);background:var(--green-pale)}
+.ayat-card.st-gagal{border-color:var(--red);background:var(--red-light)}
+
+.ayat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+
+.ayat-arab{
+  font-family:'Amiri',serif;font-size:22px;line-height:2.3;color:var(--ink);
+  text-align:right;
+}
+.ayat-word{
+  cursor:pointer;padding:1px 3px;border-radius:5px;transition:background .12s ease;
+}
+.ayat-word:hover{background:rgba(0,0,0,.05)}
+.ayat-word.word-tajwid{background:#f5c542;box-shadow:0 0 0 1px #d4a520}
+.ayat-word.word-makhroj{background:#e0604f;color:#fff;box-shadow:0 0 0 1px #c44b3b}
+
+.ayat-kritis-badge{
+  margin-top:8px;font-size:10.5px;font-weight:800;color:#a13a2c;
+  background:#fbe4e0;padding:5px 9px;border-radius:8px;display:inline-block;
+}
