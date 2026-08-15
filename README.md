@@ -56,6 +56,7 @@ penilaian-v2/
     ├── login.html
     ├── input-setoran.html
     ├── seed-kktp.html       #   Utilitas sekali-jalan: isi KKTP bawaan ke Firestore
+    ├── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa kelas 1-5 ke Firestore
     └── riwayat-siswa.html   # (menyusul)
 ```
 
@@ -105,9 +106,13 @@ Setoran bisa dipakai sungguhan:
 1. **`kktp_tahsin_tahfizh`** (aspek & bobot penilaian) — buka
    `tahsin-tahfizh/seed-kktp.html`, login dulu di tab lain, lalu klik
    tombol "Tulis KKTP ke Firestore". Aman dijalankan berkali-kali.
-2. **`siswa`** (nama, NIS, kelas, jenjang per siswa) — belum ada
-   utilitas otomatisnya; sedang dimigrasikan dari data siswa kelas 1–5
-   di sistem lama.
+2. **`siswa`** (nama, NIS, kelas, jenjang per siswa) — buka
+   `tahsin-tahfizh/seed-siswa.html`, login dulu di tab lain, lalu klik
+   tombol untuk menulis 351 siswa (kelas 1–5) sekaligus. NIS dipakai
+   sebagai ID dokumen, jadi aman dijalankan ulang (menimpa, bukan
+   menduplikasi). Kelas 6 sengaja tidak diikutkan karena sudah lulus.
+   Pengelolaan siswa lebih lanjut (naik kelas, siswa baru, dst.) akan
+   jadi bagian dari modul Admin, bukan modul Tahsin-Tahfizh ini.
 
 ## Kontribusi & Alur Kerja
 

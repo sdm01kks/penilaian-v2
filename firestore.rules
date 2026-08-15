@@ -27,11 +27,13 @@ service cloud.firestore {
     }
 
     // ---- siswa/{id} ------------------------------------------------------
-    // Data siswa (nama, NIS, kelas, jenjang). Diisi lewat migrasi data
-    // (bukan dari aplikasi ini) — pengguna yang login hanya boleh membaca.
+    // Data siswa (nama, NIS, kelas, jenjang). Diisi lewat seed-siswa.html
+    // (migrasi awal) dan nanti lewat fitur admin. Untuk saat ini, siapa pun
+    // yang login boleh membaca & menulis — akan dipersempit lagi begitu
+    // modul Admin (dengan role check) selesai dibangun.
     match /siswa/{id} {
       allow read: if isLoggedIn();
-      allow write: if false;
+      allow write: if isLoggedIn();
     }
 
     // ---- kktp_tahsin_tahfizh/{jenjang} ------------------------------------
