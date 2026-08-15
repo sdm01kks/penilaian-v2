@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Input Setoran — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Input Setoran</div>
+            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data siswa &amp; setoran masih tiruan (belum tersambung Firestore sungguhan untuk data ini).</span>
+        </div>
+
+        <!-- ============ SISWA ============ -->
+        <div class="section-label"><span class="bar"></span>Siswa yang Setor</div>
+        <div class="card">
+          <div id="siswaSelectedBlock" class="hidden">
+            <div class="siswa-selected">
+              <div class="avatar-circle" id="siswaAvatar">--</div>
+              <div class="info">
+                <div class="nama" id="siswaNama">-</div>
+                <div class="meta" id="siswaMeta">-</div>
+              </div>
+              <button class="btn-ganti" id="btnGantiSiswa" aria-label="Ganti siswa">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="siswaPickerBlock">
+            <div class="search-field">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="siswaSearch" placeholder="Cari nama atau NIS siswa…" autocomplete="off">
+            </div>
+            <div class="siswa-result-list" id="siswaResultList"></div>
+          </div>
+        </div>
+
+        <!-- ============ MATERI ============ -->
+        <div id="materiSection" class="hidden">
+          <div class="section-label"><span class="bar"></span>Materi Setoran</div>
+          <div class="card">
+            <div class="pill-toggle" id="jenisToggle">
+              <button type="button" data-jenis="ziyadah">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+                Ziyadah
+              </button>
+              <button type="button" data-jenis="murojaah" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Muroja'ah
+              </button>
+            </div>
+
+            <!-- Materi Al-Quran -->
+            <div id="materiQuran" class="hidden">
+              <div class="field-row-2">
+                <div>
+                  <div class="field-label">Surah Awal</div>
+                  <select class="select-field" id="surahAwal"></select>
+                </div>
+                <div>
+                  <div class="field-label">Surah Akhir</div>
+                  <select class="select-field" id="surahAkhir"></select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div>
+                  <div class="stepper-label">Ayat Mulai</div>
+                  <div class="stepper">
+                    <button type="button" data-step="ayatMulai" data-dir="-1">−</button>
+                    <span class="val" id="ayatMulaiVal">1</span>
+                    <button type="button" data-step="ayatMulai" data-dir="1">+</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="stepper-label">Ayat Akhir</div>
+                  <div class="stepper">
+                    <button type="button" data-step="ayatAkhir" data-dir="-1">−</button>
+                    <span class="val" id="ayatAkhirVal">7</span>
+                    <button type="button" data-step="ayatAkhir" data-dir="1">+</button>
+                  </div>
+                </div>
+              </div>
+              <div class="total-materi-note" id="totalAyatNote">Total: 7 ayat</div>
+            </div>
+
+            <!-- Materi Iqro -->
+            <div id="materiIqro" class="hidden">
+              <div class="field-label">Buku Iqro</div>
+              <select class="select-field" id="bukuIqro" style="margin-bottom:12px">
+                <option value="1">Iqro Jilid 1</option>
+                <option value="2">Iqro Jilid 2</option>
+                <option value="3">Iqro Jilid 3</option>
+                <option value="4">Iqro Jilid 4</option>
+                <option value="5">Iqro Jilid 5</option>
+                <option value="6">Iqro Jilid 6</option>
+              </select>
+              <div class="field-row-2">
+                <div>
+                  <div class="stepper-label">Halaman Mulai</div>
+                  <div class="stepper">
+                    <button type="button" data-step="halMulai" data-dir="-1">−</button>
+                    <span class="val" id="halMulaiVal">1</span>
+                    <button type="button" data-step="halMulai" data-dir="1">+</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="stepper-label">Halaman Akhir</div>
+                  <div class="stepper">
+                    <button type="button" data-step="halAkhir" data-dir="-1">−</button>
+                    <span class="val" id="halAkhirVal">1</span>
+                    <button type="button" data-step="halAkhir" data-dir="1">+</button>
+                  </div>
+                </div>
+              </div>
+              <div class="total-materi-note" id="totalHalNote">Total: 1 halaman</div>
+            </div>
+          </div>
+
+          <!-- ============ KKTP ============ -->
+          <div class="section-label"><span class="bar"></span>Penilaian KKTP</div>
+          <div class="card">
+            <div class="nilai-summary">
+              <div class="nilai-num" id="nilaiAkhirNum">–</div>
+              <div class="nilai-info">
+                <div class="nilai-level" id="nilaiAkhirLevel">Belum dinilai</div>
+                <div class="nilai-note">Nilai akhir otomatis dari rata-rata tertimbang aspek</div>
+              </div>
+            </div>
+            <div id="aspekList"></div>
+          </div>
+
+          <!-- ============ DETAIL PER AYAT ============ -->
+          <div id="ayatDetailSection" class="hidden">
+            <div class="section-label"><span class="bar"></span>Detail Per Ayat <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-muted)">(opsional)</span></div>
+            <div class="card">
+              <div class="ayat-toggle-header" id="ayatToggleHeader">
+                <div class="ayat-summary-line" style="margin:0" id="ayatSummaryLine">Belum diisi</div>
+                <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+              <div class="ayat-list hidden" id="ayatList"></div>
+            </div>
+          </div>
+
+          <!-- ============ CATATAN & STATUS ============ -->
+          <div class="section-label"><span class="bar"></span>Catatan &amp; Status</div>
+          <div class="card">
+            <div class="field-label">Status Hafalan</div>
+            <select class="select-field" id="statusHafalan" style="margin-bottom:14px">
+              <option value="lulus">Lulus — lanjut materi berikutnya</option>
+              <option value="ulang">Perlu diulang</option>
+            </select>
+            <div class="field-label">Catatan Guru (opsional)</div>
+            <textarea class="field-textarea" id="catatanGuru" placeholder="Catatan tambahan untuk siswa ini…"></textarea>
+          </div>
+
+        </div><!-- /materiSection -->
+
+      </div><!-- /appBody -->
+
+      <div id="footerBlock" class="sticky-footer hidden">
+        <button class="btn btn-primary-light" id="btnSimpan">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+          <span id="btnSimpanLabel">Simpan Setoran</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import { getSiswaList, getKktpConfig, saveSetoran, levelDariNilai } from '../assets/firestore-data.js';
+  import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------------------------------------------------------------------
+     Auth guard
+     --------------------------------------------------------------------- */
+  let currentUser = null;
+  onAuthChange((session) => {
+    if (!session) {
+      window.location.href = 'login.html';
+      return;
+    }
+    currentUser = session;
+    $('guruLabel').textContent = session.nama;
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('btnBack').addEventListener('click', () => { window.location.href = '../index.html'; });
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  /* ---------------------------------------------------------------------
+     State
+     --------------------------------------------------------------------- */
+  let selectedSiswa = null;
+  let kktpConfig = null;
+  let aspekNilai = [];       // paralel dengan kktpConfig.aspek — nilai 0-100 tiap aspek
+  let ayatDetail = {};       // { [nomorAyat]: {status:'lulus'|'gagal'|null, catatan:''} }
+  const jenisState = { value: 'murojaah' };
+
+  /* ---------------------------------------------------------------------
+     1. Pilih Siswa
+     --------------------------------------------------------------------- */
+  let siswaCache = [];
+
+  async function loadSiswaList() {
+    $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Memuat daftar siswa…</div>`;
+    try {
+      siswaCache = await getSiswaList();
+      renderSiswaResults(siswaCache);
+    } catch (err) {
+      console.error(err);
+      $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Gagal memuat daftar siswa.</div>`;
+    }
+  }
+
+  function initials(nama) {
+    return nama.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function renderSiswaResults(list) {
+    const wrap = $('siswaResultList');
+    if (!list.length) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Siswa tidak ditemukan.</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(s => `
+      <div class="siswa-result-item" data-id="${s.id}">
+        <div class="avatar-circle">${initials(s.nama)}</div>
+        <div>
+          <div class="nama">${s.nama}</div>
+          <div class="meta">${s.nis} • Kelas ${s.kelas}</div>
+        </div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('.siswa-result-item').forEach(el => {
+      el.addEventListener('click', () => selectSiswa(el.dataset.id));
+    });
+  }
+
+  $('siswaSearch').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = !q ? siswaCache : siswaCache.filter(s =>
+      s.nama.toLowerCase().includes(q) || s.nis.includes(q)
+    );
+    renderSiswaResults(filtered);
+  });
+
+  async function selectSiswa(id) {
+    const s = siswaCache.find(x => x.id === id);
+    if (!s) return;
+    selectedSiswa = s;
+
+    $('siswaAvatar').textContent = initials(s.nama);
+    $('siswaNama').textContent = s.nama;
+    $('siswaMeta').textContent = `${s.nis} • Kelas ${s.kelas}`;
+    $('siswaSelectedBlock').classList.remove('hidden');
+    $('siswaPickerBlock').classList.add('hidden');
+    $('materiSection').classList.remove('hidden');
+    $('footerBlock').classList.remove('hidden');
+
+    const isIqro = s.jenjang === 'iqro';
+    $('materiQuran').classList.toggle('hidden', isIqro);
+    $('materiIqro').classList.toggle('hidden', !isIqro);
+    $('ayatDetailSection').classList.toggle('hidden', isIqro);
+
+    await loadKktp(s.jenjang);
+    if (!isIqro) rebuildAyatList();
+
+    window.scrollTo(0, 0);
+  }
+
+  $('btnGantiSiswa').addEventListener('click', () => {
+    selectedSiswa = null;
+    $('siswaSelectedBlock').classList.add('hidden');
+    $('siswaPickerBlock').classList.remove('hidden');
+    $('materiSection').classList.add('hidden');
+    $('footerBlock').classList.add('hidden');
+    $('siswaSearch').value = '';
+    renderSiswaResults(siswaCache);
+  });
+
+  /* ---------------------------------------------------------------------
+     2. Materi — toggle jenis
+     --------------------------------------------------------------------- */
+  $('jenisToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-jenis]');
+    if (!btn) return;
+    jenisState.value = btn.dataset.jenis;
+    $('jenisToggle').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+
+  /* ---- Materi Al-Quran ---- */
+  function populateSurahSelects() {
+    const opts = SURAH_LIST.map(s => `<option value="${s.no}">${s.no}. ${s.nama} (${s.ayat} ayat)</option>`).join('');
+    $('surahAwal').innerHTML = opts;
+    $('surahAkhir').innerHTML = opts;
+  }
+  populateSurahSelects();
+
+  const quranState = { surahAwal: 1, ayatMulai: 1, surahAkhir: 1, ayatAkhir: 7 };
+
+  function clampAyat(surahNo, ayat) {
+    const s = surahByNo(surahNo);
+    return Math.min(Math.max(1, ayat), s.ayat);
+  }
+
+  function refreshQuranMateri() {
+    quranState.ayatMulai = clampAyat(quranState.surahAwal, quranState.ayatMulai);
+    quranState.ayatAkhir = clampAyat(quranState.surahAkhir, quranState.ayatAkhir);
+    $('ayatMulaiVal').textContent = quranState.ayatMulai;
+    $('ayatAkhirVal').textContent = quranState.ayatAkhir;
+    const total = hitungTotalAyat(quranState.surahAwal, quranState.ayatMulai, quranState.surahAkhir, quranState.ayatAkhir);
+    $('totalAyatNote').textContent = `Total: ${total} ayat`;
+    rebuildAyatList();
+  }
+
+  $('surahAwal').addEventListener('change', (e) => { quranState.surahAwal = +e.target.value; refreshQuranMateri(); });
+  $('surahAkhir').addEventListener('change', (e) => { quranState.surahAkhir = +e.target.value; refreshQuranMateri(); });
+
+  document.querySelectorAll('[data-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.step;
+      const dir = +btn.dataset.dir;
+      if (key === 'ayatMulai' || key === 'ayatAkhir') {
+        quranState[key] += dir;
+        refreshQuranMateri();
+      } else if (key === 'halMulai' || key === 'halAkhir') {
+        iqroState[key] = Math.max(1, iqroState[key] + dir);
+        refreshIqroMateri();
+      }
+    });
+  });
+
+  /* ---- Materi Iqro ---- */
+  const iqroState = { buku: 1, halMulai: 1, halAkhir: 1 };
+  $('bukuIqro').addEventListener('change', (e) => { iqroState.buku = +e.target.value; });
+
+  function refreshIqroMateri() {
+    if (iqroState.halAkhir < iqroState.halMulai) iqroState.halAkhir = iqroState.halMulai;
+    $('halMulaiVal').textContent = iqroState.halMulai;
+    $('halAkhirVal').textContent = iqroState.halAkhir;
+    const total = iqroState.halAkhir - iqroState.halMulai + 1;
+    $('totalHalNote').textContent = `Total: ${total} halaman`;
+  }
+  refreshIqroMateri();
+
+  /* ---------------------------------------------------------------------
+     3. Penilaian KKTP
+     --------------------------------------------------------------------- */
+  async function loadKktp(jenjang) {
+    $('aspekList').innerHTML = `<div class="skeleton" style="height:70px;margin-bottom:14px"></div><div class="skeleton" style="height:70px"></div>`;
+    kktpConfig = await getKktpConfig(jenjang);
+    aspekNilai = kktpConfig.aspek.map(() => 70); // nilai awal netral
+    renderAspekList();
+    updateNilaiAkhir();
+  }
+
+  function renderAspekList() {
+    $('aspekList').innerHTML = kktpConfig.aspek.map((a, i) => `
+      <div class="aspek-row">
+        <div class="aspek-head">
+          <span class="aspek-nama">${a.nama}</span>
+          <span class="aspek-bobot">Bobot ${a.bobot}%</span>
+        </div>
+        <div class="aspek-slider-row">
+          <input type="range" min="0" max="100" value="${aspekNilai[i]}" data-idx="${i}" class="aspek-slider">
+          <span class="aspek-val" id="aspekVal-${i}">${aspekNilai[i]}</span>
+        </div>
+        <div class="aspek-desc" id="aspekDesc-${i}">${a.desc[levelIndexFromScore(aspekNilai[i])]}</div>
+      </div>
+    `).join('');
+
+    $('aspekList').querySelectorAll('.aspek-slider').forEach(slider => {
+      updateSliderFill(slider);
+      slider.addEventListener('input', (e) => {
+        const idx = +e.target.dataset.idx;
+        aspekNilai[idx] = +e.target.value;
+        $('aspekVal-' + idx).textContent = aspekNilai[idx];
+        $('aspekDesc-' + idx).textContent = kktpConfig.aspek[idx].desc[levelIndexFromScore(aspekNilai[idx])];
+        updateSliderFill(e.target);
+        updateNilaiAkhir();
+      });
+    });
+  }
+
+  function updateSliderFill(slider) {
+    slider.style.setProperty('--_pct', slider.value + '%');
+  }
+
+  function levelIndexFromScore(score) {
+    if (score < 60) return 0;
+    if (score < 70) return 1;
+    if (score < 80) return 2;
+    if (score < 90) return 3;
+    return 4;
+  }
+
+  function hitungNilaiAkhir() {
+    if (!kktpConfig) return 0;
+    const totalBobot = kktpConfig.aspek.reduce((s, a) => s + a.bobot, 0) || 1;
+    const weighted = kktpConfig.aspek.reduce((s, a, i) => s + (aspekNilai[i] * a.bobot), 0);
+    return Math.round(weighted / totalBobot);
+  }
+
+  function updateNilaiAkhir() {
+    const nilai = hitungNilaiAkhir();
+    const level = levelDariNilai(nilai);
+    $('nilaiAkhirNum').textContent = nilai;
+    $('nilaiAkhirLevel').textContent = level.label;
+  }
+
+  /* ---------------------------------------------------------------------
+     4. Detail Per Ayat (opsional — hanya jika surah awal = surah akhir)
+     --------------------------------------------------------------------- */
+  function rebuildAyatList() {
+    ayatDetail = {};
+    if (quranState.surahAwal !== quranState.surahAkhir) {
+      $('ayatList').innerHTML = `<div class="siswa-empty-note">Detail per-ayat hanya tersedia untuk rentang dalam satu surah.</div>`;
+      $('ayatSummaryLine').textContent = 'Tidak tersedia untuk rentang lintas surah';
+      return;
+    }
+    for (let n = quranState.ayatMulai; n <= quranState.ayatAkhir; n++) {
+      ayatDetail[n] = { status: null, catatan: '' };
+    }
+    renderAyatList();
+    updateAyatSummary();
+  }
+
+  function renderAyatList() {
+    const nums = Object.keys(ayatDetail);
+    if (!nums.length) {
+      $('ayatList').innerHTML = `<div class="siswa-empty-note">Tentukan rentang ayat terlebih dahulu.</div>`;
+      return;
+    }
+    $('ayatList').innerHTML = nums.map(n => `
+      <div class="ayat-row-wrap">
+        <div class="ayat-row">
+          <span class="ayat-num">${n}</span>
+          <span style="font-size:12.5px;font-weight:600;color:var(--ink-mid)">Ayat ${n}</span>
+          <div class="ayat-status-btns">
+            <button type="button" class="lulus" data-n="${n}" data-status="lulus" aria-label="Lulus">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+            </button>
+            <button type="button" class="gagal" data-n="${n}" data-status="gagal" aria-label="Perlu diulang">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    $('ayatList').querySelectorAll('.ayat-status-btns button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const n = btn.dataset.n;
+        const status = btn.dataset.status;
+        ayatDetail[n].status = ayatDetail[n].status === status ? null : status;
+        renderAyatList();
+        updateAyatSummary();
+      });
+    });
+
+    // Set active state setelah render ulang
+    nums.forEach(n => {
+      const status = ayatDetail[n].status;
+      if (!status) return;
+      const btn = $('ayatList').querySelector(`button[data-n="${n}"][data-status="${status}"]`);
+      if (btn) btn.classList.add('active');
+    });
+  }
+
+  function updateAyatSummary() {
+    const vals = Object.values(ayatDetail);
+    const lulus = vals.filter(v => v.status === 'lulus').length;
+    const gagal = vals.filter(v => v.status === 'gagal').length;
+    const belum = vals.length - lulus - gagal;
+    $('ayatSummaryLine').innerHTML = vals.length
+      ? `<span class="lulus-count">${lulus} lulus</span> • <span class="gagal-count">${gagal} perlu diulang</span> • ${belum} belum ditandai`
+      : 'Belum diisi';
+  }
+
+  $('ayatToggleHeader').addEventListener('click', () => {
+    $('ayatToggleHeader').classList.toggle('open');
+    $('ayatList').classList.toggle('hidden');
+  });
+
+  /* ---------------------------------------------------------------------
+     5. Simpan
+     --------------------------------------------------------------------- */
+  function buildPayload() {
+    const isIqro = selectedSiswa.jenjang === 'iqro';
+    const nilai = hitungNilaiAkhir();
+    const level = levelDariNilai(nilai);
+
+    const materi = isIqro
+      ? {
+          tipe: 'iqro',
+          buku: iqroState.buku,
+          halamanMulai: iqroState.halMulai,
+          halamanAkhir: iqroState.halAkhir,
+          label: `Iqro ${iqroState.buku} — Hal. ${iqroState.halMulai}${iqroState.halAkhir !== iqroState.halMulai ? '–' + iqroState.halAkhir : ''}`,
+        }
+      : {
+          tipe: 'quran',
+          surahAwal: quranState.surahAwal,
+          ayatMulai: quranState.ayatMulai,
+          surahAkhir: quranState.surahAkhir,
+          ayatAkhir: quranState.ayatAkhir,
+          totalAyat: hitungTotalAyat(quranState.surahAwal, quranState.ayatMulai, quranState.surahAkhir, quranState.ayatAkhir),
+          label: quranState.surahAwal === quranState.surahAkhir
+            ? `${surahByNo(quranState.surahAwal).nama} ayat ${quranState.ayatMulai}-${quranState.ayatAkhir}`
+            : `${surahByNo(quranState.surahAwal).nama}:${quranState.ayatMulai} — ${surahByNo(quranState.surahAkhir).nama}:${quranState.ayatAkhir}`,
+        };
+
+    const detailAyat = (!isIqro && quranState.surahAwal === quranState.surahAkhir)
+      ? Object.entries(ayatDetail)
+          .filter(([, v]) => v.status)
+          .map(([n, v]) => ({ ayat: +n, status: v.status, catatan: v.catatan || '' }))
+      : [];
+
+    return {
+      siswaId: selectedSiswa.id,
+      siswaNama: selectedSiswa.nama,
+      kelas: selectedSiswa.kelas,
+      jenjang: selectedSiswa.jenjang,
+      jenis: jenisState.value,
+      materi,
+      detailAyat,
+      nilaiAspek: kktpConfig.aspek.map((a, i) => ({ nama: a.nama, bobot: a.bobot, nilai: aspekNilai[i] })),
+      nilaiAkhir: nilai,
+      level: level.label,
+      statusHafalan: $('statusHafalan').value,
+      catatan: $('catatanGuru').value.trim(),
+    };
+  }
+
+  $('btnSimpan').addEventListener('click', async () => {
+    if (!selectedSiswa) { showToast('Pilih siswa terlebih dahulu.', true); return; }
+
+    const btn = $('btnSimpan');
+    btn.disabled = true;
+    $('btnSimpanLabel').textContent = 'Menyimpan…';
+
+    try {
+      const payload = buildPayload();
+      await saveSetoran(payload);
+      showToast(`Setoran ${selectedSiswa.nama.split(' ')[0]} tersimpan.`);
+
+      // Reset materi & penilaian untuk siswa berikutnya, siswa tetap terpilih
+      // supaya guru bisa lanjut cepat kalau mau (mis. lanjut ayat berikutnya).
+      $('catatanGuru').value = '';
+      $('statusHafalan').value = 'lulus';
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal menyimpan setoran. Coba lagi.', true);
+    } finally {
+      btn.disabled = false;
+      $('btnSimpanLabel').textContent = 'Simpan Setoran';
+    }
+  });
+
+  /* ---------------------------------------------------------------------
+     Init
+     --------------------------------------------------------------------- */
+  loadSiswaList();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seed KKTP — Tahsin-Tahfizh</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:var(--bg-light);color:var(--ink)}
+  .wrap{max-width:520px;margin:0 auto;padding:40px 20px}
+  h1{font-size:19px;color:var(--green-deep);margin:0 0 6px}
+  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 24px;line-height:1.6}
+  .log{
+    background:#10201a;color:#c8e6d8;font-family:monospace;font-size:12px;
+    border-radius:12px;padding:14px;margin-top:16px;min-height:80px;
+    white-space:pre-wrap;line-height:1.7;
+  }
+  .log .ok{color:#6fe3a3}
+  .log .err{color:#ff8a7a}
+  .warn-box{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:20px;line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Seed Konfigurasi KKTP</h1>
+  <p class="sub">
+    Utilitas sekali-jalan untuk mengisi Firestore dengan konfigurasi KKTP
+    bawaan (aspek &amp; bobot penilaian Iqro + Al-Quran) dari sistem lama.
+    Aman dijalankan berkali-kali — akan menimpa (bukan menduplikasi) dokumen
+    <code>iqro</code> dan <code>quran</code> di koleksi <code>kktp_tahsin_tahfizh</code>.
+  </p>
+
+  <div class="warn-box" id="demoWarn" style="display:none">
+    Mode pratinjau aktif — belum tersambung Firebase. Jalankan halaman ini
+    lagi setelah <code>assets/firebase.js</code> diisi config asli.
+  </div>
+
+  <button class="btn btn-primary-light" id="btnSeed" style="width:auto;padding:12px 24px">
+    Tulis KKTP ke Firestore
+  </button>
+
+  <div class="log" id="log">Menunggu…</div>
+</div>
+
+<script type="module">
+  import { DEMO_MODE } from '../assets/firebase.js';
+  import { KKTP_DEFAULT } from '../assets/firestore-data.js';
+
+  const logEl = document.getElementById('log');
+  function log(msg, cls) {
+    const span = document.createElement('div');
+    if (cls) span.className = cls;
+    span.textContent = msg;
+    logEl.appendChild(span);
+  }
+
+  if (DEMO_MODE) {
+    document.getElementById('demoWarn').style.display = 'block';
+    document.getElementById('btnSeed').disabled = true;
+  }
+
+  document.getElementById('btnSeed').addEventListener('click', async () => {
+    logEl.innerHTML = '';
+    document.getElementById('btnSeed').disabled = true;
+    try {
+      const { db, fsMod } = window.__fb;
+      for (const jenjang of ['iqro', 'quran']) {
+        await fsMod.setDoc(fsMod.doc(db, 'kktp_tahsin_tahfizh', jenjang), KKTP_DEFAULT[jenjang]);
+        log(`✓ Tersimpan: kktp_tahsin_tahfizh/${jenjang} (${KKTP_DEFAULT[jenjang].aspek.length} aspek)`, 'ok');
+      }
+      log('\nSelesai. Anda bisa tinggalkan halaman ini sekarang.', 'ok');
+    } catch (err) {
+      console.error(err);
+      log('✗ Gagal: ' + err.message, 'err');
+      log('Pastikan Anda sudah login (buka login.html dulu di tab lain) dan Firestore Rules mengizinkan tulis ke koleksi ini.', 'err');
+    } finally {
+      document.getElementById('btnSeed').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
