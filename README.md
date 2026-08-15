@@ -33,8 +33,7 @@ lalu ditinggalkan total setelah semua modul di sini selesai dan stabil.
   Hosting, dll).
 - **Backend**: Firebase
   - **Authentication** — login email + password untuk guru & admin.
-  - **Firestore** — seluruh data (pengguna, siswa, konfigurasi KKTP,
-    target hafalan, riwayat setoran, dst).
+  - **Firestore** — seluruh data (pengguna, siswa, riwayat setoran, dst).
 - Tidak ada server/API custom — halaman berkomunikasi langsung ke
   Firebase lewat Firebase SDK (modular, v10, dimuat dari CDN).
 
@@ -47,7 +46,7 @@ penilaian-v2/
 ├── assets/                  # Dipakai bersama oleh seluruh modul
 │   ├── style.css            #   Design tokens & komponen UI bersama
 │   ├── firebase.js          #   Inisialisasi Firebase + helper Auth
-│   ├── firestore-data.js    #   Akses data siswa, KKTP, setoran (dgn fallback DEMO_MODE)
+│   ├── firestore-data.js    #   Akses data siswa & setoran (dgn fallback DEMO_MODE)
 │   ├── quran-surah.js       #   Daftar 114 surah (nama & jumlah ayat)
 │   ├── logo.png             #   Logo sekolah (transparan, 512×512)
 │   ├── favicon-32.png
@@ -55,8 +54,7 @@ penilaian-v2/
 └── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
     ├── login.html
     ├── input-setoran.html
-    ├── seed-kktp.html       #   Utilitas sekali-jalan: isi KKTP bawaan ke Firestore
-    ├── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa kelas 1-5 ke Firestore
+    ├── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
     └── riwayat-siswa.html   # (menyusul)
 ```
 
@@ -100,19 +98,30 @@ nyata. Begitu config asli terpasang, DEMO_MODE otomatis nonaktif.
 
 ## Menyiapkan Data Awal
 
-Setelah Firebase tersambung, dua koleksi ini perlu diisi sebelum Input
+Setelah Firebase tersambung, satu koleksi ini perlu diisi sebelum Input
 Setoran bisa dipakai sungguhan:
 
-1. **`kktp_tahsin_tahfizh`** (aspek & bobot penilaian) — buka
-   `tahsin-tahfizh/seed-kktp.html`, login dulu di tab lain, lalu klik
-   tombol "Tulis KKTP ke Firestore". Aman dijalankan berkali-kali.
-2. **`siswa`** (nama, NIS, kelas, jenjang per siswa) — buka
-   `tahsin-tahfizh/seed-siswa.html`, login dulu di tab lain, lalu klik
-   tombol untuk menulis 351 siswa (kelas 1–5) sekaligus. NIS dipakai
-   sebagai ID dokumen, jadi aman dijalankan ulang (menimpa, bukan
-   menduplikasi). Kelas 6 sengaja tidak diikutkan karena sudah lulus.
-   Pengelolaan siswa lebih lanjut (naik kelas, siswa baru, dst.) akan
-   jadi bagian dari modul Admin, bukan modul Tahsin-Tahfizh ini.
+- **`siswa`** (nama, NIS, kelas, jenjang per siswa) — buka
+  `tahsin-tahfizh/seed-siswa.html`, login dulu di tab lain, lalu klik
+  tombol untuk menulis seluruh siswa sekaligus. NIS dipakai
+  sebagai ID dokumen, jadi aman dijalankan ulang (menimpa, bukan
+  menduplikasi). Pengelolaan siswa lebih lanjut (naik kelas, siswa baru,
+  dst.) akan jadi bagian dari modul Admin, bukan modul Tahsin-Tahfizh ini.
+
+## Catatan Desain: Kenapa Tanpa KKTP
+
+Modul ini sempat memakai kerangka KKTP (skor tertimbang per aspek,
+0–100) untuk menilai tahsin-tahfizh, mengikuti pola penilaian akademik.
+Setelah dipakai, ini dianggap kurang cocok: hafalan bersifat kumulatif
+(bukan tujuan pembelajaran diskrit per unit), dan skor tertimbang tiap
+sesi terasa artifisial dibanding menilai bacaan per-ayat secara langsung.
+
+Sebagai gantinya, penilaian harian cukup: jenis setoran, materi, hasil
+**Baca & Tandai** (lulus/gagal per ayat + kata yang keliru beserta
+jenis kesalahannya), status hafalan, dan catatan guru. Laporan periodik
+(progres juz/surah, tren kualitas bacaan, konsistensi setoran) akan
+dihasilkan otomatis dari akumulasi data ini di modul Riwayat Siswa /
+Rapor — bukan diinput manual per sesi.
 
 ## Kontribusi & Alur Kerja
 
