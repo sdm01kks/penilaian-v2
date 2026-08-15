@@ -68,6 +68,22 @@ body{
 .brand-serif{font-family:'Amiri',serif}
 
 /* ==========================================================================
+   Logo badge — bingkai putih untuk logo sekolah (biru di atas transparan),
+   supaya tetap terbaca jelas baik di layar gelap (login) maupun terang
+   (landing, header modul).
+   ========================================================================== */
+.logo-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:#ffffff;
+  border-radius:22%;
+  box-shadow:0 12px 28px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.04);
+}
+.logo-badge img{display:block;width:100%;height:100%;object-fit:contain}
+.logo-badge.size-sm{width:44px;height:44px;padding:7px;border-radius:12px}
+.logo-badge.size-md{width:64px;height:64px;padding:10px;border-radius:16px}
+.logo-badge.size-lg{width:76px;height:76px;padding:12px;border-radius:20px}
+
+/* ==========================================================================
    Phone shell — bingkai simulasi HP untuk preview di layar besar.
    Di layar <=520px, bingkai lepas otomatis supaya jadi full-width asli.
    ========================================================================== */
