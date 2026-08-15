@@ -131,3 +131,43 @@ export function currentSession() {
   // authMod.onAuthStateChanged(auth, ...) di halaman yang membutuhkan.
   return null;
 }
+
+/**
+ * Pantau status login & dapatkan profil (nama, role) pengguna saat ini.
+ * Memanggil `callback(session | null)`. Dipakai di setiap halaman yang
+ * mewajibkan login (Input Setoran, Riwayat Siswa, dst).
+ */
+export function onAuthChange(callback) {
+  if (DEMO_MODE) {
+    callback(currentSession());
+    return () => {};
+  }
+  const { authMod, auth, db, fsMod } = window.__fb;
+  return authMod.onAuthStateChanged(auth, async (fbUser) => {
+    if (!fbUser) { callback(null); return; }
+    try {
+      const snap = await fsMod.getDoc(fsMod.doc(db, 'users', fbUser.uid));
+      const profile = snap.exists() ? snap.data() : {};
+      callback({
+        uid: fbUser.uid,
+        email: fbUser.email,
+        nama: profile.nama || fbUser.email,
+        role: profile.role || 'guru',
+      });
+    } catch (err) {
+      console.error('Gagal memuat profil pengguna:', err);
+      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru' });
+    }
+  });
+}
+
+/** Keluar dari sesi (logout). */
+export async function logout() {
+  if (DEMO_MODE) {
+    localStorage.removeItem(DEMO_SESSION_KEY);
+    sessionStorage.removeItem(DEMO_SESSION_KEY);
+    return;
+  }
+  const { authMod, auth } = window.__fb;
+  await authMod.signOut(auth);
+}

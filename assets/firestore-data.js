@@ -1,0 +1,174 @@
+/**
+ * firestore-data.js — Lapisan akses data untuk modul Tahsin-Tahfizh
+ * SD Muhammadiyah 01 Kukusan
+ *
+ * Semua fungsi di sini otomatis pakai data tiruan (DEMO_MODE) selama
+ * Firebase belum tersambung, dan otomatis pakai Firestore sungguhan
+ * begitu firebase.js terisi config asli. Halaman yang memanggil fungsi
+ * di sini tidak perlu tahu bedanya.
+ */
+
+import { DEMO_MODE } from './firebase.js';
+
+/* ==========================================================================
+   KKTP — konfigurasi aspek & bobot penilaian
+   ========================================================================== */
+
+// Dipakai sebagai fallback DEMO_MODE, dan juga sumber untuk seed-kktp.html.
+export const KKTP_DEFAULT = {
+  iqro: { jenjang: 'iqro', aspek: [
+    { nama:'Pengenalan Huruf', bobot:30, desc:[
+      'Belum mampu membedakan huruf hijaiyah yang mirip secara visual maupun bunyi',
+      'Mengenali sebagian huruf; banyak yang masih tertukar meski sudah diingatkan',
+      'Sebagian besar huruf dikenali dengan benar; beberapa huruf mirip masih tertukar',
+      'Hampir semua huruf dikenali dengan benar; kekeliruan sangat jarang terjadi',
+      'Semua huruf hijaiyah dikenali tanpa ragu, termasuk huruf yang mirip secara visual',
+    ]},
+    { nama:'Ketepatan Harakat', bobot:30, desc:[
+      'Belum mengenal harakat fathah, kasrah, dhammah, dan turunannya',
+      'Mengenal harakat dasar namun penerapannya belum konsisten',
+      'Sebagian besar harakat dibaca tepat; beberapa masih perlu diingatkan',
+      'Hampir semua harakat tepat termasuk tanwin dan sukun; kesalahan sangat jarang',
+      'Semua harakat dibaca tepat dan cepat; termasuk harakat yang kompleks',
+    ]},
+    { nama:'Kelancaran Membaca', bobot:25, desc:[
+      'Sangat lambat, mengeja setiap huruf; banyak kesalahan yang menghambat pemahaman',
+      'Terbata-bata; perlu banyak bimbingan guru untuk melanjutkan bacaan',
+      'Cukup lancar; beberapa kali tersendat di kata-kata atau kombinasi tertentu',
+      'Lancar dengan jeda yang wajar; tidak tersendat secara signifikan',
+      'Membaca halus tanpa mengeja; ritme stabil dan tidak tersendat',
+    ]},
+    { nama:'Progress Iqro', bobot:15, desc:[
+      'Belum mencapai setengah dari target halaman semester ini',
+      'Mencapai 50–69% dari target halaman semester ini',
+      'Mencapai 70–84% dari target halaman semester ini',
+      'Mencapai 85–99% dari target halaman semester ini',
+      'Mencapai atau melampaui 100% dari target halaman semester ini',
+    ]},
+  ]},
+  quran: { jenjang: 'quran', aspek: [
+    { nama:'Makharijul Huruf', bobot:30, desc:[
+      'Belum mampu membedakan bunyi huruf yang memiliki makhraj berdekatan',
+      'Beberapa makhraj sudah tepat; banyak huruf masih tertukar bunyinya',
+      'Sebagian besar makhraj tepat; beberapa huruf mirip masih perlu diingatkan',
+      'Hampir semua makhraj tepat; kekeliruan sangat jarang terjadi',
+      'Semua huruf keluar dari makhraj yang tepat; tidak ada kekeliruan',
+    ]},
+    { nama:'Penerapan Tajwid', bobot:35, desc:[
+      'Belum mengenal atau menerapkan hukum bacaan tajwid sama sekali',
+      'Mengenal beberapa hukum bacaan namun penerapannya belum konsisten',
+      'Sebagian besar hukum bacaan diterapkan; 3–5 kesalahan per halaman',
+      'Hukum bacaan diterapkan dengan baik; hanya 1–2 kesalahan minor',
+      'Semua hukum bacaan diterapkan dengan benar dan mandiri tanpa diingatkan',
+    ]},
+    { nama:'Tartil & Kelancaran', bobot:20, desc:[
+      'Sangat lambat dan banyak kesalahan; tidak menunjukkan tartil sama sekali',
+      'Terbata-bata; perlu bimbingan; ritme tidak stabil',
+      'Cukup lancar; beberapa kali tersendat; ritme cukup stabil',
+      'Lancar dan tartil; jeda antar ayat wajar; ritme stabil',
+      'Mengalir lancar dengan tartil sempurna; ritme sangat stabil dan indah',
+    ]},
+    { nama:'Sifatul Huruf', bobot:15, desc:[
+      'Belum menunjukkan penerapan sifat huruf (tebal-tipis, dengung, qalqalah)',
+      'Belum konsisten; perlu banyak contoh dan bimbingan dari guru',
+      'Beberapa aspek sifat huruf sudah muncul; belum konsisten',
+      'Sebagian besar sifat huruf diterapkan; sesekali perlu diingatkan',
+      'Tebal-tipis, dengung, dan qalqalah diterapkan dengan tepat dan konsisten',
+    ]},
+  ]},
+};
+
+export const LEVELS = [
+  { label:'Dhaif',         min:0,  max:59,  color:'#c0392b' },
+  { label:'Maqbul',        min:60, max:69,  color:'#f39c12' },
+  { label:'Jayyid',        min:70, max:79,  color:'#2980b9' },
+  { label:'Jayyid Jiddan', min:80, max:89,  color:'#2d7055' },
+  { label:'Mumtaz',        min:90, max:100, color:'#1e4d3b' },
+];
+
+export function levelDariNilai(nilai) {
+  return LEVELS.find(l => nilai >= l.min && nilai <= l.max) || LEVELS[0];
+}
+
+export async function getKktpConfig(jenjang) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    return KKTP_DEFAULT[jenjang];
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'kktp_tahsin_tahfizh', jenjang));
+  return snap.exists() ? snap.data() : KKTP_DEFAULT[jenjang];
+}
+
+/* ==========================================================================
+   Siswa
+   ========================================================================== */
+
+const DEMO_SISWA = [
+  { id:'s1', nama:'Keysa Mufida Faried',      nis:'24257021', kelas:'3B', jenjang:'quran' },
+  { id:'s2', nama:'Rheina Haura Bilqis',      nis:'24257042', kelas:'3B', jenjang:'quran' },
+  { id:'s3', nama:'Muhammad Idlal Al Matin',  nis:'24257018', kelas:'4A', jenjang:'quran' },
+  { id:'s4', nama:'Zein Zaenal Muttaqin',     nis:'24257033', kelas:'2A', jenjang:'iqro'  },
+  { id:'s5', nama:'Muhammad Fathir Alfath',   nis:'24257009', kelas:'1A', jenjang:'iqro'  },
+  { id:'s6', nama:'Muhammad Bilal Nur Ihsan', nis:'24257051', kelas:'1B', jenjang:'iqro'  },
+];
+
+/** Ambil daftar siswa. Bisa difilter per kelas (opsional). */
+export async function getSiswaList(kelasFilter) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    return kelasFilter ? DEMO_SISWA.filter(s => s.kelas === kelasFilter) : DEMO_SISWA;
+  }
+  const { db, fsMod } = window.__fb;
+  const col = fsMod.collection(db, 'siswa');
+  const q = kelasFilter
+    ? fsMod.query(col, fsMod.where('kelas', '==', kelasFilter), fsMod.where('aktif', '==', true))
+    : fsMod.query(col, fsMod.where('aktif', '==', true));
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/* ==========================================================================
+   Setoran
+   ========================================================================== */
+
+const DEMO_SETORAN_KEY = 'tt_demo_setoran';
+
+/**
+ * Simpan satu sesi setoran.
+ * @param {object} payload lihat bentuknya di input-setoran.html (buildPayload)
+ */
+export async function saveSetoran(payload) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 400));
+    const list = JSON.parse(localStorage.getItem(DEMO_SETORAN_KEY) || '[]');
+    const record = { id: 'demo-' + Date.now(), ...payload, createdAt: new Date().toISOString() };
+    list.unshift(record);
+    localStorage.setItem(DEMO_SETORAN_KEY, JSON.stringify(list));
+    return record;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  const docRef = await fsMod.addDoc(fsMod.collection(db, 'setoran'), {
+    ...payload,
+    createdBy: auth.currentUser?.uid || null,
+    createdAt: fsMod.serverTimestamp(),
+  });
+  return { id: docRef.id, ...payload };
+}
+
+/** Riwayat setoran seorang siswa, terbaru dulu. */
+export async function getRiwayatSetoran(siswaId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = JSON.parse(localStorage.getItem(DEMO_SETORAN_KEY) || '[]');
+    return list.filter(s => s.siswaId === siswaId);
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'setoran'),
+    fsMod.where('siswaId', '==', siswaId),
+    fsMod.orderBy('createdAt', 'desc')
+  );
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
