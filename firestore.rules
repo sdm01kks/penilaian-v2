@@ -9,31 +9,50 @@ rules_version = '2';
 //   2. Build > Firestore Database > tab "Rules"
 //   3. Salin SELURUH isi file ini, tempel menggantikan isi yang ada
 //   4. Klik "Publish"
-//
-// Status saat ini: hanya koleksi `users` yang diatur (dipakai oleh
-// halaman Login untuk membaca nama & role setelah berhasil masuk).
-// Koleksi lain (siswa, setoran, kktp_tahsin_tahfizh, dst.) akan
-// ditambahkan di sini seiring modul Input Setoran & Riwayat Siswa
-// dibangun — selama belum ditambahkan, otomatis tertutup total
-// (default deny), jadi aman.
 // ============================================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
     // ---- users/{uid} ---------------------------------------------------
-    // Profil pengguna (nama, role: "guru" / "admin").
-    // Dibuat manual dari Firebase Console untuk sekarang — pengguna hanya
-    // boleh membaca profilnya sendiri, tidak boleh menulis dari aplikasi.
+    // Profil pengguna (nama, role). Dibuat manual dari Firebase Console.
+    // Pengguna hanya boleh membaca profilnya sendiri.
     match /users/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if isLoggedIn() && request.auth.uid == uid;
       allow write: if false;
     }
 
+    // ---- siswa/{id} ------------------------------------------------------
+    // Data siswa (nama, NIS, kelas, jenjang). Diisi lewat migrasi data
+    // (bukan dari aplikasi ini) — pengguna yang login hanya boleh membaca.
+    match /siswa/{id} {
+      allow read: if isLoggedIn();
+      allow write: if false;
+    }
+
+    // ---- kktp_tahsin_tahfizh/{jenjang} ------------------------------------
+    // Konfigurasi aspek & bobot penilaian ("iqro" / "quran"). Diisi lewat
+    // seed-kktp.html (sekali jalan) — pengguna yang login hanya boleh
+    // membaca, tidak menulis dari aplikasi harian.
+    match /kktp_tahsin_tahfizh/{jenjang} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn(); // dibuka sementara untuk seed awal
+    }
+
+    // ---- setoran/{id} ------------------------------------------------------
+    // Riwayat setoran harian. Guru yang login boleh menambah & membaca;
+    // update/delete sementara ditutup (menyusul saat fitur edit dibangun).
+    match /setoran/{id} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
-    // Jangan hapus blok ini. Ini yang membuat koleksi yang belum
-    // didefinisikan aturannya (mis. setoran, siswa) otomatis tidak bisa
-    // diakses siapa pun sampai aturannya ditambahkan secara eksplisit.
     match /{document=**} {
       allow read, write: if false;
     }

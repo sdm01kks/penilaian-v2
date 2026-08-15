@@ -16,7 +16,7 @@ paling mendesak dikerjakan lebih dulu.
 
 | Modul | Status | Keterangan |
 |---|---|---|
-| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login → Input Setoran → Riwayat Siswa |
+| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Riwayat Siswa (menyusul) |
 | Akademik & Rapor | ⚪ Belum dimulai | Menyusul setelah Tahsin-Tahfizh selesai |
 | Ujian Sekolah | ⚪ Belum dimulai | |
 | Presensi Siswa | ⚪ Belum dimulai | |
@@ -44,15 +44,18 @@ lalu ditinggalkan total setelah semua modul di sini selesai dan stabil.
 penilaian-v2/
 ├── index.html              # Landing — daftar semua modul & tautannya
 ├── firestore.rules         # Security rules Firestore (salin ke Firebase Console)
-├── assets/                 # Dipakai bersama oleh seluruh modul
-│   ├── style.css           #   Design tokens & komponen UI bersama
-│   ├── firebase.js         #   Inisialisasi Firebase + helper Auth
+├── assets/                  # Dipakai bersama oleh seluruh modul
+│   ├── style.css            #   Design tokens & komponen UI bersama
+│   ├── firebase.js          #   Inisialisasi Firebase + helper Auth
+│   ├── firestore-data.js    #   Akses data siswa, KKTP, setoran (dgn fallback DEMO_MODE)
+│   ├── quran-surah.js       #   Daftar 114 surah (nama & jumlah ayat)
 │   ├── logo.png             #   Logo sekolah (transparan, 512×512)
 │   ├── favicon-32.png
 │   └── apple-touch-icon.png
 └── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
     ├── login.html
-    ├── input-setoran.html   # (menyusul)
+    ├── input-setoran.html
+    ├── seed-kktp.html       #   Utilitas sekali-jalan: isi KKTP bawaan ke Firestore
     └── riwayat-siswa.html   # (menyusul)
 ```
 
@@ -93,6 +96,18 @@ Selama config masih placeholder (`TODO_...`), aplikasi otomatis berjalan
 dalam **mode pratinjau (DEMO_MODE)** — login & data disimulasikan lewat
 `localStorage`, supaya tampilan & alur tetap bisa dites tanpa Firebase
 nyata. Begitu config asli terpasang, DEMO_MODE otomatis nonaktif.
+
+## Menyiapkan Data Awal
+
+Setelah Firebase tersambung, dua koleksi ini perlu diisi sebelum Input
+Setoran bisa dipakai sungguhan:
+
+1. **`kktp_tahsin_tahfizh`** (aspek & bobot penilaian) — buka
+   `tahsin-tahfizh/seed-kktp.html`, login dulu di tab lain, lalu klik
+   tombol "Tulis KKTP ke Firestore". Aman dijalankan berkali-kali.
+2. **`siswa`** (nama, NIS, kelas, jenjang per siswa) — belum ada
+   utilitas otomatisnya; sedang dimigrasikan dari data siswa kelas 1–5
+   di sistem lama.
 
 ## Kontribusi & Alur Kerja
 
