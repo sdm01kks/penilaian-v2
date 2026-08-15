@@ -150,19 +150,6 @@
             </div>
           </div>
 
-          <!-- ============ KKTP ============ -->
-          <div class="section-label"><span class="bar"></span>Penilaian KKTP</div>
-          <div class="card">
-            <div class="nilai-summary">
-              <div class="nilai-num" id="nilaiAkhirNum">–</div>
-              <div class="nilai-info">
-                <div class="nilai-level" id="nilaiAkhirLevel">Belum dinilai</div>
-                <div class="nilai-note">Nilai akhir otomatis dari rata-rata tertimbang aspek</div>
-              </div>
-            </div>
-            <div id="aspekList"></div>
-          </div>
-
           <!-- ============ BACA & TANDAI ============ -->
           <div id="ayatDetailSection" class="hidden">
             <div class="section-label"><span class="bar"></span>Baca &amp; Tandai</div>
@@ -214,7 +201,7 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
-  import { getSiswaList, getKktpConfig, saveSetoran, levelDariNilai } from '../assets/firestore-data.js';
+  import { getSiswaList, saveSetoran } from '../assets/firestore-data.js';
   import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
   import { fetchSurahText } from '../assets/quran-text.js';
 
@@ -255,9 +242,7 @@
      State
      --------------------------------------------------------------------- */
   let selectedSiswa = null;
-  let kktpConfig = null;
-  let aspekNilai = [];       // paralel dengan kktpConfig.aspek — nilai 0-100 tiap aspek
-  let ayatDetail = {};       // { [nomorAyat]: {status:'lulus'|'gagal'|null, catatan:''} }
+  let ayatDetail = {};       // { [nomorAyat]: {status:'lulus'|'gagal'|null, words:{}} }
   const jenisState = { value: 'murojaah' };
 
   /* ---------------------------------------------------------------------
@@ -372,7 +357,6 @@
     $('materiIqro').classList.toggle('hidden', !isIqro);
     $('ayatDetailSection').classList.toggle('hidden', isIqro);
 
-    await loadKktp(s.jenjang);
     if (!isIqro) rebuildAyatList();
 
     window.scrollTo(0, 0);
@@ -453,71 +437,6 @@
     $('totalHalNote').textContent = `Total: ${total} halaman`;
   }
   refreshIqroMateri();
-
-  /* ---------------------------------------------------------------------
-     3. Penilaian KKTP
-     --------------------------------------------------------------------- */
-  async function loadKktp(jenjang) {
-    $('aspekList').innerHTML = `<div class="skeleton" style="height:70px;margin-bottom:14px"></div><div class="skeleton" style="height:70px"></div>`;
-    kktpConfig = await getKktpConfig(jenjang);
-    aspekNilai = kktpConfig.aspek.map(() => 70); // nilai awal netral
-    renderAspekList();
-    updateNilaiAkhir();
-  }
-
-  function renderAspekList() {
-    $('aspekList').innerHTML = kktpConfig.aspek.map((a, i) => `
-      <div class="aspek-row">
-        <div class="aspek-head">
-          <span class="aspek-nama">${a.nama}</span>
-          <span class="aspek-bobot">Bobot ${a.bobot}%</span>
-        </div>
-        <div class="aspek-slider-row">
-          <input type="range" min="0" max="100" value="${aspekNilai[i]}" data-idx="${i}" class="aspek-slider">
-          <span class="aspek-val" id="aspekVal-${i}">${aspekNilai[i]}</span>
-        </div>
-        <div class="aspek-desc" id="aspekDesc-${i}">${a.desc[levelIndexFromScore(aspekNilai[i])]}</div>
-      </div>
-    `).join('');
-
-    $('aspekList').querySelectorAll('.aspek-slider').forEach(slider => {
-      updateSliderFill(slider);
-      slider.addEventListener('input', (e) => {
-        const idx = +e.target.dataset.idx;
-        aspekNilai[idx] = +e.target.value;
-        $('aspekVal-' + idx).textContent = aspekNilai[idx];
-        $('aspekDesc-' + idx).textContent = kktpConfig.aspek[idx].desc[levelIndexFromScore(aspekNilai[idx])];
-        updateSliderFill(e.target);
-        updateNilaiAkhir();
-      });
-    });
-  }
-
-  function updateSliderFill(slider) {
-    slider.style.setProperty('--_pct', slider.value + '%');
-  }
-
-  function levelIndexFromScore(score) {
-    if (score < 60) return 0;
-    if (score < 70) return 1;
-    if (score < 80) return 2;
-    if (score < 90) return 3;
-    return 4;
-  }
-
-  function hitungNilaiAkhir() {
-    if (!kktpConfig) return 0;
-    const totalBobot = kktpConfig.aspek.reduce((s, a) => s + a.bobot, 0) || 1;
-    const weighted = kktpConfig.aspek.reduce((s, a, i) => s + (aspekNilai[i] * a.bobot), 0);
-    return Math.round(weighted / totalBobot);
-  }
-
-  function updateNilaiAkhir() {
-    const nilai = hitungNilaiAkhir();
-    const level = levelDariNilai(nilai);
-    $('nilaiAkhirNum').textContent = nilai;
-    $('nilaiAkhirLevel').textContent = level.label;
-  }
 
   /* ---------------------------------------------------------------------
      4. Baca & Tandai — teks Arab per-ayat, tandai kata (tajwid/makhroj)
@@ -635,8 +554,6 @@
      --------------------------------------------------------------------- */
   function buildPayload() {
     const isIqro = selectedSiswa.jenjang === 'iqro';
-    const nilai = hitungNilaiAkhir();
-    const level = levelDariNilai(nilai);
 
     const materi = isIqro
       ? {
@@ -676,9 +593,6 @@
       jenis: jenisState.value,
       materi,
       detailAyat,
-      nilaiAspek: kktpConfig.aspek.map((a, i) => ({ nama: a.nama, bobot: a.bobot, nilai: aspekNilai[i] })),
-      nilaiAkhir: nilai,
-      level: level.label,
       statusHafalan: $('statusHafalan').value,
       catatan: $('catatanGuru').value.trim(),
     };
