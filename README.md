@@ -43,6 +43,7 @@ lalu ditinggalkan total setelah semua modul di sini selesai dan stabil.
 ```
 penilaian-v2/
 ├── index.html              # Landing — daftar semua modul & tautannya
+├── firestore.rules         # Security rules Firestore (salin ke Firebase Console)
 ├── assets/                 # Dipakai bersama oleh seluruh modul
 │   ├── style.css           #   Design tokens & komponen UI bersama
 │   ├── firebase.js         #   Inisialisasi Firebase + helper Auth

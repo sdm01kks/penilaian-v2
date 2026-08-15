@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// ============================================================================
+// Firestore Security Rules — Sistem Penilaian v2
+// SD Muhammadiyah 01 Kukusan
+//
+// Cara pakai:
+//   1. Buka Firebase Console > project sdm01-penilaianv2
+//   2. Build > Firestore Database > tab "Rules"
+//   3. Salin SELURUH isi file ini, tempel menggantikan isi yang ada
+//   4. Klik "Publish"
+//
+// Status saat ini: hanya koleksi `users` yang diatur (dipakai oleh
+// halaman Login untuk membaca nama & role setelah berhasil masuk).
+// Koleksi lain (siswa, setoran, kktp_tahsin_tahfizh, dst.) akan
+// ditambahkan di sini seiring modul Input Setoran & Riwayat Siswa
+// dibangun — selama belum ditambahkan, otomatis tertutup total
+// (default deny), jadi aman.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- users/{uid} ---------------------------------------------------
+    // Profil pengguna (nama, role: "guru" / "admin").
+    // Dibuat manual dari Firebase Console untuk sekarang — pengguna hanya
+    // boleh membaca profilnya sendiri, tidak boleh menulis dari aplikasi.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---- Semua koleksi lain: default tertutup --------------------------
+    // Jangan hapus blok ini. Ini yang membuat koleksi yang belum
+    // didefinisikan aturannya (mis. setoran, siswa) otomatis tidak bisa
+    // diakses siapa pun sampai aturannya ditambahkan secara eksplisit.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
