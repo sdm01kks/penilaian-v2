@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistem Penilaian v2 — SD Muhammadiyah 01 Kukusan</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{background:var(--bg-light);color:var(--ink)}
+
+  .page{
+    max-width:1000px;margin:0 auto;
+    padding:48px 24px 80px;
+  }
+
+  .hero{text-align:center;margin-bottom:44px}
+  .hero img{
+    width:64px;height:64px;border-radius:16px;object-fit:cover;
+    box-shadow:var(--shadow-soft);margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:'Amiri',serif;font-size:28px;font-weight:700;
+    color:var(--green-deep);margin:0 0 6px;
+  }
+  .hero p{font-size:14px;color:var(--ink-muted);margin:0;font-weight:500}
+
+  .roadmap-note{
+    max-width:560px;margin:22px auto 0;
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.25);
+    border-radius:var(--radius-md);
+    padding:13px 18px;
+    font-size:12.5px;color:#7a5416;line-height:1.7;font-weight:600;
+  }
+
+  .section-label{
+    font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--ink-muted);margin:0 0 16px 4px;
+  }
+
+  .module-grid{
+    display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:16px;margin-bottom:40px;
+  }
+
+  .module-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:22px;
+    display:flex;flex-direction:column;gap:14px;
+    text-decoration:none;color:inherit;
+    box-shadow:var(--shadow-soft);
+    transition:transform .16s ease, box-shadow .2s ease, border-color .2s ease;
+    position:relative;
+  }
+  .module-card.available{cursor:pointer}
+  .module-card.available:hover{
+    transform:translateY(-3px);
+    box-shadow:var(--shadow-card);
+    border-color:var(--green-light);
+  }
+  .module-card.soon{opacity:.62;cursor:default}
+
+  .module-icon{
+    width:46px;height:46px;border-radius:13px;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .module-icon svg{width:24px;height:24px}
+
+  .module-icon.tt{background:var(--green-pale);color:var(--green-dark)}
+  .module-icon.akademik{background:var(--blue-light);color:var(--blue)}
+  .module-icon.ujian{background:#f5eef8;color:#8e44ad}
+  .module-icon.presensi{background:var(--yellow-light);color:#b5790a}
+
+  .module-title{font-size:15.5px;font-weight:700;color:var(--ink);margin:0}
+  .module-desc{font-size:12.5px;color:var(--ink-muted);line-height:1.6;margin:0;flex:1}
+
+  .module-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:800;letter-spacing:.3px;
+    padding:5px 10px;border-radius:20px;width:fit-content;
+  }
+  .module-badge.ready{background:var(--green-pale);color:var(--green-dark)}
+  .module-badge.soon{background:#eceae6;color:#83807a}
+  .module-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+  .module-arrow{
+    position:absolute;top:20px;right:20px;color:var(--ink-muted);
+    transition:transform .16s ease, color .16s ease;
+  }
+  .module-card.available:hover .module-arrow{transform:translateX(3px);color:var(--green-dark)}
+
+  footer.page-footer{
+    text-align:center;padding-top:24px;border-top:1px solid var(--border);
+    font-size:11.5px;color:var(--ink-muted);line-height:1.8;
+  }
+
+  @media (max-width:560px){
+    .page{padding:32px 18px 60px}
+    .hero h1{font-size:23px}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="hero">
+    <img src="assets/logo-sdm01.jpg" alt="Logo SD Muhammadiyah 01 Kukusan">
+    <h1>Sistem Penilaian v2</h1>
+    <p>SD Muhammadiyah 01 Kukusan &middot; Kurikulum Merdeka</p>
+
+    <div class="roadmap-note">
+      Sistem ini sedang dalam migrasi bertahap dari platform lama.
+      Modul <strong>Tahsin-Tahfizh</strong> tersedia lebih dulu; modul lainnya
+      menyusul secara bertahap dengan target selesai pertengahan Oktober 2026.
+    </div>
+  </div>
+
+  <div class="section-label">Modul Penilaian</div>
+  <div class="module-grid">
+
+    <a class="module-card available" href="tahsin-tahfizh/login.html">
+      <span class="module-arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+      <div class="module-icon tt">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+      </div>
+      <div>
+        <h3 class="module-title">Tahsin-Tahfizh</h3>
+        <p class="module-desc">Input setoran, riwayat hafalan, dan penilaian KKTP untuk siswa per kelas.</p>
+      </div>
+      <span class="module-badge ready"><span class="dot"></span>Tersedia</span>
+    </a>
+
+    <div class="module-card soon">
+      <div class="module-icon akademik">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <h3 class="module-title">Akademik &amp; Rapor</h3>
+        <p class="module-desc">Nilai mata pelajaran, proyek P5, dan rapor Kurikulum Merdeka.</p>
+      </div>
+      <span class="module-badge soon"><span class="dot"></span>Segera hadir</span>
+    </div>
+
+    <div class="module-card soon">
+      <div class="module-icon ujian">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      </div>
+      <div>
+        <h3 class="module-title">Ujian Sekolah</h3>
+        <p class="module-desc">Rekap nilai ujian sekolah dan kelulusan siswa kelas 6.</p>
+      </div>
+      <span class="module-badge soon"><span class="dot"></span>Segera hadir</span>
+    </div>
+
+    <div class="module-card soon">
+      <div class="module-icon presensi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+      </div>
+      <div>
+        <h3 class="module-title">Presensi Siswa</h3>
+        <p class="module-desc">Catatan kehadiran harian siswa per kelas dan rekap bulanan.</p>
+      </div>
+      <span class="module-badge soon"><span class="dot"></span>Segera hadir</span>
+    </div>
+
+  </div>
+
+  <footer class="page-footer">
+    &copy; 2026 SD Muhammadiyah 01 Kukusan &mdash; Sistem Penilaian v2<br>
+    Aplikasi internal, tidak untuk penggunaan komersial.
+  </footer>
+
+</div>
+
+</body>
+</html>
