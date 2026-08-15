@@ -46,7 +46,9 @@ penilaian-v2/
 ├── assets/                 # Dipakai bersama oleh seluruh modul
 │   ├── style.css           #   Design tokens & komponen UI bersama
 │   ├── firebase.js         #   Inisialisasi Firebase + helper Auth
-│   └── logo-sdm01.jpg
+│   ├── logo.png             #   Logo sekolah (transparan, 512×512)
+│   ├── favicon-32.png
+│   └── apple-touch-icon.png
 └── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
     ├── login.html
     ├── input-setoran.html   # (menyusul)
