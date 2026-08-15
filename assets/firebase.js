@@ -14,12 +14,12 @@
 
 // ── GANTI BLOK INI DENGAN CONFIG ASLI DARI FIREBASE CONSOLE ──────────────
 const firebaseConfig = {
-  apiKey: "TODO_GANTI_DENGAN_API_KEY",
-  authDomain: "TODO.firebaseapp.com",
-  projectId: "TODO",
-  storageBucket: "TODO.appspot.com",
-  messagingSenderId: "TODO",
-  appId: "TODO",
+  apiKey: "AIzaSyA52_m-tU18t2ULV268v7j3X8HDkWVBGi0",
+  authDomain: "sdm01-penilaianv2.firebaseapp.com",
+  projectId: "sdm01-penilaianv2",
+  storageBucket: "sdm01-penilaianv2.firebasestorage.app",
+  messagingSenderId: "437694245628",
+  appId: "1:437694245628:web:14d0fc8350f59be0364579",
 };
 // ───────────────────────────────────────────────────────────────────────
 
