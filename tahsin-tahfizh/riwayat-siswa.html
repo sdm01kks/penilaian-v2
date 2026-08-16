@@ -103,11 +103,24 @@
   </div>
 </div>
 
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
-  import { getSiswaList, getRiwayatSetoran, getMenulisLog } from '../assets/firestore-data.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog } from '../assets/firestore-data.js';
 
   const $ = (id) => document.getElementById(id);
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
 
   onAuthChange((session) => {
     if (!session) { window.location.href = 'login.html'; return; }
@@ -313,6 +326,7 @@
           <div class="setoran-card-head">
             <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
             <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
+            ${deleteBtnHtml(r.id, 'setoran')}
           </div>
           <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
           <div class="setoran-meta-row">
@@ -322,6 +336,7 @@
         </div>
       `;
     }).join('');
+    attachDeleteHandlers('membacaList', 'setoran');
   }
 
   function renderHafalanList() {
@@ -336,6 +351,7 @@
           <div class="setoran-card-head">
             <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
             <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
+            ${deleteBtnHtml(r.id, 'setoran')}
           </div>
           <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
           <div class="setoran-meta-row">
@@ -345,6 +361,7 @@
         </div>
       `;
     }).join('');
+    attachDeleteHandlers('hafalanList', 'setoran');
   }
 
   function renderMenulisList() {
@@ -357,11 +374,51 @@
         <div class="setoran-card-head">
           <span class="jenis-badge murojaah">Pemeriksaan</span>
           <span class="tanggal-text">${formatTanggal(r.tanggalPeriksa)}</span>
+          ${deleteBtnHtml(r.id, 'menulis')}
         </div>
         <div class="materi-label">Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
         ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
       </div>
     `).join('');
+    attachDeleteHandlers('menulisList', 'menulis');
+  }
+
+  function deleteBtnHtml(id, kind) {
+    return `
+      <button type="button" class="delete-entry-btn" data-id="${id}" data-kind="${kind}" aria-label="Hapus catatan">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+      </button>
+    `;
+  }
+
+  function attachDeleteHandlers(containerId, kind) {
+    $(containerId).querySelectorAll('.delete-entry-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const ok = confirm('Hapus catatan ini? Tindakan ini tidak bisa dibatalkan.');
+        if (!ok) return;
+        btn.disabled = true;
+        try {
+          if (kind === 'setoran') {
+            await deleteSetoran(id);
+            setoranCache = setoranCache.filter(x => x.id !== id);
+            renderMembacaList();
+            renderHafalanList();
+          } else {
+            await deleteMenulisLog(id);
+            menulisCache = menulisCache.filter(x => x.id !== id);
+            renderMenulisList();
+          }
+          renderRingkasan();
+          showToast('Catatan berhasil dihapus.');
+        } catch (err) {
+          console.error(err);
+          showToast('Gagal menghapus. Mungkin ini bukan catatan milik Anda sendiri.', true);
+          btn.disabled = false;
+        }
+      });
+    });
   }
 
   /* ---- Ringkasan Progres ---- */
