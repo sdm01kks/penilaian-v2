@@ -369,6 +369,15 @@
     $('materiIqro').classList.toggle('hidden', !isIqro);
     $('ayatDetailSection').classList.toggle('hidden', isIqro);
 
+    // Kelas 1-2 (Iqro): hanya latihan membaca (Tahsin), tidak ada
+    // konsep hafalan (Ziyadah/Muroja'ah) sama sekali.
+    const ziyadahBtn = $('jenisToggle').querySelector('[data-jenis="ziyadah"]');
+    const murojaahBtn = $('jenisToggle').querySelector('[data-jenis="murojaah"]');
+    const tahsinBtn = $('jenisToggle').querySelector('[data-jenis="tahsin"]');
+    ziyadahBtn.classList.toggle('hidden', isIqro);
+    murojaahBtn.classList.toggle('hidden', isIqro);
+    if (isIqro) tahsinBtn.click();
+
     if (!isIqro) rebuildAyatList();
 
     window.scrollTo(0, 0);

@@ -69,7 +69,7 @@
         </div>
 
         <!-- ============ SISWA ============ -->
-        <div class="section-label"><span class="bar"></span>Siswa</div>
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Siswa</div>
         <div class="card">
           <div id="siswaSelectedBlock" class="hidden">
             <div class="siswa-selected">
@@ -98,6 +98,17 @@
         <div id="formSection" class="hidden">
           <div class="section-label"><span class="bar"></span>Progres Menyalin</div>
           <div class="card">
+            <div id="jilidIqroWrap" class="hidden" style="margin-bottom:12px">
+              <div class="field-label">Jilid Iqro</div>
+              <select class="select-field" id="jilidIqro">
+                <option value="1">Iqro Jilid 1</option>
+                <option value="2">Iqro Jilid 2</option>
+                <option value="3">Iqro Jilid 3</option>
+                <option value="4">Iqro Jilid 4</option>
+                <option value="5">Iqro Jilid 5</option>
+                <option value="6">Iqro Jilid 6</option>
+              </select>
+            </div>
             <div class="field-label">Tanggal Periksa</div>
             <input type="date" class="select-field" id="tanggalPeriksa" style="margin-bottom:12px">
 
@@ -270,6 +281,9 @@
     $('formSection').classList.remove('hidden');
     $('footerBlock').classList.remove('hidden');
 
+    $('jilidIqroWrap').classList.toggle('hidden', s.jenjang !== 'iqro');
+    $('jilidIqro').value = '1';
+
     iqroLikeState.halMulai = 1; iqroLikeState.halAkhir = 1;
     refreshHalaman();
     $('catatanMenulis').value = '';
@@ -321,7 +335,7 @@
           <div class="riwayat-dot"></div>
           <div class="riwayat-body">
             <div class="riwayat-tanggal">${formatTanggal(r.tanggalPeriksa)}</div>
-            <div class="riwayat-halaman">Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
+            <div class="riwayat-halaman">${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
             ${r.catatan ? `<div class="riwayat-catatan">${escapeHtml(r.catatan)}</div>` : ''}
           </div>
         </div>
@@ -355,6 +369,7 @@
         siswaNama: selectedSiswa.nama,
         kelas: selectedSiswa.kelas,
         tanggalPeriksa: $('tanggalPeriksa').value,
+        jilidIqro: selectedSiswa.jenjang === 'iqro' ? +$('jilidIqro').value : null,
         halamanMulai: iqroLikeState.halMulai,
         halamanAkhir: iqroLikeState.halAkhir,
         catatan: $('catatanMenulis').value.trim(),

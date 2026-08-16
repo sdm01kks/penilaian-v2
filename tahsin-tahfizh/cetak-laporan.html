@@ -233,7 +233,7 @@
     const menulisTerakhir = menulisPeriode[0];
     const menulisLog = menulisPeriode.map(r => ({
       tanggal: r.tanggalPeriksa,
-      materi: `Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`,
+      materi: `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`,
       meta: '',
       dot: 'green',
     }));

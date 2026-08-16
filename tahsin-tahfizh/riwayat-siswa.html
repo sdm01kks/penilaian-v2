@@ -379,7 +379,7 @@
           <span class="tanggal-text">${formatTanggal(r.tanggalPeriksa)}</span>
           ${deleteBtnHtml(r.id, 'menulis')}
         </div>
-        <div class="materi-label">Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
+        <div class="materi-label">${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
         ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
       </div>
     `).join('');
@@ -481,7 +481,7 @@
       <div class="card">
         ${menulisTerakhir ? `
           <div class="progress-info-row"><span class="k">Terakhir diperiksa</span><span class="v">${formatTanggal(menulisTerakhir.tanggalPeriksa)}</span></div>
-          <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.halamanAkhir}</span></div>
+          <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.jilidIqro ? `Iqro ${menulisTerakhir.jilidIqro} — ` : ''}${menulisTerakhir.halamanAkhir}</span></div>
           <div class="progress-info-row"><span class="k">Total pemeriksaan</span><span class="v">${menulisCache.length}x</span></div>
         ` : `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`}
       </div>
