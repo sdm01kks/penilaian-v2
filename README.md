@@ -16,7 +16,7 @@ paling mendesak dikerjakan lebih dulu.
 
 | Modul | Status | Keterangan |
 |---|---|---|
-| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Riwayat Siswa (menyusul) |
+| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Catat Menulis ✅ · Riwayat Siswa ✅ |
 | Akademik & Rapor | ⚪ Belum dimulai | Menyusul setelah Tahsin-Tahfizh selesai |
 | Ujian Sekolah | ⚪ Belum dimulai | |
 | Presensi Siswa | ⚪ Belum dimulai | |
@@ -55,8 +55,8 @@ penilaian-v2/
     ├── login.html
     ├── input-setoran.html   # Membaca + Menghapal (harian, per antrean)
     ├── catat-menulis.html   # Menulis (berkala, bukan per antrean)
-    ├── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
-    └── riwayat-siswa.html   # (menyusul)
+    ├── riwayat-siswa.html   # Riwayat per siswa (3 tab, lintas kelas)
+    └── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
 ```
 
 Modul berikutnya (Akademik & Rapor, dst.) akan mengikuti pola folder
