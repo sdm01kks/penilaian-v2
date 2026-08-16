@@ -72,13 +72,20 @@
         <!-- ============ HASIL ============ -->
         <div id="hasilSection" class="hidden">
           <div class="tab-row">
-            <button class="tab-btn active" data-tab="baca">Membaca &amp; Menghapal</button>
+            <button class="tab-btn active" data-tab="membaca">Membaca</button>
+            <button class="tab-btn" data-tab="hafalan">Menghapal</button>
             <button class="tab-btn" data-tab="tulis">Menulis</button>
             <button class="tab-btn" data-tab="ringkasan">Ringkasan</button>
           </div>
 
-          <div id="tabBaca">
-            <div id="setoranList"><div class="siswa-empty-note">Memuat riwayat…</div></div>
+          <div id="tabMembaca">
+            <div class="intro-note-sm">Semua sesi yang punya data Baca &amp; Tandai — terlepas dari jenis sesinya (Ziyadah, Muroja'ah, atau Tahsin).</div>
+            <div id="membacaList"><div class="siswa-empty-note">Memuat riwayat…</div></div>
+          </div>
+
+          <div id="tabHafalan" class="hidden">
+            <div class="intro-note-sm">Progres hafalan dari sesi Ziyadah &amp; Muroja'ah — sesi Tahsin (latihan membaca) tidak dihitung di sini.</div>
+            <div id="hafalanList"><div class="siswa-empty-note">Memuat riwayat…</div></div>
           </div>
 
           <div id="tabTulis" class="hidden">
@@ -208,7 +215,7 @@
     $('siswaPickerBlock').classList.add('hidden');
     $('hasilSection').classList.remove('hidden');
 
-    setActiveTab('baca');
+    setActiveTab('membaca');
     await loadRiwayat(s.id);
     window.scrollTo(0, 0);
   }
@@ -229,26 +236,30 @@
   });
   function setActiveTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    $('tabBaca').classList.toggle('hidden', tab !== 'baca');
+    $('tabMembaca').classList.toggle('hidden', tab !== 'membaca');
+    $('tabHafalan').classList.toggle('hidden', tab !== 'hafalan');
     $('tabTulis').classList.toggle('hidden', tab !== 'tulis');
     $('tabRingkasan').classList.toggle('hidden', tab !== 'ringkasan');
   }
 
   /* ---- Muat riwayat ---- */
   async function loadRiwayat(siswaId) {
-    $('setoranList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
+    $('membacaList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
+    $('hafalanList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
     $('menulisList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
     try {
       [setoranCache, menulisCache] = await Promise.all([
         getRiwayatSetoran(siswaId),
         getMenulisLog(siswaId),
       ]);
-      renderSetoranList();
+      renderMembacaList();
+      renderHafalanList();
       renderMenulisList();
       renderRingkasan();
     } catch (err) {
       console.error(err);
-      $('setoranList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
+      $('membacaList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
+      $('hafalanList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
       $('menulisList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
     }
   }
@@ -285,23 +296,50 @@
     return parts.join(' • ');
   }
 
-  function renderSetoranList() {
-    if (!setoranCache.length) {
-      $('setoranList').innerHTML = `<div class="siswa-empty-note">Belum ada riwayat setoran.</div>`;
+  function jenisLabel(jenis) {
+    return jenis === 'ziyadah' ? 'Ziyadah' : jenis === 'murojaah' ? "Muroja'ah" : 'Tahsin';
+  }
+
+  function renderMembacaList() {
+    const list = setoranCache.filter(r => r.detailAyat && r.detailAyat.length);
+    if (!list.length) {
+      $('membacaList').innerHTML = `<div class="siswa-empty-note">Belum ada sesi dengan data Baca &amp; Tandai.</div>`;
       return;
     }
-    $('setoranList').innerHTML = setoranCache.map(r => {
+    $('membacaList').innerHTML = list.map(r => {
       const miniStat = ringkasDetailAyat(r.detailAyat);
       return `
         <div class="setoran-card">
           <div class="setoran-card-head">
-            <span class="jenis-badge ${r.jenis}">${r.jenis === 'ziyadah' ? 'Ziyadah' : "Muroja'ah"}</span>
+            <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
+            <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
+          </div>
+          <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
+          <div class="setoran-meta-row">
+            ${miniStat ? `<span class="mini-stat">${miniStat}</span>` : ''}
+          </div>
+          ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderHafalanList() {
+    const list = setoranCache.filter(r => r.jenis !== 'tahsin');
+    if (!list.length) {
+      $('hafalanList').innerHTML = `<div class="siswa-empty-note">Belum ada riwayat hafalan.</div>`;
+      return;
+    }
+    $('hafalanList').innerHTML = list.map(r => {
+      return `
+        <div class="setoran-card">
+          <div class="setoran-card-head">
+            <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
             <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
           </div>
           <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
           <div class="setoran-meta-row">
             <span class="status-badge ${r.statusHafalan === 'lulus' ? 'lulus' : 'ulang'}">${r.statusHafalan === 'lulus' ? 'Lulus' : 'Perlu Diulang'}</span>
-            ${miniStat ? `<span class="mini-stat">${miniStat}</span>` : ''}
           </div>
           ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
         </div>

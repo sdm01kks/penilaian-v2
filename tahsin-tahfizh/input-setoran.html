@@ -88,6 +88,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 Muroja'ah
               </button>
+              <button type="button" data-jenis="tahsin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+                Tahsin
+              </button>
             </div>
 
             <!-- Materi Al-Quran -->
@@ -176,11 +180,13 @@
           <!-- ============ CATATAN & STATUS ============ -->
           <div class="section-label"><span class="bar"></span>Catatan &amp; Status</div>
           <div class="card">
-            <div class="field-label">Status Hafalan</div>
-            <select class="select-field" id="statusHafalan" style="margin-bottom:14px">
-              <option value="lulus">Lulus — lanjut materi berikutnya</option>
-              <option value="ulang">Perlu diulang</option>
-            </select>
+            <div id="statusHafalanWrap">
+              <div class="field-label">Status Hafalan</div>
+              <select class="select-field" id="statusHafalan" style="margin-bottom:14px">
+                <option value="lulus">Lulus — lanjut materi berikutnya</option>
+                <option value="ulang">Perlu diulang</option>
+              </select>
+            </div>
             <div class="field-label">Catatan Guru (opsional)</div>
             <textarea class="field-textarea" id="catatanGuru" placeholder="Catatan tambahan untuk siswa ini…"></textarea>
           </div>
@@ -387,6 +393,8 @@
     if (!btn) return;
     jenisState.value = btn.dataset.jenis;
     $('jenisToggle').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    // Tahsin = latihan membaca murni, tidak ada checkpoint hafalan
+    $('statusHafalanWrap').classList.toggle('hidden', jenisState.value === 'tahsin');
   });
 
   /* ---- Materi Al-Quran ---- */
@@ -599,7 +607,7 @@
       jenis: jenisState.value,
       materi,
       detailAyat,
-      statusHafalan: $('statusHafalan').value,
+      statusHafalan: jenisState.value === 'tahsin' ? null : $('statusHafalan').value,
       catatan: $('catatanGuru').value.trim(),
     };
   }
