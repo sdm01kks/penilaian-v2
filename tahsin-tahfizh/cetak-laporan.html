@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cetak Laporan — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  #reportOutput{display:none}
+  .progress-note{text-align:center;font-size:12.5px;color:var(--ink-muted);font-weight:600;padding:20px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport no-print">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Cetak Laporan</div>
+            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data masih tiruan.</span>
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Kelas</div>
+        <div class="card">
+          <div class="kelas-chip-row" id="kelasChipRow"></div>
+          <div id="kelasHint" class="siswa-empty-note">Pilih satu kelas untuk dicetak laporannya.</div>
+        </div>
+
+        <div class="section-label">Periode Laporan</div>
+        <div class="card">
+          <div class="date-row">
+            <div>
+              <div class="field-label">Tanggal Mulai</div>
+              <input type="date" class="select-field" id="tglMulai">
+            </div>
+            <div>
+              <div class="field-label">Tanggal Akhir</div>
+              <input type="date" class="select-field" id="tglAkhir">
+            </div>
+          </div>
+          <div class="field-label">Label Semester (tampil di laporan)</div>
+          <input type="text" class="select-field" id="labelSemester" placeholder="mis. Semester Ganjil 2026/2027" style="text-align:left">
+        </div>
+
+        <div class="section-label">&nbsp;</div>
+        <button class="btn btn-primary-light" id="btnBuat">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          <span id="btnBuatLabel">Buat &amp; Cetak Laporan Kelas</span>
+        </button>
+
+        <div id="progressArea"></div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="reportOutput"></div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog } from '../assets/firestore-data.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  let currentUser = null;
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    currentUser = session;
+    $('guruLabel').textContent = session.nama;
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'riwayat-siswa.html'; });
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // Default periode: 6 bulan terakhir s/d hari ini
+  const today = new Date();
+  const sixMonthsAgo = new Date(today); sixMonthsAgo.setMonth(today.getMonth() - 6);
+  $('tglAkhir').valueAsDate = today;
+  $('tglMulai').valueAsDate = sixMonthsAgo;
+
+  /* ---- Pilih kelas ---- */
+  let siswaCache = [];
+  let kelasTerpilih = null;
+
+  async function loadKelas() {
+    siswaCache = await getSiswaList();
+    const kelasList = [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+    $('kelasChipRow').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        kelasTerpilih = chip.dataset.kelas;
+        $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(c => c.classList.toggle('active', c === chip));
+        const jumlah = siswaCache.filter(s => s.kelas === kelasTerpilih).length;
+        $('kelasHint').textContent = `Kelas ${kelasTerpilih} — ${jumlah} siswa akan dicetak.`;
+      });
+    });
+  }
+  loadKelas();
+
+  /* ---- Helpers ---- */
+  function toDate(ts) {
+    if (!ts) return null;
+    if (typeof ts?.toDate === 'function') return ts.toDate();
+    return new Date(ts);
+  }
+  function dalamRentang(ts, start, end) {
+    const d = toDate(ts);
+    if (!d) return false;
+    return d >= start && d <= end;
+  }
+  function formatTanggalPendek(d) {
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s || '';
+    return div.innerHTML;
+  }
+  function initials(nama) {
+    return nama.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  /* ---- Narasi otomatis ---- */
+  function narasiMembaca(ayatDinilai, tajwid, makhroj, namaDepan) {
+    if (!ayatDinilai) return `Belum ada data penilaian bacaan (Baca & Tandai) untuk ${namaDepan} pada periode ini.`;
+    const rate = (tajwid + makhroj) / ayatDinilai;
+    let kualitas = rate < 0.3
+      ? 'menunjukkan penguasaan bacaan yang baik'
+      : rate < 0.6
+        ? 'cukup baik, dengan beberapa bagian yang masih perlu latihan lebih lanjut'
+        : 'masih memerlukan bimbingan lebih intensif, terutama pada aspek tajwid dan makhraj';
+    return `Selama periode ini, bacaan ${namaDepan} telah dinilai sebanyak ${ayatDinilai} ayat, dengan ${tajwid} catatan tajwid dan ${makhroj} catatan makhraj. Secara umum, bacaan ${namaDepan} ${kualitas}.`;
+  }
+
+  function narasiHafalan(isIqro, ziyadahLulus, murojaahCount, posisiTerakhir, totalSesi, namaDepan) {
+    if (!totalSesi) return `Belum ada catatan setoran untuk ${namaDepan} pada periode ini.`;
+    if (isIqro) {
+      return `Selama periode ini, ${namaDepan} mengikuti ${totalSesi} kali sesi bimbingan membaca Iqro, dengan posisi terakhir pada ${posisiTerakhir || '-'}.`;
+    }
+    return `Pada periode ini, ${namaDepan} menyelesaikan ${ziyadahLulus} materi hafalan baru dan melakukan ${murojaahCount} kali muroja'ah untuk menjaga hafalan yang telah dikuasai. Posisi hafalan terakhir: ${posisiTerakhir || '-'}.`;
+  }
+
+  function narasiMenulis(ada, halamanAkhir, totalPemeriksaan, namaDepan) {
+    if (!ada) return `Belum ada catatan pemeriksaan buku salinan Al-Qur'an untuk ${namaDepan} pada periode ini.`;
+    return `${namaDepan} telah menyalin Al-Qur'an hingga halaman ${halamanAkhir}, dengan ${totalPemeriksaan} kali pemeriksaan oleh guru selama periode ini.`;
+  }
+
+  /* ---- Bangun satu halaman laporan ---- */
+  function buildLaporanSiswa(siswa, setoranPeriode, menulisPeriode, labelSemester, guruNama) {
+    const namaDepan = siswa.nama.split(' ')[0];
+    const isIqro = siswa.jenjang === 'iqro';
+
+    const sesiMembaca = setoranPeriode.filter(r => r.detailAyat && r.detailAyat.length);
+    let ayatDinilai = 0, tajwid = 0, makhroj = 0;
+    sesiMembaca.forEach(r => r.detailAyat.forEach(a => {
+      ayatDinilai++;
+      (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') tajwid++; else if (k.jenis === 'makhroj') makhroj++; });
+    }));
+
+    const sesiHafalan = setoranPeriode.filter(r => r.jenis !== 'tahsin');
+    const ziyadahLulus = sesiHafalan.filter(r => r.jenis === 'ziyadah' && r.statusHafalan === 'lulus').length;
+    const murojaahCount = sesiHafalan.filter(r => r.jenis === 'murojaah').length;
+    const posisiTerakhir = setoranPeriode.length ? (setoranPeriode[0].materi?.label || '-') : '-';
+
+    const menulisTerakhir = menulisPeriode[0];
+
+    return `
+      <div class="laporan-page">
+        <div class="lpr-head">
+          <img src="../assets/logo.png" alt="Logo">
+          <div>
+            <h1>Laporan Perkembangan Tahsin-Tahfizh</h1>
+            <p class="sub">SD Muhammadiyah 01 Kukusan &middot; ${escapeHtml(labelSemester || '-')}</p>
+          </div>
+        </div>
+
+        <div class="lpr-info-grid">
+          <div><span class="k">Nama Siswa</span><span class="v">${escapeHtml(siswa.nama)}</span></div>
+          <div><span class="k">NIS</span><span class="v">${escapeHtml(siswa.nis)}</span></div>
+          <div><span class="k">Kelas</span><span class="v">${escapeHtml(siswa.kelas)}</span></div>
+          <div><span class="k">Guru Pembimbing</span><span class="v">${escapeHtml(guruNama)}</span></div>
+        </div>
+
+        <div class="lpr-section">
+          <h2>1. Membaca Al-Qur'an</h2>
+          <div class="lpr-stat-row">
+            <div class="lpr-stat"><span class="n">${ayatDinilai}</span><span class="l">Ayat Dinilai</span></div>
+            <div class="lpr-stat"><span class="n">${tajwid}</span><span class="l">Catatan Tajwid</span></div>
+            <div class="lpr-stat"><span class="n">${makhroj}</span><span class="l">Catatan Makhraj</span></div>
+          </div>
+          <p class="lpr-narasi">${narasiMembaca(ayatDinilai, tajwid, makhroj, namaDepan)}</p>
+        </div>
+
+        <div class="lpr-section">
+          <h2>2. Menghapal Al-Qur'an</h2>
+          <div class="lpr-stat-row">
+            ${isIqro ? `
+              <div class="lpr-stat"><span class="n">${sesiHafalan.length}</span><span class="l">Total Sesi</span></div>
+            ` : `
+              <div class="lpr-stat"><span class="n">${ziyadahLulus}</span><span class="l">Materi Baru Lulus</span></div>
+              <div class="lpr-stat"><span class="n">${murojaahCount}</span><span class="l">Sesi Muroja'ah</span></div>
+            `}
+          </div>
+          <p class="lpr-narasi">${narasiHafalan(isIqro, ziyadahLulus, murojaahCount, posisiTerakhir, sesiHafalan.length, namaDepan)}</p>
+        </div>
+
+        <div class="lpr-section">
+          <h2>3. Menulis Al-Qur'an</h2>
+          <div class="lpr-stat-row">
+            <div class="lpr-stat"><span class="n">${menulisTerakhir ? menulisTerakhir.halamanAkhir : '-'}</span><span class="l">Halaman Terakhir</span></div>
+            <div class="lpr-stat"><span class="n">${menulisPeriode.length}</span><span class="l">Kali Diperiksa</span></div>
+          </div>
+          <p class="lpr-narasi">${narasiMenulis(!!menulisTerakhir, menulisTerakhir?.halamanAkhir, menulisPeriode.length, namaDepan)}</p>
+        </div>
+
+        <div class="lpr-ttd-section">
+          <div class="lpr-ttd-tanda">Depok, ${formatTanggalPendek(new Date())}</div>
+          <div class="lpr-ttd-grid">
+            <div class="lpr-ttd-col">
+              <div>Orang Tua/Wali,</div>
+              <div class="lpr-ttd-space"></div>
+              <div class="lpr-ttd-name">(……………………………)</div>
+            </div>
+            <div class="lpr-ttd-col">
+              <div>Kepala Sekolah,</div>
+              <div class="lpr-ttd-space"></div>
+              <div class="lpr-ttd-name">(……………………………)</div>
+            </div>
+            <div class="lpr-ttd-col">
+              <div>Guru Tahsin-Tahfizh,</div>
+              <div class="lpr-ttd-space"></div>
+              <div class="lpr-ttd-name">${escapeHtml(guruNama)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ---- Aksi utama ---- */
+  $('btnBuat').addEventListener('click', async () => {
+    if (!kelasTerpilih) { showToast('Pilih kelas terlebih dahulu.', true); return; }
+    const start = new Date($('tglMulai').value);
+    const end = new Date($('tglAkhir').value);
+    end.setHours(23, 59, 59, 999);
+    if (isNaN(start) || isNaN(end) || start > end) { showToast('Rentang tanggal tidak valid.', true); return; }
+
+    const labelSemester = $('labelSemester').value.trim();
+    const daftarSiswa = siswaCache.filter(s => s.kelas === kelasTerpilih).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+    if (!daftarSiswa.length) { showToast('Tidak ada siswa di kelas ini.', true); return; }
+
+    const btn = $('btnBuat');
+    btn.disabled = true;
+
+    let html = '';
+    for (let i = 0; i < daftarSiswa.length; i++) {
+      const s = daftarSiswa[i];
+      $('btnBuatLabel').textContent = `Memproses ${i + 1}/${daftarSiswa.length}: ${s.nama}…`;
+      try {
+        const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id), getMenulisLog(s.id)]);
+        const setoranPeriode = setoran.filter(r => dalamRentang(r.createdAt, start, end));
+        const menulisPeriode = menulis.filter(r => dalamRentang(r.tanggalPeriksa, start, end));
+        html += buildLaporanSiswa(s, setoranPeriode, menulisPeriode, labelSemester, currentUser.nama);
+      } catch (err) {
+        console.error(`Gagal memuat data ${s.nama}:`, err);
+      }
+    }
+
+    $('reportOutput').innerHTML = html;
+    btn.disabled = false;
+    $('btnBuatLabel').textContent = 'Buat & Cetak Laporan Kelas';
+
+    // Beri jeda sesaat supaya browser selesai me-render sebelum dialog print muncul
+    setTimeout(() => window.print(), 300);
+  });
+</script>
+</body>
+</html>
