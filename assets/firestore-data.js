@@ -115,9 +115,12 @@ const DEMO_SISWA = [
 
 /** Ambil daftar siswa. Bisa difilter per kelas (opsional). */
 export async function getSiswaList(kelasFilter) {
+  const sortByNama = (list) => [...list].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));
-    return kelasFilter ? DEMO_SISWA.filter(s => s.kelas === kelasFilter) : DEMO_SISWA;
+    const list = kelasFilter ? DEMO_SISWA.filter(s => s.kelas === kelasFilter) : DEMO_SISWA;
+    return sortByNama(list);
   }
   const { db, fsMod } = window.__fb;
   const col = fsMod.collection(db, 'siswa');
@@ -125,7 +128,7 @@ export async function getSiswaList(kelasFilter) {
     ? fsMod.query(col, fsMod.where('kelas', '==', kelasFilter), fsMod.where('aktif', '==', true))
     : fsMod.query(col, fsMod.where('aktif', '==', true));
   const snap = await fsMod.getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return sortByNama(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 }
 
 /* ==========================================================================
@@ -173,6 +176,18 @@ export async function getRiwayatSetoran(siswaId) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+/** Hapus satu entri setoran (hanya bisa oleh pembuatnya — ditegakkan lewat Firestore Rules). */
+export async function deleteSetoran(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = JSON.parse(localStorage.getItem(DEMO_SETORAN_KEY) || '[]');
+    localStorage.setItem(DEMO_SETORAN_KEY, JSON.stringify(list.filter(s => s.id !== id)));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'setoran', id));
+}
+
 /* ==========================================================================
    Menulis — log progres menyalin Al-Qur'an (pemeriksaan berkala,
    bukan per-sesi antrean). Fase awal: sekadar tercatat rutin,
@@ -214,4 +229,16 @@ export async function getMenulisLog(siswaId) {
   );
   const snap = await fsMod.getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/** Hapus satu catatan menulis (hanya bisa oleh pembuatnya). */
+export async function deleteMenulisLog(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = JSON.parse(localStorage.getItem(DEMO_MENULIS_KEY) || '[]');
+    localStorage.setItem(DEMO_MENULIS_KEY, JSON.stringify(list.filter(s => s.id !== id)));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'menulis_log', id));
 }
