@@ -46,21 +46,24 @@ service cloud.firestore {
     }
 
     // ---- setoran/{id} ------------------------------------------------------
-    // Riwayat setoran harian. Guru yang login boleh menambah & membaca;
-    // update/delete sementara ditutup (menyusul saat fitur edit dibangun).
+    // Riwayat setoran harian. Guru yang login boleh menambah & membaca.
+    // Hapus hanya diizinkan untuk entri milik sendiri (createdBy == dirinya)
+    // — untuk kasus salah input. Ubah/edit isi entri belum dibuka.
     match /setoran/{id} {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if false;
+      allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
+      allow update: if false;
     }
 
     // ---- menulis_log/{id} ---------------------------------------------------
-    // Catatan pemeriksaan berkala buku salinan Al-Qur'an (bukan per-sesi
-    // antrean harian). Sama aturannya seperti setoran.
+    // Catatan pemeriksaan berkala buku salinan Al-Qur'an. Aturan sama
+    // seperti setoran: hapus hanya untuk entri milik sendiri.
     match /menulis_log/{id} {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if false;
+      allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
+      allow update: if false;
     }
 
     // ---- Semua koleksi lain: default tertutup --------------------------
