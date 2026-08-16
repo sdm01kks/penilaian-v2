@@ -601,3 +601,52 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
   font-size:11.5px;color:var(--ink-muted);line-height:1.6;font-weight:600;
   background:var(--green-ghost);border-radius:11px;padding:9px 12px;margin-bottom:12px;
 }
+
+/* ==========================================================================
+   Cetak Laporan
+   ========================================================================== */
+
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+
+/* ---- Kertas laporan (tampil di layar sebagai preview, dicetak di kertas) ---- */
+.laporan-page{
+  background:#fff;color:#1a1a1a;
+  width:210mm;min-height:297mm;
+  margin:0 auto 24px;padding:18mm 16mm;
+  box-shadow:0 4px 24px rgba(0,0,0,.15);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:10.5pt;line-height:1.55;
+}
+.lpr-head{display:flex;align-items:center;gap:14px;border-bottom:2.5pt solid #1e4d3b;padding-bottom:12pt;margin-bottom:16pt}
+.lpr-head img{width:52pt;height:52pt;object-fit:contain}
+.lpr-head h1{font-size:14pt;margin:0 0 2pt;color:#1e4d3b}
+.lpr-head .sub{font-size:9.5pt;color:#555;margin:0}
+
+.lpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:3pt 18pt;margin-bottom:16pt;font-size:10pt}
+.lpr-info-grid .k{color:#666;display:inline-block;width:80pt}
+.lpr-info-grid .v{font-weight:700}
+
+.lpr-section{margin-bottom:14pt}
+.lpr-section h2{
+  font-size:11pt;color:#fff;background:#1e4d3b;padding:5pt 10pt;border-radius:4pt;margin:0 0 8pt;
+}
+.lpr-stat-row{display:flex;gap:10pt;margin-bottom:8pt;flex-wrap:wrap}
+.lpr-stat{background:#f0f7f3;border-radius:6pt;padding:6pt 12pt;text-align:center;flex:1;min-width:70pt}
+.lpr-stat .n{font-size:14pt;font-weight:800;color:#1e4d3b;display:block}
+.lpr-stat .l{font-size:8pt;color:#666}
+.lpr-narasi{font-size:10pt;line-height:1.65;text-align:justify}
+
+.lpr-ttd-section{page-break-inside:avoid;break-inside:avoid;margin-top:26pt}
+.lpr-ttd-tanda{text-align:right;font-size:9.5pt;margin-bottom:10pt}
+.lpr-ttd-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt}
+.lpr-ttd-col{text-align:center;font-size:9.5pt}
+.lpr-ttd-space{height:44pt}
+.lpr-ttd-name{font-weight:700;border-top:0.75pt solid #000;padding-top:2pt;font-size:9.5pt}
+
+@media print{
+  body{background:#fff !important}
+  .no-print{display:none !important}
+  #reportOutput{display:block !important}
+  .laporan-page{box-shadow:none;margin:0;width:auto;min-height:auto;page-break-after:always}
+  .laporan-page:last-child{page-break-after:auto}
+}
