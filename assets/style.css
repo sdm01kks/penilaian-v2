@@ -285,7 +285,12 @@ body{
   font-size:11px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
   color:var(--ink-muted);margin:22px 2px 10px;display:flex;align-items:center;gap:6px;
 }
-.section-label:first-child{margin-top:0}
+/* Catatan: margin-top TIDAK di-nol-kan otomatis untuk :first-child di sini —
+   karena beberapa section-label adalah anak pertama dari div pembungkusnya
+   sendiri (bukan dari .app-body), sehingga :first-child akan salah sasaran
+   dan menghilangkan jarak antar section yang seharusnya. Section-label yang
+   benar-benar pertama di halaman diberi margin-top:0 secara eksplisit lewat
+   inline style di HTML-nya, bukan lewat CSS selector di sini. */
 .section-label .bar{width:3px;height:12px;border-radius:2px;background:var(--green-mid)}
 
 .card{
@@ -532,3 +537,53 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
   margin-top:8px;font-size:10.5px;font-weight:800;color:#a13a2c;
   background:#fbe4e0;padding:5px 9px;border-radius:8px;display:inline-block;
 }
+
+/* ==========================================================================
+   Riwayat Siswa
+   ========================================================================== */
+
+.tab-row{display:flex;gap:6px;margin-bottom:14px;background:var(--bg-light);padding:5px;border-radius:14px}
+.tab-btn{
+  flex:1;padding:9px 6px;border-radius:10px;border:none;background:transparent;
+  font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink-muted);cursor:pointer;
+  transition:all .15s ease;
+}
+.tab-btn.active{background:var(--surface);color:var(--green-dark);box-shadow:0 2px 8px rgba(15,50,38,.1)}
+
+.setoran-card{
+  border-radius:14px;border:1px solid var(--border);background:var(--surface);
+  padding:12px 13px;margin-bottom:10px;
+}
+.setoran-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.jenis-badge{
+  font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:20px;
+}
+.jenis-badge.ziyadah{background:var(--green-pale);color:var(--green-dark)}
+.jenis-badge.murojaah{background:var(--blue-light);color:var(--blue)}
+.tanggal-text{font-size:11px;color:var(--ink-muted);font-weight:700}
+.materi-label{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:7px}
+.setoran-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.status-badge{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:20px}
+.status-badge.lulus{background:var(--green-pale);color:var(--green-dark)}
+.status-badge.ulang{background:var(--red-light);color:var(--red)}
+.mini-stat{font-size:11px;color:var(--ink-muted);font-weight:600}
+.setoran-catatan{
+  font-size:12px;color:var(--ink-mid);margin-top:8px;line-height:1.5;
+  background:var(--bg-light);border-radius:9px;padding:8px 10px;font-style:italic;
+}
+
+.progress-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.progress-stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 12px;text-align:center;
+}
+.progress-stat-card .num{font-size:22px;font-weight:800;color:var(--green-dark);line-height:1.2}
+.progress-stat-card .label{font-size:10.5px;color:var(--ink-muted);font-weight:700;margin-top:3px;line-height:1.4}
+
+.progress-info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;
+}
+.progress-info-row:last-child{border-bottom:none}
+.progress-info-row .k{color:var(--ink-muted);font-weight:600}
+.progress-info-row .v{color:var(--ink);font-weight:800}
