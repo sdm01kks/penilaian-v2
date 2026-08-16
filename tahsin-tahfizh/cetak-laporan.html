@@ -186,6 +186,19 @@
     return `${namaDepan} telah menyalin Al-Qur'an hingga halaman ${halamanAkhir}, dengan ${totalPemeriksaan} kali pemeriksaan oleh guru selama periode ini.`;
   }
 
+  /* ---- Predikat kualitas bacaan (gauge visual) ---- */
+  function hitungAkurasiBacaan(tajwid, makhroj, ayatDinilai) {
+    if (!ayatDinilai) return null;
+    const errPerAyat = (tajwid + makhroj) / ayatDinilai;
+    const pct = Math.max(5, Math.min(100, Math.round(100 - errPerAyat * 35)));
+    let label, color;
+    if (errPerAyat <= 0.3) { label = 'Istimewa'; color = '#2d7055'; }
+    else if (errPerAyat <= 0.7) { label = 'Baik'; color = '#3a8a68'; }
+    else if (errPerAyat <= 1.5) { label = 'Cukup'; color = '#c9882a'; }
+    else { label = 'Perlu Bimbingan'; color = '#c0392b'; }
+    return { pct, label, color };
+  }
+
   /* ---- Bangun satu halaman laporan ---- */
   function buildLaporanSiswa(siswa, setoranPeriode, menulisPeriode, labelSemester, guruNama) {
     const namaDepan = siswa.nama.split(' ')[0];
@@ -193,17 +206,56 @@
 
     const sesiMembaca = setoranPeriode.filter(r => r.detailAyat && r.detailAyat.length);
     let ayatDinilai = 0, tajwid = 0, makhroj = 0;
-    sesiMembaca.forEach(r => r.detailAyat.forEach(a => {
-      ayatDinilai++;
-      (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') tajwid++; else if (k.jenis === 'makhroj') makhroj++; });
-    }));
+    const membacaLog = sesiMembaca.map(r => {
+      let t = 0, m = 0;
+      r.detailAyat.forEach(a => {
+        ayatDinilai++;
+        (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') { t++; tajwid++; } else if (k.jenis === 'makhroj') { m++; makhroj++; } });
+      });
+      const total = t + m;
+      const dot = total === 0 ? 'green' : total <= 2 ? 'gold' : 'red';
+      return { tanggal: r.createdAt, materi: r.materi?.label || '-', meta: total === 0 ? 'Bersih' : `${t} tajwid • ${m} makhroj`, dot };
+    });
+
+    const akurasi = hitungAkurasiBacaan(tajwid, makhroj, ayatDinilai);
 
     const sesiHafalan = setoranPeriode.filter(r => r.jenis !== 'tahsin');
     const ziyadahLulus = sesiHafalan.filter(r => r.jenis === 'ziyadah' && r.statusHafalan === 'lulus').length;
     const murojaahCount = sesiHafalan.filter(r => r.jenis === 'murojaah').length;
     const posisiTerakhir = setoranPeriode.length ? (setoranPeriode[0].materi?.label || '-') : '-';
+    const hafalanLog = sesiHafalan.map(r => ({
+      tanggal: r.createdAt,
+      materi: r.materi?.label || '-',
+      meta: r.jenis === 'ziyadah' ? 'Ziyadah' : "Muroja'ah",
+      dot: r.statusHafalan === 'lulus' ? 'green' : 'red',
+    }));
 
     const menulisTerakhir = menulisPeriode[0];
+    const menulisLog = menulisPeriode.map(r => ({
+      tanggal: r.tanggalPeriksa,
+      materi: `Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`,
+      meta: '',
+      dot: 'green',
+    }));
+
+    const renderLog = (log, kosongMsg, maxItem = 6) => {
+      if (!log.length) return `<div class="lpr-narasi" style="color:#999;font-style:italic">${kosongMsg}</div>`;
+      const shown = log.slice(0, maxItem);
+      const sisa = log.length - shown.length;
+      return `
+        <div class="lpr-log-list">
+          ${shown.map(item => `
+            <div class="lpr-log-item">
+              <span class="lpr-log-dot ${item.dot}"></span>
+              <span class="lpr-log-tgl">${formatTanggalPendek(toDate(item.tanggal) || new Date())}</span>
+              <span class="lpr-log-materi">${escapeHtml(item.materi)}</span>
+              ${item.meta ? `<span class="lpr-log-meta">${escapeHtml(item.meta)}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ${sisa > 0 ? `<div class="lpr-log-more">…dan ${sisa} entri lainnya pada periode ini</div>` : ''}
+      `;
+    };
 
     return `
       <div class="laporan-page">
@@ -213,6 +265,7 @@
             <h1>Laporan Perkembangan Tahsin-Tahfizh</h1>
             <p class="sub">SD Muhammadiyah 01 Kukusan &middot; ${escapeHtml(labelSemester || '-')}</p>
           </div>
+          <span class="badge">${escapeHtml(siswa.jenjang === 'iqro' ? 'JENJANG IQRO' : 'JENJANG AL-QUR\'AN')}</span>
         </div>
 
         <div class="lpr-info-grid">
@@ -223,17 +276,30 @@
         </div>
 
         <div class="lpr-section">
-          <h2>1. Membaca Al-Qur'an</h2>
+          <h2>📖 1. Membaca Al-Qur'an</h2>
           <div class="lpr-stat-row">
             <div class="lpr-stat"><span class="n">${ayatDinilai}</span><span class="l">Ayat Dinilai</span></div>
             <div class="lpr-stat"><span class="n">${tajwid}</span><span class="l">Catatan Tajwid</span></div>
             <div class="lpr-stat"><span class="n">${makhroj}</span><span class="l">Catatan Makhraj</span></div>
           </div>
+          ${akurasi ? `
+            <div class="lpr-gauge-row">
+              <div class="lpr-gauge-predikat">
+                <span class="n" style="color:${akurasi.color}">${akurasi.pct}%</span>
+                <span class="l" style="color:${akurasi.color}">${akurasi.label}</span>
+              </div>
+              <div class="lpr-gauge-bar-wrap">
+                <div class="lpr-gauge-bar-track"><div class="lpr-gauge-bar-fill" style="width:${akurasi.pct}%;background:${akurasi.color}"></div></div>
+                <div class="lpr-gauge-caption">Perkiraan akurasi bacaan berdasarkan catatan Baca &amp; Tandai selama periode ini</div>
+              </div>
+            </div>
+          ` : ''}
           <p class="lpr-narasi">${narasiMembaca(ayatDinilai, tajwid, makhroj, namaDepan)}</p>
+          ${renderLog(membacaLog, 'Belum ada sesi dengan data Baca & Tandai pada periode ini.')}
         </div>
 
         <div class="lpr-section">
-          <h2>2. Menghapal Al-Qur'an</h2>
+          <h2>🎯 2. Menghapal Al-Qur'an</h2>
           <div class="lpr-stat-row">
             ${isIqro ? `
               <div class="lpr-stat"><span class="n">${sesiHafalan.length}</span><span class="l">Total Sesi</span></div>
@@ -243,15 +309,17 @@
             `}
           </div>
           <p class="lpr-narasi">${narasiHafalan(isIqro, ziyadahLulus, murojaahCount, posisiTerakhir, sesiHafalan.length, namaDepan)}</p>
+          ${renderLog(hafalanLog, 'Belum ada riwayat setoran hafalan pada periode ini.')}
         </div>
 
         <div class="lpr-section">
-          <h2>3. Menulis Al-Qur'an</h2>
+          <h2>✍️ 3. Menulis Al-Qur'an</h2>
           <div class="lpr-stat-row">
             <div class="lpr-stat"><span class="n">${menulisTerakhir ? menulisTerakhir.halamanAkhir : '-'}</span><span class="l">Halaman Terakhir</span></div>
             <div class="lpr-stat"><span class="n">${menulisPeriode.length}</span><span class="l">Kali Diperiksa</span></div>
           </div>
           <p class="lpr-narasi">${narasiMenulis(!!menulisTerakhir, menulisTerakhir?.halamanAkhir, menulisPeriode.length, namaDepan)}</p>
+          ${renderLog(menulisLog, 'Belum ada catatan pemeriksaan menulis pada periode ini.')}
         </div>
 
         <div class="lpr-ttd-section">
