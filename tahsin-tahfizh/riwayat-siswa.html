@@ -312,18 +312,29 @@
     return parts.join(' • ');
   }
 
+  function ringkasDetailBacaanIqro(detailBacaanIqro) {
+    if (!detailBacaanIqro || !detailBacaanIqro.kataSalah) return 'Bersih (tanpa catatan)';
+    let tajwid = 0, makhroj = 0;
+    detailBacaanIqro.kataSalah.forEach(k => { if (k.jenis === 'tajwid') tajwid++; else if (k.jenis === 'makhroj') makhroj++; });
+    if (!tajwid && !makhroj) return 'Bersih (tanpa catatan)';
+    const parts = [];
+    if (tajwid) parts.push(`${tajwid} tajwid`);
+    if (makhroj) parts.push(`${makhroj} makhroj`);
+    return parts.join(' • ');
+  }
+
   function jenisLabel(jenis) {
     return jenis === 'ziyadah' ? 'Ziyadah' : jenis === 'murojaah' ? "Muroja'ah" : 'Tahsin';
   }
 
   function renderMembacaList() {
-    const list = setoranCache.filter(r => r.detailAyat && r.detailAyat.length);
+    const list = setoranCache.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
     if (!list.length) {
       $('membacaList').innerHTML = `<div class="siswa-empty-note">Belum ada sesi dengan data Baca &amp; Tandai.</div>`;
       return;
     }
     $('membacaList').innerHTML = list.map(r => {
-      const miniStat = ringkasDetailAyat(r.detailAyat);
+      const miniStat = r.detailAyat?.length ? ringkasDetailAyat(r.detailAyat) : ringkasDetailBacaanIqro(r.detailBacaanIqro);
       return `
         <div class="setoran-card">
           <div class="setoran-card-head">
@@ -439,14 +450,20 @@
     let posisiTerakhir = '-';
     if (setoranCache.length) posisiTerakhir = setoranCache[0].materi?.label || '-';
 
-    // Kualitas bacaan dari 5 sesi Al-Quran terbaru yang punya detail Baca & Tandai
-    const sesiDenganDetail = setoranCache.filter(r => r.detailAyat && r.detailAyat.length).slice(0, 5);
+    // Kualitas bacaan dari 5 sesi terbaru yang punya data Baca & Tandai
+    // (baik dari Al-Qur'an maupun Latihan Membaca Iqro teks-bebas)
+    const sesiDenganDetail = setoranCache.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro).slice(0, 5);
     let totalTajwid = 0, totalMakhroj = 0, totalAyatDinilai = 0;
     sesiDenganDetail.forEach(r => {
-      r.detailAyat.forEach(a => {
-        totalAyatDinilai++;
-        (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') totalTajwid++; else if (k.jenis === 'makhroj') totalMakhroj++; });
-      });
+      if (r.detailAyat?.length) {
+        r.detailAyat.forEach(a => {
+          totalAyatDinilai++;
+          (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') totalTajwid++; else if (k.jenis === 'makhroj') totalMakhroj++; });
+        });
+      } else if (r.detailBacaanIqro) {
+        totalAyatDinilai++; // dihitung sebagai 1 sesi latihan
+        (r.detailBacaanIqro.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') totalTajwid++; else if (k.jenis === 'makhroj') totalMakhroj++; });
+      }
     });
 
     const menulisTerakhir = menulisCache[0];

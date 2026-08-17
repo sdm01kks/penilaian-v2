@@ -63,6 +63,13 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
               </button>
             </div>
+            <div id="tamatIqroRow" class="hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <label class="checkbox-row-light">
+                <input type="checkbox" id="tamatIqroToggle">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
+                <span class="label">Sudah tamat Iqro (mulai baca Al-Qur'an)</span>
+              </label>
+            </div>
           </div>
 
           <div id="siswaPickerBlock">
@@ -160,6 +167,19 @@
             </div>
           </div>
 
+          <!-- ============ LATIHAN MEMBACA IQRO (teks bebas) ============ -->
+          <div id="iqroBacaSection" class="hidden">
+            <div class="section-label">Latihan Membaca <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-muted)">(opsional)</span></div>
+            <div class="card">
+              <div class="field-label">Tulis kata/baris yang dibaca anak (pisah spasi)</div>
+              <textarea class="field-textarea" id="iqroBacaTeks" placeholder="Contoh: با تا ثا جا" style="min-height:52px;font-family:'Amiri',serif;font-size:19px;direction:rtl;text-align:right"></textarea>
+              <button type="button" class="btn btn-secondary-light" id="btnBuatKartuIqro" style="width:auto;padding:9px 16px;margin-top:8px;font-size:12.5px">
+                Buat Kartu Kata
+              </button>
+              <div id="iqroBacaCard" style="margin-top:12px"></div>
+            </div>
+          </div>
+
           <!-- ============ BACA & TANDAI ============ -->
           <div id="ayatDetailSection" class="hidden">
             <div class="section-label"><span class="bar"></span>Baca &amp; Tandai</div>
@@ -213,7 +233,7 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
-  import { getSiswaList, saveSetoran } from '../assets/firestore-data.js';
+  import { getSiswaList, saveSetoran, updateTamatIqro } from '../assets/firestore-data.js';
   import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
   import { fetchSurahText } from '../assets/quran-text.js';
 
@@ -364,24 +384,60 @@
     $('materiSection').classList.remove('hidden');
     $('footerBlock').classList.remove('hidden');
 
-    const isIqro = s.jenjang === 'iqro';
-    $('materiQuran').classList.toggle('hidden', isIqro);
-    $('materiIqro').classList.toggle('hidden', !isIqro);
-    $('ayatDetailSection').classList.toggle('hidden', isIqro);
+    // Toggle "Tamat Iqro" hanya relevan untuk siswa jenjang Iqro.
+    $('tamatIqroRow').classList.toggle('hidden', s.jenjang !== 'iqro');
+    $('tamatIqroToggle').checked = !!s.tamatIqro;
 
-    // Kelas 1-2 (Iqro): hanya latihan membaca (Tahsin), tidak ada
-    // konsep hafalan (Ziyadah/Muroja'ah) sama sekali.
-    const ziyadahBtn = $('jenisToggle').querySelector('[data-jenis="ziyadah"]');
-    const murojaahBtn = $('jenisToggle').querySelector('[data-jenis="murojaah"]');
-    const tahsinBtn = $('jenisToggle').querySelector('[data-jenis="tahsin"]');
-    ziyadahBtn.classList.toggle('hidden', isIqro);
-    murojaahBtn.classList.toggle('hidden', isIqro);
-    if (isIqro) tahsinBtn.click();
-
-    if (!isIqro) rebuildAyatList();
+    applyMateriUI(s);
 
     window.scrollTo(0, 0);
   }
+
+  /**
+   * Atur tampilan materi & kunci jenis sesi berdasarkan siswa.
+   * - Kelas 1-2 (jenjang 'iqro') SELALU dikunci ke Tahsin (tidak ada
+   *   Ziyadah/Muroja'ah), terlepas dari status tamatIqro.
+   * - Kalau tamatIqro true, materi yang dipakai adalah Al-Qur'an
+   *   (surah/ayat + Baca & Tandai penuh) — bukan lagi halaman Iqro.
+   */
+  function applyMateriUI(s) {
+    const isIqroJenjang = s.jenjang === 'iqro';
+    const bacaQuran = !isIqroJenjang || s.tamatIqro; // materi yang dipakai: Al-Qur'an
+
+    $('materiQuran').classList.toggle('hidden', !bacaQuran);
+    $('materiIqro').classList.toggle('hidden', bacaQuran);
+    $('iqroBacaSection').classList.toggle('hidden', !isIqroJenjang || s.tamatIqro);
+    $('ayatDetailSection').classList.toggle('hidden', !bacaQuran);
+
+    const ziyadahBtn = $('jenisToggle').querySelector('[data-jenis="ziyadah"]');
+    const murojaahBtn = $('jenisToggle').querySelector('[data-jenis="murojaah"]');
+    const tahsinBtn = $('jenisToggle').querySelector('[data-jenis="tahsin"]');
+    ziyadahBtn.classList.toggle('hidden', isIqroJenjang);
+    murojaahBtn.classList.toggle('hidden', isIqroJenjang);
+    if (isIqroJenjang) tahsinBtn.click();
+
+    if (bacaQuran) rebuildAyatList();
+  }
+
+  $('tamatIqroToggle').addEventListener('change', async (e) => {
+    if (!selectedSiswa) return;
+    const value = e.target.checked;
+    e.target.disabled = true;
+    try {
+      await updateTamatIqro(selectedSiswa.id, value);
+      selectedSiswa.tamatIqro = value;
+      const cacheEntry = siswaCache.find(x => x.id === selectedSiswa.id);
+      if (cacheEntry) cacheEntry.tamatIqro = value;
+      applyMateriUI(selectedSiswa);
+      showToast(value ? `${selectedSiswa.nama.split(' ')[0]} ditandai tamat Iqro.` : 'Status tamat Iqro dibatalkan.');
+    } catch (err) {
+      console.error(err);
+      e.target.checked = !value;
+      showToast('Gagal menyimpan status. Coba lagi.', true);
+    } finally {
+      e.target.disabled = false;
+    }
+  });
 
   $('btnGantiSiswa').addEventListener('click', () => {
     selectedSiswa = null;
@@ -460,6 +516,49 @@
     $('totalHalNote').textContent = `Total: ${total} halaman`;
   }
   refreshIqroMateri();
+
+  /* ---- Latihan Membaca Iqro (teks bebas, ketik-lalu-tandai) ---- */
+  let iqroBacaanState = { teks: '', words: {} };
+
+  $('btnBuatKartuIqro').addEventListener('click', () => {
+    const teks = $('iqroBacaTeks').value.trim();
+    if (!teks) return;
+    iqroBacaanState = { teks, words: {} };
+    renderIqroBacaCard();
+  });
+
+  function renderIqroBacaCard() {
+    const words = iqroBacaanState.teks.split(/\s+/).filter(Boolean);
+    const wordSpans = words.map((w, i) => {
+      const mark = iqroBacaanState.words[i];
+      const cls = mark ? ` word-${mark}` : '';
+      return `<span class="ayat-word${cls}" data-i="${i}">${w}</span>`;
+    }).join(' ');
+
+    const tajwidCount = Object.values(iqroBacaanState.words).filter(v => v === 'tajwid').length;
+    const makhrojCount = Object.values(iqroBacaanState.words).filter(v => v === 'makhroj').length;
+
+    $('iqroBacaCard').innerHTML = `
+      <div class="ayat-card">
+        <div class="ayat-arab" dir="rtl">${wordSpans}</div>
+      </div>
+      <div class="baca-stat-bar">
+        <span class="stat-chip stat-tajwid">${tajwidCount} Tajwid</span>
+        <span class="stat-chip stat-makhroj">${makhrojCount} Makhroj</span>
+      </div>
+    `;
+
+    $('iqroBacaCard').querySelectorAll('.ayat-word').forEach(span => {
+      span.addEventListener('click', () => {
+        const i = span.dataset.i;
+        const current = iqroBacaanState.words[i] || null;
+        const next = current === null ? 'tajwid' : current === 'tajwid' ? 'makhroj' : null;
+        if (next === null) delete iqroBacaanState.words[i];
+        else iqroBacaanState.words[i] = next;
+        renderIqroBacaCard();
+      });
+    });
+  }
 
   /* ---------------------------------------------------------------------
      4. Baca & Tandai — teks Arab per-ayat, tandai kata (tajwid/makhroj)
@@ -576,9 +675,9 @@
      5. Simpan
      --------------------------------------------------------------------- */
   function buildPayload() {
-    const isIqro = selectedSiswa.jenjang === 'iqro';
+    const isIqroMateri = selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro;
 
-    const materi = isIqro
+    const materi = isIqroMateri
       ? {
           tipe: 'iqro',
           buku: iqroState.buku,
@@ -598,7 +697,7 @@
             : `${surahByNo(quranState.surahAwal).nama}:${quranState.ayatMulai} — ${surahByNo(quranState.surahAkhir).nama}:${quranState.ayatAkhir}`,
         };
 
-    const detailAyat = (!isIqro && quranState.surahAwal === quranState.surahAkhir)
+    const detailAyat = (!isIqroMateri && quranState.surahAwal === quranState.surahAkhir)
       ? Object.entries(ayatDetail)
           .filter(([, v]) => v.status || Object.keys(v.words).length)
           .map(([n, v]) => ({
@@ -608,6 +707,13 @@
           }))
       : [];
 
+    const detailBacaanIqro = (isIqroMateri && iqroBacaanState.teks)
+      ? {
+          teks: iqroBacaanState.teks,
+          kataSalah: Object.entries(iqroBacaanState.words).map(([idx, jenis]) => ({ index: +idx, jenis })),
+        }
+      : null;
+
     return {
       siswaId: selectedSiswa.id,
       siswaNama: selectedSiswa.nama,
@@ -616,6 +722,7 @@
       jenis: jenisState.value,
       materi,
       detailAyat,
+      detailBacaanIqro,
       statusHafalan: jenisState.value === 'tahsin' ? null : $('statusHafalan').value,
       catatan: $('catatanGuru').value.trim(),
     };
@@ -637,6 +744,9 @@
       // supaya guru bisa lanjut cepat kalau mau (mis. lanjut ayat berikutnya).
       $('catatanGuru').value = '';
       $('statusHafalan').value = 'lulus';
+      $('iqroBacaTeks').value = '';
+      $('iqroBacaCard').innerHTML = '';
+      iqroBacaanState = { teks: '', words: {} };
     } catch (err) {
       console.error(err);
       showToast('Gagal menyimpan setoran. Coba lagi.', true);

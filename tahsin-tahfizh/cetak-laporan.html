@@ -204,14 +204,19 @@
     const namaDepan = siswa.nama.split(' ')[0];
     const isIqro = siswa.jenjang === 'iqro';
 
-    const sesiMembaca = setoranPeriode.filter(r => r.detailAyat && r.detailAyat.length);
+    const sesiMembaca = setoranPeriode.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
     let ayatDinilai = 0, tajwid = 0, makhroj = 0;
     const membacaLog = sesiMembaca.map(r => {
       let t = 0, m = 0;
-      r.detailAyat.forEach(a => {
+      if (r.detailAyat?.length) {
+        r.detailAyat.forEach(a => {
+          ayatDinilai++;
+          (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') { t++; tajwid++; } else if (k.jenis === 'makhroj') { m++; makhroj++; } });
+        });
+      } else if (r.detailBacaanIqro) {
         ayatDinilai++;
-        (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') { t++; tajwid++; } else if (k.jenis === 'makhroj') { m++; makhroj++; } });
-      });
+        (r.detailBacaanIqro.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') { t++; tajwid++; } else if (k.jenis === 'makhroj') { m++; makhroj++; } });
+      }
       const total = t + m;
       const dot = total === 0 ? 'green' : total <= 2 ? 'gold' : 'red';
       return { tanggal: r.createdAt, materi: r.materi?.label || '-', meta: total === 0 ? 'Bersih' : `${t} tajwid • ${m} makhroj`, dot };

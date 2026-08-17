@@ -281,7 +281,7 @@
     $('formSection').classList.remove('hidden');
     $('footerBlock').classList.remove('hidden');
 
-    $('jilidIqroWrap').classList.toggle('hidden', s.jenjang !== 'iqro');
+    $('jilidIqroWrap').classList.toggle('hidden', s.jenjang !== 'iqro' || !!s.tamatIqro);
     $('jilidIqro').value = '1';
 
     iqroLikeState.halMulai = 1; iqroLikeState.halAkhir = 1;
@@ -369,7 +369,7 @@
         siswaNama: selectedSiswa.nama,
         kelas: selectedSiswa.kelas,
         tanggalPeriksa: $('tanggalPeriksa').value,
-        jilidIqro: selectedSiswa.jenjang === 'iqro' ? +$('jilidIqro').value : null,
+        jilidIqro: (selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro) ? +$('jilidIqro').value : null,
         halamanMulai: iqroLikeState.halMulai,
         halamanAkhir: iqroLikeState.halAkhir,
         catatan: $('catatanMenulis').value.trim(),
