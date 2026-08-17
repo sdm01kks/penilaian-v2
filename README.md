@@ -57,6 +57,7 @@ penilaian-v2/
     ├── catat-menulis.html   # Menulis (berkala, bukan per antrean)
     ├── riwayat-siswa.html   # Riwayat per siswa (3 tab, lintas kelas)
     ├── cetak-laporan.html   # Laporan cetak per kelas, per periode (semester)
+    ├── target-hafalan.html # Atur target surah/jilid per kelas per semester
     └── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
 ```
 

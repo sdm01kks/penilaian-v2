@@ -66,6 +66,15 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // ---- target_hafalan/{kelas} ---------------------------------------------
+    // Target surah (Quran) / jilid+halaman (Iqro) per kelas per semester.
+    // Siapa pun yang login boleh membaca & mengatur — dipersempit lagi
+    // begitu modul Admin (role check) selesai dibangun.
+    match /target_hafalan/{kelas} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn();
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;
