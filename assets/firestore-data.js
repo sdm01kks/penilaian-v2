@@ -176,7 +176,18 @@ export async function getRiwayatSetoran(siswaId) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-/** Hapus satu entri setoran (hanya bisa oleh pembuatnya — ditegakkan lewat Firestore Rules). */
+/** Tandai siswa (jenjang Iqro) sudah tamat Iqro — mulai membaca Al-Qur'an
+ *  langsung (tetap sesi membaca/Tahsin, bukan hafalan, selama masih kelas 1-2). */
+export async function updateTamatIqro(siswaId, value) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const idx = DEMO_SISWA.findIndex(s => s.id === siswaId);
+    if (idx >= 0) DEMO_SISWA[idx].tamatIqro = value;
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.updateDoc(fsMod.doc(db, 'siswa', siswaId), { tamatIqro: value });
+}
 export async function deleteSetoran(id) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));

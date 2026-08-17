@@ -678,3 +678,21 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
   .laporan-page{box-shadow:none;margin:0;width:auto;min-height:auto;page-break-after:always}
   .laporan-page:last-child{page-break-after:auto}
 }
+
+/* ---- Checkbox tema terang (mis. toggle Tamat Iqro) ---- */
+.checkbox-row-light{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.checkbox-row-light input{position:absolute;opacity:0;width:1px;height:1px}
+.checkbox-row-light .box{
+  width:18px;height:18px;border-radius:6px;flex-shrink:0;
+  border:1.5px solid var(--border);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;transition:all .15s ease;
+}
+.checkbox-row-light input:checked + .box{background:var(--green-mid);border-color:var(--green-mid)}
+.checkbox-row-light .box svg{width:11px;height:11px;opacity:0;transform:scale(.6);transition:all .12s ease}
+.checkbox-row-light input:checked + .box svg{opacity:1;transform:scale(1)}
+.checkbox-row-light span.label{font-size:12.5px;color:var(--ink-mid);font-weight:700}
+
+.btn-secondary-light{
+  background:var(--green-ghost);color:var(--green-dark);border:1.5px solid var(--border);
+}
+.btn-secondary-light:hover:not(:disabled){background:var(--green-pale)}
