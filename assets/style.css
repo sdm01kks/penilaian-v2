@@ -696,3 +696,5 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
   background:var(--green-ghost);color:var(--green-dark);border:1.5px solid var(--border);
 }
 .btn-secondary-light:hover:not(:disabled){background:var(--green-pale)}
+
+.status-bacaan-label{font-size:11.5px;font-weight:700;margin-bottom:8px}
