@@ -45,10 +45,52 @@
           <span>Mode pratinjau — data masih tiruan.</span>
         </div>
 
-        <div class="section-label" style="margin-top:0"><span class="bar"></span>Kelas</div>
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Cakupan Laporan</div>
         <div class="card">
-          <div class="kelas-chip-row" id="kelasChipRow"></div>
-          <div id="kelasHint" class="siswa-empty-note">Pilih satu kelas untuk dicetak laporannya.</div>
+          <div class="pill-toggle" id="modeToggle" style="margin-bottom:0">
+            <button type="button" data-mode="kelas" class="active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Satu Kelas
+            </button>
+            <button type="button" data-mode="siswa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a6 6 0 0 1 12 0v2"/></svg>
+              Satu Siswa
+            </button>
+          </div>
+        </div>
+
+        <div id="pilihKelasBlock">
+          <div class="section-label">Kelas</div>
+          <div class="card">
+            <div class="kelas-chip-row" id="kelasChipRow"></div>
+            <div id="kelasHint" class="siswa-empty-note">Pilih satu kelas untuk dicetak laporannya.</div>
+          </div>
+        </div>
+
+        <div id="pilihSiswaBlock" class="hidden">
+          <div class="section-label">Siswa</div>
+          <div class="card">
+            <div id="siswaTerpilihBlock" class="hidden">
+              <div class="siswa-selected">
+                <div class="avatar-circle" id="siswaTerpilihAvatar">--</div>
+                <div class="info">
+                  <div class="nama" id="siswaTerpilihNama">-</div>
+                  <div class="meta" id="siswaTerpilihMeta">-</div>
+                </div>
+                <button class="btn-ganti" id="btnGantiSiswaCetak" aria-label="Ganti siswa">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id="siswaPickerBlockCetak">
+              <div class="search-field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="siswaSearchCetak" placeholder="Cari nama atau NIS siswa…" autocomplete="off">
+              </div>
+              <div class="kelas-chip-row" id="kelasChipRowCetak"></div>
+              <div class="siswa-result-list" id="siswaResultListCetak"></div>
+            </div>
+          </div>
         </div>
 
         <div class="section-label">Periode Laporan</div>
@@ -119,7 +161,19 @@
   $('tglAkhir').valueAsDate = today;
   $('tglMulai').valueAsDate = sixMonthsAgo;
 
-  /* ---- Pilih kelas ---- */
+  /* ---- Mode: Per Kelas vs Per Siswa ---- */
+  let mode = 'kelas';
+  $('modeToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    mode = btn.dataset.mode;
+    $('modeToggle').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    $('pilihKelasBlock').classList.toggle('hidden', mode !== 'kelas');
+    $('pilihSiswaBlock').classList.toggle('hidden', mode !== 'siswa');
+    $('btnBuatLabel').textContent = mode === 'kelas' ? 'Buat & Cetak Laporan Kelas' : 'Buat & Cetak Laporan Siswa';
+  });
+
+  /* ---- Pilih kelas (mode: Per Kelas) ---- */
   let siswaCache = [];
   let kelasTerpilih = null;
 
@@ -135,8 +189,101 @@
         $('kelasHint').textContent = `Kelas ${kelasTerpilih} — ${jumlah} siswa akan dicetak.`;
       });
     });
+
+    setupSiswaPickerCetak();
+    handleUrlPreselect();
   }
   loadKelas();
+
+  /* ---- Pilih siswa individual (mode: Per Siswa) ---- */
+  let siswaTerpilihCetak = null;
+  let kelasFilterCetak = null;
+
+  function initialsCetak(nama) {
+    return nama.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function setupSiswaPickerCetak() {
+    const kelasList = [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+    $('kelasChipRowCetak').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
+    $('kelasChipRowCetak').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        kelasFilterCetak = (kelasFilterCetak === chip.dataset.kelas) ? null : chip.dataset.kelas;
+        $('siswaSearchCetak').value = '';
+        $('kelasChipRowCetak').querySelectorAll('.kelas-chip').forEach(c => c.classList.toggle('active', c.dataset.kelas === kelasFilterCetak));
+        renderSiswaResultsCetak();
+      });
+    });
+    renderSiswaResultsCetak();
+  }
+
+  function renderSiswaResultsCetak() {
+    const wrap = $('siswaResultListCetak');
+    const q = $('siswaSearchCetak').value.trim().toLowerCase();
+    let scoped = kelasFilterCetak ? siswaCache.filter(s => s.kelas === kelasFilterCetak) : siswaCache;
+    if (q) scoped = scoped.filter(s => s.nama.toLowerCase().includes(q) || s.nis.includes(q));
+
+    if (!kelasFilterCetak && !q) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Pilih kelas di atas, atau ketik nama/NIS untuk mencari langsung.</div>`;
+      return;
+    }
+    if (!scoped.length) {
+      wrap.innerHTML = `<div class="siswa-empty-note">Siswa tidak ditemukan.</div>`;
+      return;
+    }
+    const itemHtml = (s) => `
+      <div class="siswa-result-item" data-id="${s.id}">
+        <div class="avatar-circle">${initialsCetak(s.nama)}</div>
+        <div>
+          <div class="nama">${s.nama}</div>
+          <div class="meta">${s.nis} • Kelas ${s.kelas}</div>
+        </div>
+      </div>
+    `;
+    if (!kelasFilterCetak && q) {
+      const byKelas = {};
+      scoped.forEach(s => { (byKelas[s.kelas] ||= []).push(s); });
+      wrap.innerHTML = Object.keys(byKelas).sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map(k => `
+        <div class="siswa-group-label">Kelas ${k}</div>
+        ${byKelas[k].map(itemHtml).join('')}
+      `).join('');
+    } else {
+      wrap.innerHTML = scoped.map(itemHtml).join('');
+    }
+    wrap.querySelectorAll('.siswa-result-item').forEach(el => el.addEventListener('click', () => selectSiswaCetak(el.dataset.id)));
+  }
+
+  $('siswaSearchCetak').addEventListener('input', () => renderSiswaResultsCetak());
+
+  function selectSiswaCetak(id) {
+    const s = siswaCache.find(x => x.id === id);
+    if (!s) return;
+    siswaTerpilihCetak = s;
+    $('siswaTerpilihAvatar').textContent = initialsCetak(s.nama);
+    $('siswaTerpilihNama').textContent = s.nama;
+    $('siswaTerpilihMeta').textContent = `${s.nis} • Kelas ${s.kelas}`;
+    $('siswaTerpilihBlock').classList.remove('hidden');
+    $('siswaPickerBlockCetak').classList.add('hidden');
+  }
+
+  $('btnGantiSiswaCetak').addEventListener('click', () => {
+    siswaTerpilihCetak = null;
+    $('siswaTerpilihBlock').classList.add('hidden');
+    $('siswaPickerBlockCetak').classList.remove('hidden');
+    $('siswaSearchCetak').value = '';
+    renderSiswaResultsCetak();
+  });
+
+  /* ---- Prasetel dari tautan Riwayat Siswa (?siswaId=...) ---- */
+  function handleUrlPreselect() {
+    const params = new URLSearchParams(window.location.search);
+    const siswaId = params.get('siswaId');
+    if (!siswaId) return;
+    const s = siswaCache.find(x => x.id === siswaId);
+    if (!s) return;
+    $('modeToggle').querySelector('[data-mode="siswa"]').click();
+    selectSiswaCetak(siswaId);
+  }
 
   /* ---- Helpers ---- */
   function toDate(ts) {
@@ -353,23 +500,30 @@
 
   /* ---- Aksi utama ---- */
   $('btnBuat').addEventListener('click', async () => {
-    if (!kelasTerpilih) { showToast('Pilih kelas terlebih dahulu.', true); return; }
     const start = new Date($('tglMulai').value);
     const end = new Date($('tglAkhir').value);
     end.setHours(23, 59, 59, 999);
     if (isNaN(start) || isNaN(end) || start > end) { showToast('Rentang tanggal tidak valid.', true); return; }
-
     const labelSemester = $('labelSemester').value.trim();
-    const daftarSiswa = siswaCache.filter(s => s.kelas === kelasTerpilih).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
-    if (!daftarSiswa.length) { showToast('Tidak ada siswa di kelas ini.', true); return; }
+
+    let daftarSiswa;
+    if (mode === 'kelas') {
+      if (!kelasTerpilih) { showToast('Pilih kelas terlebih dahulu.', true); return; }
+      daftarSiswa = siswaCache.filter(s => s.kelas === kelasTerpilih).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+      if (!daftarSiswa.length) { showToast('Tidak ada siswa di kelas ini.', true); return; }
+    } else {
+      if (!siswaTerpilihCetak) { showToast('Pilih siswa terlebih dahulu.', true); return; }
+      daftarSiswa = [siswaTerpilihCetak];
+    }
 
     const btn = $('btnBuat');
     btn.disabled = true;
+    const labelDefault = mode === 'kelas' ? 'Buat & Cetak Laporan Kelas' : 'Buat & Cetak Laporan Siswa';
 
     let html = '';
     for (let i = 0; i < daftarSiswa.length; i++) {
       const s = daftarSiswa[i];
-      $('btnBuatLabel').textContent = `Memproses ${i + 1}/${daftarSiswa.length}: ${s.nama}…`;
+      if (daftarSiswa.length > 1) $('btnBuatLabel').textContent = `Memproses ${i + 1}/${daftarSiswa.length}: ${s.nama}…`;
       try {
         const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id), getMenulisLog(s.id)]);
         const setoranPeriode = setoran.filter(r => dalamRentang(r.createdAt, start, end));
@@ -382,7 +536,7 @@
 
     $('reportOutput').innerHTML = html;
     btn.disabled = false;
-    $('btnBuatLabel').textContent = 'Buat & Cetak Laporan Kelas';
+    $('btnBuatLabel').textContent = labelDefault;
 
     // Beri jeda sesaat supaya browser selesai me-render sebelum dialog print muncul
     setTimeout(() => window.print(), 300);
