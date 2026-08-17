@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Target Hafalan — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Target Hafalan</div>
+            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data masih tiruan.</span>
+        </div>
+
+        <div class="intro-note">
+          Target ini dipakai untuk menghitung progres di Riwayat Siswa &amp; Laporan Cetak.
+          Satu target berlaku untuk satu kelas — perbarui setiap semester baru.
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Kelas</div>
+        <div class="card">
+          <div class="kelas-chip-row" id="kelasChipRow"></div>
+          <div id="kelasHint" class="siswa-empty-note">Pilih kelas untuk atur target hafalannya.</div>
+        </div>
+
+        <div id="formArea" class="hidden">
+
+          <div class="section-label">Label Semester</div>
+          <div class="card">
+            <input type="text" class="select-field" id="labelSemester" placeholder="mis. Semester Ganjil 2026/2027" style="text-align:left">
+          </div>
+
+          <!-- ===== Target Quran ===== -->
+          <div id="targetQuranBlock" class="hidden">
+            <div class="section-label">Target Surah</div>
+            <div class="card">
+              <div class="quick-fill-row">
+                <button type="button" class="quick-fill-btn" id="btnIsiJuz30">Isi Juz 30 (An-Naba–An-Nas)</button>
+                <button type="button" class="quick-fill-btn" id="btnIsiJuz29">Isi Juz 29 (Al-Mulk–Al-Mursalat)</button>
+                <button type="button" class="quick-fill-btn" id="btnKosongkan">Kosongkan</button>
+              </div>
+              <div id="surahTerpilihNote" class="total-materi-note" style="margin-bottom:12px">0 surah dipilih</div>
+              <div class="surah-check-list" id="surahCheckList"></div>
+            </div>
+          </div>
+
+          <!-- ===== Target Iqro ===== -->
+          <div id="targetIqroBlock" class="hidden">
+            <div class="section-label">Target Iqro</div>
+            <div class="card">
+              <div class="field-label">Sampai Jilid</div>
+              <select class="select-field" id="targetJilid" style="margin-bottom:12px">
+                <option value="1">Iqro Jilid 1</option>
+                <option value="2">Iqro Jilid 2</option>
+                <option value="3">Iqro Jilid 3</option>
+                <option value="4">Iqro Jilid 4</option>
+                <option value="5">Iqro Jilid 5</option>
+                <option value="6">Iqro Jilid 6</option>
+              </select>
+              <div class="field-label">Sampai Halaman</div>
+              <div class="stepper">
+                <button type="button" data-step="targetHalaman" data-dir="-1">−</button>
+                <span class="val" id="targetHalamanVal">1</span>
+                <button type="button" data-step="targetHalaman" data-dir="1">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label">&nbsp;</div>
+          <button class="btn btn-primary-light" id="btnSimpanTarget">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            <span id="btnSimpanLabel">Simpan Target</span>
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaList, getTargetHafalan, saveTargetHafalan } from '../assets/firestore-data.js';
+  import { SURAH_LIST } from '../assets/quran-surah.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('guruLabel').textContent = session.nama;
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+  $('btnBack').addEventListener('click', () => { window.location.href = 'riwayat-siswa.html'; });
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  let siswaCache = [];
+  let kelasTerpilih = null;
+  let surahTerpilih = new Set();
+  const iqroTargetState = { halaman: 1 };
+
+  async function loadKelas() {
+    siswaCache = await getSiswaList();
+    const kelasList = [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+    $('kelasChipRow').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => pilihKelas(chip.dataset.kelas));
+    });
+  }
+  loadKelas();
+
+  populateSurahList();
+  function populateSurahList() {
+    $('surahCheckList').innerHTML = SURAH_LIST.map(s => `
+      <label class="surah-check-item">
+        <input type="checkbox" data-no="${s.no}">
+        <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="txt"><span class="no">${s.no}.</span>${s.nama} <span style="color:var(--ink-muted)">(${s.ayat} ayat)</span></span>
+      </label>
+    `).join('');
+    $('surahCheckList').querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const no = +cb.dataset.no;
+        if (cb.checked) surahTerpilih.add(no); else surahTerpilih.delete(no);
+        updateSurahNote();
+      });
+    });
+  }
+
+  function updateSurahNote() {
+    $('surahTerpilihNote').textContent = `${surahTerpilih.size} surah dipilih`;
+  }
+
+  function setSurahTerpilih(list) {
+    surahTerpilih = new Set(list);
+    $('surahCheckList').querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = surahTerpilih.has(+cb.dataset.no);
+    });
+    updateSurahNote();
+  }
+
+  $('btnIsiJuz30').addEventListener('click', () => {
+    const juz30 = SURAH_LIST.filter(s => s.no >= 78).map(s => s.no);
+    setSurahTerpilih(juz30);
+  });
+  $('btnIsiJuz29').addEventListener('click', () => {
+    const juz29 = SURAH_LIST.filter(s => s.no >= 67 && s.no <= 77).map(s => s.no);
+    setSurahTerpilih(juz29);
+  });
+  $('btnKosongkan').addEventListener('click', () => setSurahTerpilih([]));
+
+  document.querySelectorAll('[data-step="targetHalaman"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      iqroTargetState.halaman = Math.max(1, iqroTargetState.halaman + (+btn.dataset.dir));
+      $('targetHalamanVal').textContent = iqroTargetState.halaman;
+    });
+  });
+
+  async function pilihKelas(kelas) {
+    kelasTerpilih = kelas;
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(c => c.classList.toggle('active', c.dataset.kelas === kelas));
+
+    const contohSiswa = siswaCache.find(s => s.kelas === kelas);
+    const isIqroKelas = contohSiswa?.jenjang === 'iqro';
+    $('targetQuranBlock').classList.toggle('hidden', isIqroKelas);
+    $('targetIqroBlock').classList.toggle('hidden', !isIqroKelas);
+    $('formArea').classList.remove('hidden');
+    $('kelasHint').textContent = `Kelas ${kelas} dipilih.`;
+
+    $('labelSemester').value = '';
+    setSurahTerpilih([]);
+    iqroTargetState.halaman = 1;
+    $('targetHalamanVal').textContent = 1;
+    $('targetJilid').value = '1';
+
+    try {
+      const existing = await getTargetHafalan(kelas);
+      if (existing) {
+        $('labelSemester').value = existing.labelSemester || '';
+        if (isIqroKelas) {
+          $('targetJilid').value = String(existing.targetJilid || 1);
+          iqroTargetState.halaman = existing.targetHalaman || 1;
+          $('targetHalamanVal').textContent = iqroTargetState.halaman;
+        } else {
+          setSurahTerpilih(existing.targetSurah || []);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  $('btnSimpanTarget').addEventListener('click', async () => {
+    if (!kelasTerpilih) return;
+    const contohSiswa = siswaCache.find(s => s.kelas === kelasTerpilih);
+    const isIqroKelas = contohSiswa?.jenjang === 'iqro';
+
+    const btn = $('btnSimpanTarget');
+    btn.disabled = true;
+    $('btnSimpanLabel').textContent = 'Menyimpan…';
+    try {
+      const data = {
+        jenjang: isIqroKelas ? 'iqro' : 'quran',
+        labelSemester: $('labelSemester').value.trim(),
+      };
+      if (isIqroKelas) {
+        data.targetJilid = +$('targetJilid').value;
+        data.targetHalaman = iqroTargetState.halaman;
+      } else {
+        data.targetSurah = [...surahTerpilih].sort((a, b) => a - b);
+      }
+      await saveTargetHafalan(kelasTerpilih, data);
+      showToast(`Target hafalan kelas ${kelasTerpilih} tersimpan.`);
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal menyimpan target. Coba lagi.', true);
+    } finally {
+      btn.disabled = false;
+      $('btnSimpanLabel').textContent = 'Simpan Target';
+    }
+  });
+</script>
+</body>
+</html>

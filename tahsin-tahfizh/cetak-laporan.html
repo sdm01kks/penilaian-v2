@@ -132,7 +132,8 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
-  import { getSiswaList, getRiwayatSetoran, getMenulisLog } from '../assets/firestore-data.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
+  import { surahByNo } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
 
@@ -333,6 +334,60 @@
     return `${namaDepan} telah menyalin Al-Qur'an hingga halaman ${halamanAkhir}, dengan ${totalPemeriksaan} kali pemeriksaan oleh guru selama periode ini.`;
   }
 
+  function renderTargetSection(siswa, targetKelas, setoranFull, namaDepan) {
+    if (!targetKelas) return '';
+    const isIqro = siswa.jenjang === 'iqro';
+
+    if (isIqro) {
+      const entriIqro = setoranFull.filter(r => r.materi?.tipe === 'iqro');
+      const posisiJilid = entriIqro[0]?.materi?.buku || 1;
+      const posisiHalaman = entriIqro[0]?.materi?.halamanAkhir || 0;
+      const tercapai = (posisiJilid > targetKelas.targetJilid) ||
+        (posisiJilid === targetKelas.targetJilid && posisiHalaman >= targetKelas.targetHalaman);
+      return `
+        <div class="lpr-section">
+          <h2>🎯 Target Hafalan${targetKelas.labelSemester ? ' — ' + escapeHtml(targetKelas.labelSemester) : ''}</h2>
+          <div class="lpr-stat-row">
+            <div class="lpr-stat"><span class="n">Iqro ${targetKelas.targetJilid}:${targetKelas.targetHalaman}</span><span class="l">Target</span></div>
+            <div class="lpr-stat"><span class="n">Iqro ${posisiJilid}:${posisiHalaman || '-'}</span><span class="l">Posisi Saat Ini</span></div>
+          </div>
+          <p class="lpr-narasi" style="color:${tercapai ? '#2d7055' : '#c0392b'};font-weight:700">${tercapai ? `Target tercapai — ${namaDepan} sudah mencapai atau melampaui target semester ini.` : `Target belum tercapai — ${namaDepan} masih perlu bimbingan lebih lanjut untuk mencapai target semester ini.`}</p>
+        </div>
+      `;
+    }
+
+    const progres = hitungProgresSurah(targetKelas.targetSurah, setoranFull);
+    if (!progres.length) return '';
+    const tercapaiCount = progres.filter(p => {
+      const surah = surahByNo(p.surahNo);
+      return surah && p.maxAyatAkhir >= surah.ayat;
+    }).length;
+
+    return `
+      <div class="lpr-section">
+        <h2>🎯 Target Hafalan${targetKelas.labelSemester ? ' — ' + escapeHtml(targetKelas.labelSemester) : ''}</h2>
+        <div class="lpr-stat-row">
+          <div class="lpr-stat"><span class="n">${tercapaiCount}/${progres.length}</span><span class="l">Surah Tercapai</span></div>
+        </div>
+        <div class="lpr-log-list">
+          ${progres.map(p => {
+            const surah = surahByNo(p.surahNo);
+            if (!surah) return '';
+            const pct = Math.min(100, Math.round((p.maxAyatAkhir / surah.ayat) * 100));
+            const dot = pct >= 100 ? 'green' : pct > 0 ? 'gold' : 'red';
+            return `
+              <div class="lpr-log-item">
+                <span class="lpr-log-dot ${dot}"></span>
+                <span class="lpr-log-materi">${escapeHtml(surah.nama)}</span>
+                <span class="lpr-log-meta">${pct}%</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   /* ---- Predikat kualitas bacaan (gauge visual) ---- */
   function hitungAkurasiBacaan(tajwid, makhroj, ayatDinilai) {
     if (!ayatDinilai) return null;
@@ -347,7 +402,7 @@
   }
 
   /* ---- Bangun satu halaman laporan ---- */
-  function buildLaporanSiswa(siswa, setoranPeriode, menulisPeriode, labelSemester, guruNama) {
+  function buildLaporanSiswa(siswa, setoranPeriode, menulisPeriode, labelSemester, guruNama, targetKelas, setoranFull) {
     const namaDepan = siswa.nama.split(' ')[0];
     const isIqro = siswa.jenjang === 'iqro';
 
@@ -464,6 +519,8 @@
           ${renderLog(hafalanLog, 'Belum ada riwayat setoran hafalan pada periode ini.')}
         </div>
 
+        ${renderTargetSection(siswa, targetKelas, setoranFull || setoranPeriode, namaDepan)}
+
         <div class="lpr-section">
           <h2>✍️ 3. Menulis Al-Qur'an</h2>
           <div class="lpr-stat-row">
@@ -521,6 +578,7 @@
     const labelDefault = mode === 'kelas' ? 'Buat & Cetak Laporan Kelas' : 'Buat & Cetak Laporan Siswa';
 
     let html = '';
+    const targetCacheByKelas = {};
     for (let i = 0; i < daftarSiswa.length; i++) {
       const s = daftarSiswa[i];
       if (daftarSiswa.length > 1) $('btnBuatLabel').textContent = `Memproses ${i + 1}/${daftarSiswa.length}: ${s.nama}…`;
@@ -528,7 +586,8 @@
         const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id), getMenulisLog(s.id)]);
         const setoranPeriode = setoran.filter(r => dalamRentang(r.createdAt, start, end));
         const menulisPeriode = menulis.filter(r => dalamRentang(r.tanggalPeriksa, start, end));
-        html += buildLaporanSiswa(s, setoranPeriode, menulisPeriode, labelSemester, currentUser.nama);
+        if (!(s.kelas in targetCacheByKelas)) targetCacheByKelas[s.kelas] = await getTargetHafalan(s.kelas).catch(() => null);
+        html += buildLaporanSiswa(s, setoranPeriode, menulisPeriode, labelSemester, currentUser.nama, targetCacheByKelas[s.kelas], setoran);
       } catch (err) {
         console.error(`Gagal memuat data ${s.nama}:`, err);
       }

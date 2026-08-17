@@ -33,6 +33,9 @@
             <div class="app-header-title">Riwayat Siswa</div>
             <div class="app-header-sub" id="guruLabel">Memuat…</div>
           </div>
+          <a href="target-hafalan.html" class="app-header-back" style="text-decoration:none" aria-label="Target Hafalan" title="Target Hafalan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          </a>
           <a href="cetak-laporan.html" id="linkCetakLaporan" class="app-header-back" style="text-decoration:none" aria-label="Cetak Laporan" title="Cetak Laporan">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
           </a>
@@ -113,7 +116,8 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
-  import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog } from '../assets/firestore-data.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
+  import { surahByNo } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
 
@@ -261,14 +265,17 @@
   }
 
   /* ---- Muat riwayat ---- */
+  let targetCache = null;
+
   async function loadRiwayat(siswaId) {
     $('membacaList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
     $('hafalanList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
     $('menulisList').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
     try {
-      [setoranCache, menulisCache] = await Promise.all([
+      [setoranCache, menulisCache, targetCache] = await Promise.all([
         getRiwayatSetoran(siswaId),
         getMenulisLog(siswaId),
+        getTargetHafalan(selectedSiswa.kelas).catch(() => null),
       ]);
       renderMembacaList();
       renderHafalanList();
@@ -496,6 +503,8 @@
         </div>
       ` : ''}
 
+      ${renderTargetBlock(isIqro)}
+
       <div class="section-label" style="margin-top:0">Menulis</div>
       <div class="card">
         ${menulisTerakhir ? `
@@ -503,6 +512,58 @@
           <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.jilidIqro ? `Iqro ${menulisTerakhir.jilidIqro} — ` : ''}${menulisTerakhir.halamanAkhir}</span></div>
           <div class="progress-info-row"><span class="k">Total pemeriksaan</span><span class="v">${menulisCache.length}x</span></div>
         ` : `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`}
+      </div>
+    `;
+  }
+
+  function renderTargetBlock(isIqro) {
+    if (!targetCache) {
+      return `
+        <div class="section-label" style="margin-top:0">Target Hafalan</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="siswa-empty-note">Belum ada target yang diatur untuk kelas ${escapeHtml(selectedSiswa.kelas)}. Atur lewat menu Target Hafalan.</div>
+        </div>
+      `;
+    }
+
+    if (isIqro) {
+      const posisiHalaman = setoranCache.find(r => r.materi?.tipe === 'iqro')?.materi?.halamanAkhir || 0;
+      const posisiJilid = setoranCache.find(r => r.materi?.tipe === 'iqro')?.materi?.buku || 1;
+      const tercapai = (posisiJilid > targetCache.targetJilid) ||
+        (posisiJilid === targetCache.targetJilid && posisiHalaman >= targetCache.targetHalaman);
+      return `
+        <div class="section-label" style="margin-top:0">Target Hafalan${targetCache.labelSemester ? ' — ' + escapeHtml(targetCache.labelSemester) : ''}</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="progress-info-row"><span class="k">Target</span><span class="v">Iqro ${targetCache.targetJilid} Hal. ${targetCache.targetHalaman}</span></div>
+          <div class="progress-info-row"><span class="k">Posisi saat ini</span><span class="v">Iqro ${posisiJilid} Hal. ${posisiHalaman || '-'}</span></div>
+          <div class="progress-info-row"><span class="k">Status</span><span class="v" style="color:${tercapai ? 'var(--green-dark)' : 'var(--red)'}">${tercapai ? 'Tercapai' : 'Belum tercapai'}</span></div>
+        </div>
+      `;
+    }
+
+    const progres = hitungProgresSurah(targetCache.targetSurah, setoranCache);
+    const tercapaiCount = progres.filter(p => {
+      const surah = surahByNo(p.surahNo);
+      return surah && p.maxAyatAkhir >= surah.ayat;
+    }).length;
+
+    return `
+      <div class="section-label" style="margin-top:0">Target Hafalan${targetCache.labelSemester ? ' — ' + escapeHtml(targetCache.labelSemester) : ''}</div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="progress-info-row"><span class="k">Surah tercapai</span><span class="v">${tercapaiCount} / ${progres.length}</span></div>
+        ${progres.map(p => {
+          const surah = surahByNo(p.surahNo);
+          if (!surah) return '';
+          const pct = Math.min(100, Math.round((p.maxAyatAkhir / surah.ayat) * 100));
+          const color = pct >= 100 ? '#2d7055' : pct > 0 ? '#c9882a' : '#c0c0c0';
+          return `
+            <div class="progres-surah-row">
+              <span class="nm">${escapeHtml(surah.nama)}</span>
+              <span class="track"><span class="fill" style="width:${pct}%;background:${color}"></span></span>
+              <span class="pct">${pct}%</span>
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
   }
