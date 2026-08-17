@@ -204,7 +204,7 @@
     const namaDepan = siswa.nama.split(' ')[0];
     const isIqro = siswa.jenjang === 'iqro';
 
-    const sesiMembaca = setoranPeriode.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
+    const sesiMembaca = setoranPeriode.filter(r => r.materi?.tipe === 'iqro' || (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
     let ayatDinilai = 0, tajwid = 0, makhroj = 0;
     const membacaLog = sesiMembaca.map(r => {
       let t = 0, m = 0;

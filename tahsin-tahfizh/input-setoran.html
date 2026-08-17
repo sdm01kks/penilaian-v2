@@ -64,6 +64,7 @@
               </button>
             </div>
             <div id="tamatIqroRow" class="hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <div id="statusBacaanLabel" class="status-bacaan-label"></div>
               <label class="checkbox-row-light">
                 <input type="checkbox" id="tamatIqroToggle">
                 <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
@@ -387,10 +388,22 @@
     // Toggle "Tamat Iqro" hanya relevan untuk siswa jenjang Iqro.
     $('tamatIqroRow').classList.toggle('hidden', s.jenjang !== 'iqro');
     $('tamatIqroToggle').checked = !!s.tamatIqro;
+    updateStatusBacaanLabel(s);
 
     applyMateriUI(s);
 
     window.scrollTo(0, 0);
+  }
+
+  function updateStatusBacaanLabel(s) {
+    const el = $('statusBacaanLabel');
+    if (s.tamatIqro) {
+      el.textContent = 'Status saat ini: Sudah tamat Iqro — membaca Al-Qur\'an';
+      el.style.color = 'var(--green-dark)';
+    } else {
+      el.textContent = 'Status saat ini: Masih latihan Iqro';
+      el.style.color = 'var(--ink-muted)';
+    }
   }
 
   /**
@@ -422,12 +435,22 @@
   $('tamatIqroToggle').addEventListener('change', async (e) => {
     if (!selectedSiswa) return;
     const value = e.target.checked;
+
+    const pesanKonfirmasi = value
+      ? `Tandai ${selectedSiswa.nama} sudah tamat Iqro? Form Input Setoran akan beralih ke materi Al-Qur'an (Surah/Ayat) mulai sekarang.`
+      : `Batalkan status tamat Iqro untuk ${selectedSiswa.nama}? Form akan kembali ke materi Iqro (Jilid/Halaman).`;
+    if (!confirm(pesanKonfirmasi)) {
+      e.target.checked = !value; // batalkan perubahan checkbox
+      return;
+    }
+
     e.target.disabled = true;
     try {
       await updateTamatIqro(selectedSiswa.id, value);
       selectedSiswa.tamatIqro = value;
       const cacheEntry = siswaCache.find(x => x.id === selectedSiswa.id);
       if (cacheEntry) cacheEntry.tamatIqro = value;
+      updateStatusBacaanLabel(selectedSiswa);
       applyMateriUI(selectedSiswa);
       showToast(value ? `${selectedSiswa.nama.split(' ')[0]} ditandai tamat Iqro.` : 'Status tamat Iqro dibatalkan.');
     } catch (err) {

@@ -328,7 +328,7 @@
   }
 
   function renderMembacaList() {
-    const list = setoranCache.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
+    const list = setoranCache.filter(r => r.materi?.tipe === 'iqro' || (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
     if (!list.length) {
       $('membacaList').innerHTML = `<div class="siswa-empty-note">Belum ada sesi dengan data Baca &amp; Tandai.</div>`;
       return;
