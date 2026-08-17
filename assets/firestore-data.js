@@ -188,6 +188,56 @@ export async function updateTamatIqro(siswaId, value) {
   const { db, fsMod } = window.__fb;
   await fsMod.updateDoc(fsMod.doc(db, 'siswa', siswaId), { tamatIqro: value });
 }
+
+/* ==========================================================================
+   Target Hafalan — target per kelas per semester (Quran: daftar surah,
+   Iqro: jilid & halaman target). Dipakai untuk menghitung capaian vs
+   target di Riwayat Siswa & Cetak Laporan.
+   ========================================================================== */
+
+const DEMO_TARGET_KEY = 'tt_demo_target_hafalan';
+
+export async function getTargetHafalan(kelas) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    const all = JSON.parse(localStorage.getItem(DEMO_TARGET_KEY) || '{}');
+    return all[kelas] || null;
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'target_hafalan', kelas));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveTargetHafalan(kelas, data) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const all = JSON.parse(localStorage.getItem(DEMO_TARGET_KEY) || '{}');
+    all[kelas] = { ...data, kelas };
+    localStorage.setItem(DEMO_TARGET_KEY, JSON.stringify(all));
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  await fsMod.setDoc(fsMod.doc(db, 'target_hafalan', kelas), {
+    ...data,
+    kelas,
+    updatedBy: auth.currentUser?.uid || null,
+    updatedAt: fsMod.serverTimestamp(),
+  });
+}
+
+/** Hitung progres satu siswa terhadap target kelasnya (khusus jenjang Quran). */
+export function hitungProgresSurah(targetSurah, riwayatSetoran) {
+  return (targetSurah || []).map(surahNo => {
+    const entriesSurahIni = riwayatSetoran.filter(r =>
+      r.jenis === 'ziyadah' && r.statusHafalan === 'lulus' &&
+      r.materi?.tipe === 'quran' &&
+      r.materi?.surahAwal === surahNo && r.materi?.surahAkhir === surahNo
+    );
+    const maxAyatAkhir = entriesSurahIni.reduce((max, r) => Math.max(max, r.materi.ayatAkhir || 0), 0);
+    return { surahNo, maxAyatAkhir };
+  });
+}
+
 export async function deleteSetoran(id) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));

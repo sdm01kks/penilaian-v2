@@ -698,3 +698,36 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
 .btn-secondary-light:hover:not(:disabled){background:var(--green-pale)}
 
 .status-bacaan-label{font-size:11.5px;font-weight:700;margin-bottom:8px}
+
+/* ==========================================================================
+   Target Hafalan
+   ========================================================================== */
+
+.surah-check-list{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.surah-check-item{
+  display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:9px;cursor:pointer;
+}
+.surah-check-item:hover{background:var(--green-ghost)}
+.surah-check-item input{position:absolute;opacity:0;width:1px;height:1px}
+.surah-check-item .box{
+  width:17px;height:17px;border-radius:5px;flex-shrink:0;border:1.5px solid var(--border);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+}
+.surah-check-item input:checked + .box{background:var(--green-mid);border-color:var(--green-mid)}
+.surah-check-item .box svg{width:10px;height:10px;opacity:0;transform:scale(.6);transition:all .12s ease}
+.surah-check-item input:checked + .box svg{opacity:1;transform:scale(1)}
+.surah-check-item .txt{font-size:12.5px;font-weight:600;color:var(--ink)}
+.surah-check-item .txt .no{color:var(--ink-muted);font-weight:700;margin-right:4px}
+
+.quick-fill-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.quick-fill-btn{
+  font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:20px;
+  background:var(--green-ghost);border:1px solid var(--border);color:var(--green-dark);cursor:pointer;
+}
+.quick-fill-btn:hover{background:var(--green-pale)}
+
+.progres-surah-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+.progres-surah-row .nm{width:110px;flex-shrink:0;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progres-surah-row .track{flex:1;height:6px;border-radius:4px;background:var(--border);overflow:hidden}
+.progres-surah-row .fill{height:100%;border-radius:4px}
+.progres-surah-row .pct{width:36px;text-align:right;flex-shrink:0;font-weight:700;color:var(--ink-muted);font-size:11px}
