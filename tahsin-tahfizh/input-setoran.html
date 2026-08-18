@@ -31,7 +31,10 @@
           </button>
           <div class="app-header-title-wrap">
             <div class="app-header-title">Input Setoran</div>
-            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+            <button class="app-header-sub-btn" id="guruLabel" title="Ketuk untuk keluar">
+              <span id="guruLabelText">Memuat…</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
           </div>
           <a href="catat-menulis.html" class="app-header-back" style="text-decoration:none" aria-label="Catat Menulis" title="Catat Menulis">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -250,11 +253,22 @@
       return;
     }
     currentUser = session;
-    $('guruLabel').textContent = session.nama;
+    $('guruLabelText').textContent = session.nama;
     loadSiswaList(); // baru dipanggil setelah scope (role/kelasAmpu) diketahui
   });
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('guruLabel').addEventListener('click', async () => {
+    if (!confirm('Keluar dari akun ini?')) return;
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+    }
+    window.location.href = 'login.html';
+  });
+
 
   $('btnBack').addEventListener('click', () => {
     if (selectedSiswa) {
