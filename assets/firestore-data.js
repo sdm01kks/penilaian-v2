@@ -114,7 +114,28 @@ const DEMO_SISWA = [
 ];
 
 /** Ambil daftar siswa. Bisa difilter per kelas (opsional). */
-export async function getSiswaList(kelasFilter) {
+// Semua kode kelas yang ada di sekolah — dipakai sebagai batas filter query
+// untuk admin (supaya query tetap "terbukti aman" di mata Firestore Rules,
+// lihat catatan panjang di bawah).
+export const SEMUA_KELAS = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
+
+/**
+ * PENTING soal `scope` di fungsi-fungsi bawah ini:
+ * Firestore MENOLAK TOTAL query yang mengembalikan banyak dokumen (list/query,
+ * bukan get satu dokumen) kalau security rule-nya butuh baca dokumen lain
+ * (di sini: profil guru di koleksi `users`, untuk cek kelasAmpu) TANPA ada
+ * filter query yang cocok dengan itu — bukan menyaring hasil diam-diam,
+ * tapi menolak seluruh permintaan. Makanya setiap query siswa/setoran/menulis
+ * di bawah ini WAJIB diberi filter `kelas` yang eksplisit (`where('kelas', ...)`)
+ * berdasarkan kelasAmpu pengguna yang sedang login (`scope`), supaya
+ * Firestore bisa "membuktikan" query itu aman tanpa perlu buka setiap
+ * dokumen satu-satu.
+ *
+ * `scope` = { role: 'admin'|'guru_tahsin_tahfizh', kelasAmpu: string[] }
+ * — ambil dari session hasil onAuthChange() di firebase.js.
+ */
+
+export async function getSiswaList(kelasFilter, scope) {
   const sortByNama = (list) => [...list].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
 
   if (DEMO_MODE) {
@@ -122,11 +143,15 @@ export async function getSiswaList(kelasFilter) {
     const list = kelasFilter ? DEMO_SISWA.filter(s => s.kelas === kelasFilter) : DEMO_SISWA;
     return sortByNama(list);
   }
+
+  const allowedKelas = kelasFilter
+    ? [kelasFilter]
+    : (scope?.role === 'admin' ? SEMUA_KELAS : (scope?.kelasAmpu || []));
+  if (!allowedKelas.length) return [];
+
   const { db, fsMod } = window.__fb;
   const col = fsMod.collection(db, 'siswa');
-  const q = kelasFilter
-    ? fsMod.query(col, fsMod.where('kelas', '==', kelasFilter), fsMod.where('aktif', '==', true))
-    : fsMod.query(col, fsMod.where('aktif', '==', true));
+  const q = fsMod.query(col, fsMod.where('kelas', 'in', allowedKelas), fsMod.where('aktif', '==', true));
   const snap = await fsMod.getDocs(q);
   return sortByNama(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 }
@@ -160,7 +185,9 @@ export async function saveSetoran(payload) {
 }
 
 /** Riwayat setoran seorang siswa, terbaru dulu. */
-export async function getRiwayatSetoran(siswaId) {
+/** Riwayat setoran seorang siswa, terbaru dulu. `kelas` wajib diisi (lihat
+ *  catatan di atas soal kenapa list query butuh filter kelas eksplisit). */
+export async function getRiwayatSetoran(siswaId, kelas) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));
     const list = JSON.parse(localStorage.getItem(DEMO_SETORAN_KEY) || '[]');
@@ -170,6 +197,7 @@ export async function getRiwayatSetoran(siswaId) {
   const q = fsMod.query(
     fsMod.collection(db, 'setoran'),
     fsMod.where('siswaId', '==', siswaId),
+    fsMod.where('kelas', '==', kelas),
     fsMod.orderBy('createdAt', 'desc')
   );
   const snap = await fsMod.getDocs(q);
@@ -276,7 +304,8 @@ export async function saveMenulisLog(payload) {
 }
 
 /** Riwayat catatan menulis seorang siswa, terbaru dulu. */
-export async function getMenulisLog(siswaId) {
+/** Riwayat catatan menulis seorang siswa, terbaru dulu. `kelas` wajib diisi. */
+export async function getMenulisLog(siswaId, kelas) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 200));
     const list = JSON.parse(localStorage.getItem(DEMO_MENULIS_KEY) || '[]');
@@ -286,6 +315,7 @@ export async function getMenulisLog(siswaId) {
   const q = fsMod.query(
     fsMod.collection(db, 'menulis_log'),
     fsMod.where('siswaId', '==', siswaId),
+    fsMod.where('kelas', '==', kelas),
     fsMod.orderBy('createdAt', 'desc')
   );
   const snap = await fsMod.getDocs(q);
