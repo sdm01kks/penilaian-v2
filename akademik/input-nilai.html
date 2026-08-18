@@ -67,6 +67,20 @@
     background:var(--red-light);color:var(--red);border:none;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
   }
+
+  /* ---- Pemilih mapel & tingkatan khusus Admin ---- */
+  .mapel-admin-card{
+    background:var(--bg-light);border:1px solid var(--border);border-radius:14px;
+    padding:12px 13px;margin-bottom:8px;
+  }
+  .mapel-admin-nama{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:9px}
+  .tingkatan-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .tingkatan-btn{
+    display:flex;align-items:center;justify-content:center;
+    background:var(--surface);border:1.5px solid var(--border);border-radius:9px;
+    padding:8px 0;font-size:12.5px;font-weight:800;color:var(--green-dark);
+    text-decoration:none;
+  }
 </style>
 </head>
 <body>
@@ -106,7 +120,7 @@
           </button>
         </div>
 
-        <div class="section-label"><span class="bar"></span>Kelas &amp; Mapel yang Diampu</div>
+        <div class="section-label" id="penugasanSectionLabel"><span class="bar"></span>Kelas &amp; Mapel yang Diampu</div>
 
         <div id="soonStrip" class="soon-strip hidden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
@@ -129,7 +143,7 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
-  import { tingkatanDariKelas } from '../assets/firestore-data-akademik.js';
+  import { tingkatanDariKelas, getMapelList } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
 
@@ -169,18 +183,39 @@
     $('profileRole').textContent = session.role === 'admin' ? 'Admin' : 'Guru';
   }
 
-  function renderPenugasan(session) {
+  async function renderPenugasan(session) {
     const list = $('penugasanList');
-    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
 
     if (session.role === 'admin') {
-      list.innerHTML = `
-        <div class="empty-state" style="padding:24px 12px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          <p>Anda login sebagai Admin. Tampilan lintas-kelas untuk Admin akan hadir bersama modul Admin.</p>
-        </div>`;
+      $('penugasanSectionLabel').innerHTML = '<span class="bar"></span>Semua Mapel — Pilih Tingkatan';
+      list.innerHTML = '<div class="empty-state" style="padding:20px 12px"><p>Memuat daftar mapel…</p></div>';
+      try {
+        const mapelList = await getMapelList();
+        if (!mapelList.length) {
+          list.innerHTML = `
+            <div class="empty-state" style="padding:24px 12px">
+              <p>Belum ada data mapel. Isi koleksi <code>mapel</code> di Firebase Console dulu.</p>
+            </div>`;
+          return;
+        }
+        list.innerHTML = mapelList.map(m => `
+          <div class="mapel-admin-card">
+            <div class="mapel-admin-nama">${escapeHtml(m.nama)}</div>
+            <div class="tingkatan-row">
+              ${[1,2,3,4,5,6].map(t => `
+                <a class="tingkatan-btn" href="setup-tp.html?mapel=${encodeURIComponent(m.nama)}&tingkatan=${t}">${t}</a>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+        list.innerHTML = '<div class="empty-state" style="padding:24px 12px"><p>Gagal memuat daftar mapel.</p></div>';
+      }
       return;
     }
+
+    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
 
     if (penugasan.length === 0) {
       list.innerHTML = `
