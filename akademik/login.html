@@ -1,1 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Masuk — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
 
+  .login-screen{
+    flex:1;display:flex;flex-direction:column;
+    background:
+      radial-gradient(120% 60% at 50% -10%, rgba(47,189,126,.16) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-dark-2) 100%);
+    padding:calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 28px);
+    overflow-y:auto;
+  }
+
+  .brand-block{text-align:center;margin-bottom:28px}
+  .brand-block .logo-badge{margin:0 auto 16px}
+  .brand-title{
+    font-family:'Amiri',serif;font-weight:700;font-size:21px;color:#fff;
+    letter-spacing:.2px;margin-bottom:4px;
+  }
+  .brand-title .accent{color:var(--gold-accent)}
+  .brand-sub{font-size:12.5px;color:var(--dark-text-muted);font-weight:600;letter-spacing:.2px}
+
+  .login-card{
+    background:var(--dark-card);
+    border:1px solid var(--dark-card-border);
+    border-radius:26px;
+    padding:26px 22px 24px;
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+  }
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin:6px 0 20px}
+  .link-gold{color:var(--gold-accent);font-size:13px;font-weight:700;text-decoration:none;background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+  .link-gold:hover{text-decoration:underline}
+
+  .form-footnote{
+    text-align:center;margin-top:26px;font-size:12.5px;color:var(--dark-text-muted);line-height:1.7;
+  }
+  .form-footnote strong{color:var(--dark-text);font-weight:700}
+
+  .spinner{
+    width:17px;height:17px;border-radius:50%;
+    border:2.5px solid rgba(4,20,13,.25);border-top-color:#04140d;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .bottom-links{
+    margin-top:auto;padding-top:30px;text-align:center;
+    font-size:11.5px;color:rgba(255,255,255,.28);
+  }
+  .bottom-links button{
+    background:none;border:none;color:rgba(255,255,255,.35);font-size:11.5px;
+    font-family:inherit;cursor:pointer;padding:0;text-decoration:underline;
+  }
+
+  .demo-badge{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(224,172,76,.1);border:1px solid rgba(224,172,76,.28);
+    color:var(--gold-accent);font-size:11.5px;font-weight:700;
+    padding:9px 12px;border-radius:12px;margin-bottom:18px;line-height:1.5;
+  }
+  .demo-badge svg{flex-shrink:0;width:15px;height:15px;margin-top:1px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div class="login-screen">
+
+      <div class="brand-block">
+        <span class="logo-badge size-lg">
+          <img src="../assets/logo.png" alt="Logo SD Muhammadiyah 01 Kukusan">
+        </span>
+        <div class="brand-title">Akademik<span class="accent">&nbsp;&amp;</span> Rapor</div>
+        <div class="brand-sub">SD MUHAMMADIYAH 01 KUKUSAN</div>
+      </div>
+
+      <div class="login-card">
+
+        <div id="demoBadge" class="demo-badge hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — belum tersambung ke Firebase. Gunakan
+            <strong style="color:var(--gold-accent)">guru.akademik@sdm01kukusan.sch.id</strong> / <strong style="color:var(--gold-accent)">akademik123</strong> untuk mencoba.</span>
+        </div>
+
+        <div id="statusPill" class="status-pill">
+          <span class="dot"></span>
+          <span id="statusText">Memeriksa koneksi…</span>
+        </div>
+
+        <form id="loginForm" novalidate>
+          <div class="field-dark" id="fieldEmail">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg>
+            <input type="email" id="email" placeholder="Email guru/admin" autocomplete="username" required>
+          </div>
+
+          <div class="field-dark" id="fieldPassword">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <input type="password" id="password" placeholder="Kata sandi" autocomplete="current-password" required>
+            <button type="button" class="toggle-visibility" id="togglePw" aria-label="Tampilkan kata sandi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="formErrorMsg" class="field-error-msg hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+            <span id="formErrorText">Email atau kata sandi salah.</span>
+          </div>
+
+          <div class="row-between">
+            <label class="checkbox-row">
+              <input type="checkbox" id="rememberMe" checked>
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span class="label">Ingat saya</span>
+            </label>
+            <button type="button" class="link-gold" id="forgotPw">Lupa kata sandi?</button>
+          </div>
+
+          <button type="submit" class="btn btn-primary-dark" id="submitBtn">
+            <span id="submitLabel">Masuk</span>
+          </button>
+        </form>
+
+      </div>
+
+      <div class="form-footnote">
+        Belum punya akun, atau kelas/mapel Anda belum terdaftar?<br>
+        <strong>Silakan hubungi admin Akademik &amp; Rapor sekolah.</strong>
+      </div>
+
+      <div class="bottom-links">
+        <button id="showHelp">Bantuan</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, login, terjemahkanErrorLogin, currentSession } from '../assets/firebase.js';
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('loginForm');
+  const statusPill = $('statusPill');
+  const statusText = $('statusText');
+  const demoBadge = $('demoBadge');
+  const submitBtn = $('submitBtn');
+  const submitLabel = $('submitLabel');
+  const toast = $('toast');
+  const toastMsg = $('toastMsg');
+
+  function showToast(msg, isError = false) {
+    toastMsg.textContent = msg;
+    toast.classList.toggle('error', isError);
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2800);
+  }
+
+  function setStatus(state, text) {
+    statusPill.className = 'status-pill' + (state === 'warn' ? ' status-warn' : state === 'error' ? ' status-error' : '');
+    statusText.textContent = text;
+  }
+
+  // ---- Status koneksi & mode demo ----
+  if (DEMO_MODE) {
+    demoBadge.classList.remove('hidden');
+    setStatus('warn', 'Mode pratinjau (belum tersambung Firebase)');
+  } else {
+    setStatus('ok', 'Sistem terhubung');
+  }
+
+  // Jika sudah pernah login (mode demo, "ingat saya"), langsung redirect.
+  const existing = currentSession();
+  if (existing) {
+    // Di halaman produksi, arahkan sesuai role. Untuk MVP, guru & admin
+    // sama-sama masuk ke Input Nilai Mapel.
+    // window.location.href = 'input-nilai.html';
+  }
+
+  // ---- Toggle tampilkan/sembunyikan kata sandi ----
+  const pwInput = $('password');
+  $('togglePw').addEventListener('click', () => {
+    pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
+  });
+
+  // ---- Lupa kata sandi ----
+  $('forgotPw').addEventListener('click', () => {
+    showToast('Hubungi admin sekolah untuk mengatur ulang kata sandi Anda.');
+  });
+
+  $('showHelp').addEventListener('click', () => {
+    showToast('Butuh bantuan? Hubungi admin Akademik & Rapor sekolah Anda.');
+  });
+
+  // ---- Submit form ----
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('formErrorMsg').classList.add('hidden');
+    $('fieldEmail').classList.remove('error');
+    $('fieldPassword').classList.remove('error');
+
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    const rememberMe = $('rememberMe').checked;
+
+    if (!email || !password) {
+      $('formErrorText').textContent = 'Email dan kata sandi wajib diisi.';
+      $('formErrorMsg').classList.remove('hidden');
+      if (!email) $('fieldEmail').classList.add('error');
+      if (!password) $('fieldPassword').classList.add('error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitLabel.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const session = await login(email, password, rememberMe);
+      showToast(`Selamat datang, ${session.nama.split(' ')[0]}!`);
+      setTimeout(() => {
+        // Arahkan ke halaman Input Nilai Mapel (fokus MVP saat ini).
+        window.location.href = 'input-nilai.html';
+      }, 700);
+    } catch (err) {
+      console.error(err);
+      const msg = terjemahkanErrorLogin(err);
+      $('formErrorText').textContent = msg;
+      $('formErrorMsg').classList.remove('hidden');
+      $('fieldEmail').classList.add('error');
+      $('fieldPassword').classList.add('error');
+      submitBtn.disabled = false;
+      submitLabel.textContent = 'Masuk';
+    }
+  });
+</script>
+</body>
+</html>

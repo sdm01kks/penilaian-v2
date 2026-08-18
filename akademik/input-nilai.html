@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Input Nilai Mapel — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .soon-strip{
+    background:var(--blue-light);border:1px solid rgba(41,128,185,.22);color:#1c5d82;
+    font-size:11.5px;font-weight:700;padding:9px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.6;
+  }
+  .soon-strip svg{flex-shrink:0;width:15px;height:15px;margin-top:1px}
+
+  /* ---- Kartu penugasan (kelas + mapel) ---- */
+  .penugasan-list{display:flex;flex-direction:column;gap:8px}
+  .penugasan-item{
+    display:flex;align-items:center;gap:11px;padding:12px 13px;
+    border-radius:14px;background:var(--bg-light);border:1px solid var(--border);
+  }
+  .penugasan-kelas-badge{
+    width:38px;height:38px;border-radius:11px;flex-shrink:0;
+    background:var(--blue-light);color:var(--blue);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11.5px;font-weight:800;
+  }
+  .penugasan-info{flex:1;min-width:0}
+  .penugasan-mapel{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .penugasan-kelas{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-top:1px}
+  .penugasan-item{flex-wrap:wrap}
+  .penugasan-actions{
+    display:flex;gap:6px;width:100%;margin-top:9px;padding-top:9px;
+    border-top:1px solid var(--border);
+  }
+  .penugasan-actions a, .penugasan-actions span{
+    flex:1;text-align:center;font-size:11px;font-weight:800;padding:7px 8px;border-radius:10px;
+    text-decoration:none;
+  }
+  .penugasan-actions a{background:var(--green-pale);color:var(--green-dark)}
+  .penugasan-actions span{background:#eceae6;color:var(--ink-muted)}
+
+  .profile-card{
+    display:flex;align-items:center;gap:12px;
+  }
+  .profile-avatar{
+    width:46px;height:46px;border-radius:50%;flex-shrink:0;
+    background:var(--green-pale);color:var(--green-dark);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;
+  }
+  .profile-info{flex:1;min-width:0}
+  .profile-nama{font-size:14.5px;font-weight:800;color:var(--ink)}
+  .profile-role{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-top:1px;text-transform:capitalize}
+  .btn-logout{
+    width:36px;height:36px;border-radius:11px;flex-shrink:0;
+    background:var(--red-light);color:var(--red);border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Input Nilai Mapel</div>
+            <div class="app-header-sub" id="guruLabel">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data penugasan masih tiruan (belum tersambung Firestore sungguhan untuk data ini).</span>
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Akun Anda</div>
+        <div class="card profile-card">
+          <div class="profile-avatar" id="profileAvatar">--</div>
+          <div class="profile-info">
+            <div class="profile-nama" id="profileNama">-</div>
+            <div class="profile-role" id="profileRole">-</div>
+          </div>
+          <button class="btn-logout" id="btnLogout" aria-label="Keluar" title="Keluar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
+        </div>
+
+        <div class="section-label"><span class="bar"></span>Kelas &amp; Mapel yang Diampu</div>
+
+        <div id="soonStrip" class="soon-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Setup TP &amp; KKTP sudah bisa dipakai. Form isi nilai per siswa untuk tiap mapel di bawah akan menyusul di update berikutnya.</span>
+        </div>
+
+        <div class="card" id="penugasanCard">
+          <div id="penugasanList" class="penugasan-list"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import { tingkatanDariKelas } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function initials(nama) {
+    return (nama || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  /* ---------------------------------------------------------------------
+     Auth guard
+     --------------------------------------------------------------------- */
+  let currentUser = null;
+  onAuthChange((session) => {
+    if (!session) {
+      window.location.href = 'login.html';
+      return;
+    }
+    currentUser = session;
+    renderProfile(session);
+    renderPenugasan(session);
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+  $('soonStrip').classList.remove('hidden');
+
+  function renderProfile(session) {
+    $('guruLabel').textContent = session.nama;
+    $('profileAvatar').textContent = initials(session.nama) || '--';
+    $('profileNama').textContent = session.nama;
+    $('profileRole').textContent = session.role === 'admin' ? 'Admin' : 'Guru';
+  }
+
+  function renderPenugasan(session) {
+    const list = $('penugasanList');
+    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
+
+    if (session.role === 'admin') {
+      list.innerHTML = `
+        <div class="empty-state" style="padding:24px 12px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <p>Anda login sebagai Admin. Tampilan lintas-kelas untuk Admin akan hadir bersama modul Admin.</p>
+        </div>`;
+      return;
+    }
+
+    if (penugasan.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state" style="padding:24px 12px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <p>Anda belum ditugaskan mengampu kelas/mapel apa pun.<br>Hubungi admin Akademik &amp; Rapor sekolah.</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = penugasan.map(p => {
+      const tingkatan = tingkatanDariKelas(p.kelas);
+      const tpUrl = `setup-tp.html?mapel=${encodeURIComponent(p.mapel || '')}&tingkatan=${encodeURIComponent(tingkatan)}`;
+      return `
+      <div class="penugasan-item">
+        <div class="penugasan-kelas-badge">${escapeHtml(p.kelas || '-')}</div>
+        <div class="penugasan-info">
+          <div class="penugasan-mapel">${escapeHtml(p.mapel || 'Mapel tidak diketahui')}</div>
+          <div class="penugasan-kelas">Kelas ${escapeHtml(p.kelas || '-')}</div>
+        </div>
+        <div class="penugasan-actions">
+          <a href="${tpUrl}">Kelola TP &amp; KKTP</a>
+          <span>Input Nilai (segera)</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  $('btnBack').addEventListener('click', () => {
+    window.location.href = '../index.html';
+  });
+
+  $('btnLogout').addEventListener('click', async () => {
+    try {
+      await logout();
+      window.location.href = 'login.html';
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal keluar. Coba lagi.', true);
+    }
+  });
+</script>
+</body>
+</html>

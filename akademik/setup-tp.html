@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup TP & KKTP — Akademik & Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  /* ---- Kartu TP ---- */
+  .tp-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  .tp-card-head{
+    display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer;
+  }
+  .tp-num-badge{
+    width:28px;height:28px;border-radius:9px;background:var(--green-pale);color:var(--green-dark);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex-shrink:0;
+  }
+  .tp-head-body{flex:1;min-width:0}
+  .tp-head-nama{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.4}
+  .tp-head-meta{display:flex;gap:6px;margin-top:4px;align-items:center}
+  .tipe-pill{
+    font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;
+  }
+  .tipe-pill.pengetahuan{background:var(--blue-light);color:var(--blue)}
+  .tipe-pill.kinerja{background:var(--gold-light);color:#8a6416}
+  .tp-card-body{display:none;padding:0 14px 16px}
+  .tp-card.open .tp-card-body{display:block}
+  .tp-card.open .chevron{transform:rotate(180deg)}
+
+  .tp-cp-box{
+    background:var(--bg-light);border-radius:11px;padding:10px 12px;font-size:12px;
+    color:var(--ink-mid);line-height:1.6;margin-bottom:12px;
+  }
+  .tp-cp-box strong{color:var(--ink);display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+
+  .level-row{
+    display:flex;gap:10px;align-items:flex-start;padding:9px 0;
+    border-top:1px solid var(--border);
+  }
+  .level-row:first-of-type{border-top:none}
+  .level-badge-sm{
+    width:80px;flex-shrink:0;font-size:10.5px;font-weight:800;padding:4px 0;
+    text-align:center;border-radius:8px;line-height:1.3;
+  }
+  .level-badge-sm .rng{display:block;font-size:9.5px;font-weight:600;opacity:.75;margin-top:1px}
+  .lv-0{background:#fbe4e0;color:#a83a2b}
+  .lv-1{background:var(--gold-light);color:#8a6416}
+  .lv-2{background:var(--blue-light);color:var(--blue)}
+  .lv-3{background:var(--green-pale);color:var(--green-dark)}
+  .level-desc-text{flex:1;font-size:12px;color:var(--ink-mid);line-height:1.5}
+  .level-desc-text.empty{color:var(--ink-muted);font-style:italic}
+
+  .tp-actions-row{display:flex;gap:8px;margin-top:12px}
+  .tp-actions-row .btn{flex:1;padding:9px;font-size:12.5px}
+
+  /* ---- Form tambah/edit ---- */
+  .form-card{
+    background:var(--surface);border:1.5px solid var(--green-light);border-radius:18px;
+    padding:16px;margin-bottom:16px;
+  }
+  .form-title{font-size:14px;font-weight:800;color:var(--green-dark);margin-bottom:14px}
+  .tipe-toggle{display:flex;gap:8px;margin-bottom:14px}
+  .tipe-toggle button{
+    flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--border);
+    background:var(--surface);font-family:inherit;font-size:12.5px;font-weight:700;
+    color:var(--ink-mid);cursor:pointer;
+  }
+  .tipe-toggle button.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .level-form-block{
+    background:var(--bg-light);border-radius:13px;padding:12px;margin-bottom:10px;
+  }
+  .level-form-label{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:8px}
+  .level-form-textarea{
+    width:100%;min-height:56px;padding:9px 11px;border-radius:10px;border:1.5px solid var(--border);
+    font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;resize:vertical;background:var(--surface);
+    margin-top:8px;
+  }
+  .level-form-textarea:focus{border-color:var(--green-light)}
+  .num-mini{width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid var(--border);font-family:inherit;font-size:12.5px;text-align:center;outline:none}
+  .num-mini:focus{border-color:var(--green-light)}
+
+  .form-btns{display:flex;gap:8px;margin-top:6px}
+  .form-btns .btn{flex:1}
+
+  .fab-add{
+    position:sticky;bottom:16px;width:100%;margin-top:6px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--green-dark);color:#fff;border:none;border-radius:14px;
+    padding:13px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+    box-shadow:0 8px 20px rgba(30,77,59,.28);
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleMapel">Setup TP &amp; KKTP</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data TP tersimpan sementara di perangkat ini.</span>
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Tujuan Pembelajaran</div>
+
+        <div id="tpList"></div>
+
+        <div id="formCard" class="form-card hidden">
+          <div class="form-title" id="formTitle">Tambah TP Baru</div>
+
+          <div class="field-label">Nomor TP</div>
+          <input type="number" class="select-field" id="fNomor" style="margin-bottom:12px" min="1" placeholder="1">
+
+          <div class="field-label">Nama Tujuan Pembelajaran</div>
+          <textarea class="field-textarea" id="fNama" style="min-height:50px;margin-bottom:12px" placeholder="Mis. Mengurutkan dan membandingkan pecahan sederhana"></textarea>
+
+          <div class="field-label">Capaian Pembelajaran (CP) — opsional</div>
+          <textarea class="field-textarea" id="fCp" style="min-height:60px;margin-bottom:14px" placeholder="Kalimat CP dari mapel ini untuk fase terkait"></textarea>
+
+          <div class="field-label">Tipe Penilaian</div>
+          <div class="tipe-toggle">
+            <button type="button" id="btnTipePengetahuan" onclick="pilihTipe('pengetahuan')">📖 Pengetahuan</button>
+            <button type="button" id="btnTipeKinerja" onclick="pilihTipe('kinerja')">⚙️ Kinerja</button>
+          </div>
+
+          <div class="field-label">4 Level KKTP</div>
+          <div id="levelFormWrap"></div>
+
+          <div class="form-btns">
+            <button class="btn btn-secondary" onclick="batalForm()">Batal</button>
+            <button class="btn btn-primary" onclick="simpanForm()" id="btnSimpanForm">Simpan TP</button>
+          </div>
+        </div>
+
+        <button class="fab-add" id="btnTambah" onclick="bukaFormBaru()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Tambah TP Baru
+        </button>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    LEVEL_LABEL, LEVEL_RANGE_DEFAULT, faseDariTingkatan, tingkatanDariKelas,
+    getTPList, saveTP, deleteTP,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const mapelNama = params.get('mapel') || '';
+  const tingkatan = params.get('tingkatan') || '';
+
+  let session   = null;
+  let allTP     = [];
+  let editingId = null;
+  let tipeAktif = 'pengetahuan';
+  let levelsForm = JSON.parse(JSON.stringify(LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  /* ---------------------------------------------------------------------
+     Guard: login + parameter valid + guru punya penugasan mapel ini
+     di tingkatan ini (atau admin).
+     --------------------------------------------------------------------- */
+  onAuthChange((s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    session = s;
+
+    if (!mapelNama || !tingkatan) {
+      showEmptyScope('Tautan tidak lengkap — mapel atau tingkatan tidak diketahui. Kembali ke halaman sebelumnya dan coba lagi.');
+      return;
+    }
+
+    const berhak = s.role === 'admin' || (s.penugasan || []).some(p =>
+      p.mapel === mapelNama && tingkatanDariKelas(p.kelas) === String(tingkatan)
+    );
+    if (!berhak) {
+      showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas tingkat ${tingkatan}.`);
+      return;
+    }
+
+    $('titleMapel').textContent = mapelNama;
+    $('subKelas').textContent   = `Tingkat ${tingkatan} · Fase ${faseDariTingkatan(tingkatan)}`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+    muatTP();
+  });
+
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  async function muatTP() {
+    try {
+      allTP = await getTPList({ mapel: mapelNama, tingkatan });
+      renderTPList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat TP.', true);
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     Render daftar TP
+     --------------------------------------------------------------------- */
+  function renderTPList() {
+    const wrap = $('tpList');
+    if (!allTP.length) {
+      wrap.innerHTML = `<div class="card" style="text-align:center;color:var(--ink-muted);font-size:12.5px;padding:24px">
+        Belum ada Tujuan Pembelajaran untuk ${escapeHtml(mapelNama)} tingkat ${escapeHtml(tingkatan)}.<br>Mulai dengan tombol di bawah.
+      </div>`;
+      return;
+    }
+    wrap.innerHTML = allTP.map((tp, i) => renderTPCard(tp, i)).join('');
+  }
+
+  function renderTPCard(tp, i) {
+    const labels = LEVEL_LABEL[tp.tipe] || LEVEL_LABEL.pengetahuan;
+    const levelRows = (tp.levels || []).map((lv, li) => `
+      <div class="level-row">
+        <div class="level-badge-sm lv-${li}">${escapeHtml(labels[li])}<span class="rng">${lv.min}–${lv.maks}</span></div>
+        <div class="level-desc-text ${lv.deskripsi ? '' : 'empty'}">${lv.deskripsi ? escapeHtml(lv.deskripsi) : 'Belum diisi'}</div>
+      </div>`).join('');
+
+    return `
+    <div class="tp-card" id="tpc-${i}">
+      <div class="tp-card-head" onclick="toggleCard(${i})">
+        <div class="tp-num-badge">${tp.nomorTp || i + 1}</div>
+        <div class="tp-head-body">
+          <div class="tp-head-nama">${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
+          <div class="tp-head-meta">
+            <span class="tipe-pill ${tp.tipe}">${tp.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan'}</span>
+          </div>
+        </div>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="tp-card-body">
+        ${tp.cp ? `<div class="tp-cp-box"><strong>Capaian Pembelajaran</strong>${escapeHtml(tp.cp)}</div>` : ''}
+        ${levelRows}
+        <div class="tp-actions-row">
+          <button class="btn btn-secondary" onclick="bukaFormEdit('${tp.id}')">Edit</button>
+          <button class="btn btn-secondary" style="color:var(--red)" onclick="hapusTP('${tp.id}')">Hapus</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  window.toggleCard = (i) => $('tpc-' + i)?.classList.toggle('open');
+
+  /* ---------------------------------------------------------------------
+     Form tambah / edit
+     --------------------------------------------------------------------- */
+  function renderLevelForm() {
+    const labels = LEVEL_LABEL[tipeAktif];
+    $('levelFormWrap').innerHTML = levelsForm.map((lv, i) => `
+      <div class="level-form-block">
+        <div class="level-form-label">${escapeHtml(labels[i])}</div>
+        <div class="field-row-2" style="margin-bottom:0">
+          <div><input type="number" class="num-mini" id="lvMin-${i}" value="${lv.min}" placeholder="Min"></div>
+          <div><input type="number" class="num-mini" id="lvMaks-${i}" value="${lv.maks}" placeholder="Maks"></div>
+        </div>
+        <textarea class="level-form-textarea" id="lvDesc-${i}" placeholder="Kalimat deskripsi capaian untuk level ini…">${escapeHtml(lv.deskripsi || '')}</textarea>
+      </div>`).join('');
+  }
+
+  window.pilihTipe = (tipe) => {
+    tipeAktif = tipe;
+    $('btnTipePengetahuan').classList.toggle('active', tipe === 'pengetahuan');
+    $('btnTipeKinerja').classList.toggle('active', tipe === 'kinerja');
+    renderLevelForm();
+  };
+
+  window.bukaFormBaru = () => {
+    editingId = null;
+    $('formTitle').textContent = 'Tambah TP Baru';
+    $('fNomor').value = allTP.length ? Math.max(...allTP.map(t => t.nomorTp || 0)) + 1 : 1;
+    $('fNama').value = '';
+    $('fCp').value = '';
+    levelsForm = JSON.parse(JSON.stringify(LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
+    pilihTipe('pengetahuan');
+    $('formCard').classList.remove('hidden');
+    $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.bukaFormEdit = (id) => {
+    const tp = allTP.find(t => t.id === id);
+    if (!tp) return;
+    editingId = id;
+    $('formTitle').textContent = 'Edit TP';
+    $('fNomor').value = tp.nomorTp || '';
+    $('fNama').value  = tp.namaTp || '';
+    $('fCp').value    = tp.cp || '';
+    levelsForm = JSON.parse(JSON.stringify(tp.levels || LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
+    pilihTipe(tp.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan');
+    $('formCard').classList.remove('hidden');
+    $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.batalForm = () => {
+    $('formCard').classList.add('hidden');
+    editingId = null;
+  };
+
+  window.simpanForm = async () => {
+    const nomorTp = parseInt($('fNomor').value, 10) || null;
+    const namaTp  = $('fNama').value.trim();
+    if (!namaTp) { showToast('Nama TP wajib diisi.', true); return; }
+
+    const levels = levelsForm.map((_, i) => ({
+      min:       parseInt($('lvMin-' + i).value, 10) || 0,
+      maks:      parseInt($('lvMaks-' + i).value, 10) || 0,
+      deskripsi: $('lvDesc-' + i).value.trim(),
+    }));
+
+    const btn = $('btnSimpanForm');
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    try {
+      await saveTP({
+        id: editingId,
+        mapel: mapelNama,
+        tingkatan,
+        nomorTp,
+        namaTp,
+        cp: $('fCp').value.trim(),
+        tipe: tipeAktif,
+        levels,
+      });
+      showToast(editingId ? 'TP berhasil diperbarui.' : 'TP baru berhasil ditambahkan.');
+      $('formCard').classList.add('hidden');
+      editingId = null;
+      await muatTP();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan TP.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Simpan TP';
+    }
+  };
+
+  window.hapusTP = async (id) => {
+    if (!confirm('Hapus TP ini? Nilai yang sudah diisi terkait TP ini tidak akan otomatis terhapus.')) return;
+    try {
+      await deleteTP(id);
+      showToast('TP dihapus.');
+      await muatTP();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menghapus TP.', true);
+    }
+  };
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'input-nilai.html'; });
+</script>
+</body>
+</html>
