@@ -9,6 +9,13 @@ rules_version = '2';
 //   2. Build > Firestore Database > tab "Rules"
 //   3. Salin SELURUH isi file ini, tempel menggantikan isi yang ada
 //   4. Klik "Publish"
+//
+// Model akses:
+//   - Hanya pengguna yang punya dokumen di koleksi `users` yang bisa
+//     mengakses data apa pun (dibuat manual dari Firebase Console).
+//   - role "admin": akses penuh ke semua kelas.
+//   - role "guru": hanya boleh baca/tulis data untuk kelas yang ada di
+//     daftar `kelasAmpu` miliknya.
 // ============================================================================
 
 service cloud.firestore {
@@ -18,61 +25,74 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Profil pengguna yang sedang login (nama, role, kelasAmpu).
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() && myProfile().role == 'admin';
+    }
+
+    // Boleh akses kelas tertentu kalau admin, atau kelas itu ada di kelasAmpu-nya.
+    function bolehKelas(kelas) {
+      return isLoggedIn() && (myProfile().role == 'admin' || kelas in myProfile().kelasAmpu);
+    }
+
     // ---- users/{uid} ---------------------------------------------------
-    // Profil pengguna (nama, role). Dibuat manual dari Firebase Console.
-    // Pengguna hanya boleh membaca profilnya sendiri.
+    // Profil pengguna (nama, role, kelasAmpu). Dibuat & diubah manual
+    // lewat Firebase Console. Pengguna hanya boleh membaca profilnya sendiri.
     match /users/{uid} {
       allow read: if isLoggedIn() && request.auth.uid == uid;
       allow write: if false;
     }
 
     // ---- siswa/{id} ------------------------------------------------------
-    // Data siswa (nama, NIS, kelas, jenjang). Diisi lewat seed-siswa.html
-    // (migrasi awal) dan nanti lewat fitur admin. Untuk saat ini, siapa pun
-    // yang login boleh membaca & menulis — akan dipersempit lagi begitu
-    // modul Admin (dengan role check) selesai dibangun.
+    // Data siswa. Guru hanya boleh membaca siswa dari kelas yang diampunya.
+    // Menulis (seed/migrasi data) khusus admin.
     match /siswa/{id} {
-      allow read: if isLoggedIn();
-      allow write: if isLoggedIn();
+      allow read: if bolehKelas(resource.data.kelas);
+      allow write: if isAdmin();
     }
 
     // ---- kktp_tahsin_tahfizh/{jenjang} ------------------------------------
-    // Konfigurasi aspek & bobot penilaian ("iqro" / "quran"). Diisi lewat
-    // seed-kktp.html (sekali jalan) — pengguna yang login hanya boleh
-    // membaca, tidak menulis dari aplikasi harian.
+    // Sudah tidak dipakai aktif (KKTP digantikan Baca & Tandai), dibiarkan
+    // untuk kompatibilitas. Baca oleh siapa pun yang login, tulis khusus admin.
     match /kktp_tahsin_tahfizh/{jenjang} {
       allow read: if isLoggedIn();
-      allow write: if isLoggedIn(); // dibuka sementara untuk seed awal
+      allow write: if isAdmin();
     }
 
     // ---- setoran/{id} ------------------------------------------------------
-    // Riwayat setoran harian. Guru yang login boleh menambah & membaca.
-    // Hapus hanya diizinkan untuk entri milik sendiri (createdBy == dirinya)
-    // — untuk kasus salah input. Ubah/edit isi entri belum dibuka.
+    // Riwayat setoran harian. Guru hanya boleh baca/tambah untuk kelas
+    // yang diampunya. Hapus hanya untuk entri milik sendiri.
     match /setoran/{id} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow read: if bolehKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehKelas(request.resource.data.kelas);
       allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
       allow update: if false;
     }
 
     // ---- menulis_log/{id} ---------------------------------------------------
     // Catatan pemeriksaan berkala buku salinan Al-Qur'an. Aturan sama
-    // seperti setoran: hapus hanya untuk entri milik sendiri.
+    // seperti setoran.
     match /menulis_log/{id} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow read: if bolehKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehKelas(request.resource.data.kelas);
       allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
       allow update: if false;
     }
 
     // ---- target_hafalan/{kelas} ---------------------------------------------
     // Target surah (Quran) / jilid+halaman (Iqro) per kelas per semester.
-    // Siapa pun yang login boleh membaca & mengatur — dipersempit lagi
-    // begitu modul Admin (role check) selesai dibangun.
+    // ID dokumen = kode kelas, jadi tinggal dicocokkan dengan kelasAmpu.
     match /target_hafalan/{kelas} {
-      allow read: if isLoggedIn();
-      allow write: if isLoggedIn();
+      allow read: if bolehKelas(kelas);
+      allow write: if bolehKelas(kelas);
     }
 
     // ---- Semua koleksi lain: default tertutup --------------------------
