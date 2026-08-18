@@ -273,6 +273,13 @@ body{
 .app-header-back:hover{background:rgba(255,255,255,.24)}
 .app-header-title{font-size:16.5px;font-weight:800;letter-spacing:.2px;flex:1}
 .app-header-sub{font-size:11.5px;color:rgba(255,255,255,.75);font-weight:600;margin-top:2px}
+.app-header-sub-btn{
+  font-size:11.5px;color:rgba(255,255,255,.75);font-weight:600;margin-top:2px;
+  background:none;border:none;padding:0;font-family:inherit;cursor:pointer;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.app-header-sub-btn:hover{color:#fff}
+.app-header-sub-btn svg{width:11px;height:11px;flex-shrink:0;opacity:.8}
 
 /* ---- Badan halaman ---- */
 .app-body{
