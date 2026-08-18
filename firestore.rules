@@ -34,9 +34,17 @@ service cloud.firestore {
       return isLoggedIn() && myProfile().role == 'admin';
     }
 
-    // Boleh akses kelas tertentu kalau admin, atau kelas itu ada di kelasAmpu-nya.
+    // Boleh akses kelas tertentu kalau admin, atau dia guru_tahsin_tahfizh
+    // dengan kelas itu ada di kelasAmpu-nya. Sengaja dicek role-nya secara
+    // spesifik (bukan cuma "ada kelasAmpu") — supaya guru mapel lain yang
+    // nanti juga punya field kelasAmpu (untuk modul Akademik, dst) TIDAK
+    // ikut kebagian akses ke data Tahsin-Tahfizh hanya karena kebetulan
+    // field & kode kelasnya sama.
     function bolehKelas(kelas) {
-      return isLoggedIn() && (myProfile().role == 'admin' || kelas in myProfile().kelasAmpu);
+      return isLoggedIn() && (
+        myProfile().role == 'admin' ||
+        (myProfile().role == 'guru_tahsin_tahfizh' && kelas in myProfile().kelasAmpu)
+      );
     }
 
     // ---- users/{uid} ---------------------------------------------------
