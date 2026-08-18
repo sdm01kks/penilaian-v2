@@ -61,7 +61,7 @@ const DEMO_SESSION_KEY = 'tt_demo_session';
 function _demoSeedUsers() {
   if (localStorage.getItem(DEMO_USERS_KEY)) return;
   localStorage.setItem(DEMO_USERS_KEY, JSON.stringify([
-    { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru', kelasAmpu: ['3A','3B','3C','4A','4B'] },
+    { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru_tahsin_tahfizh', kelasAmpu: ['3A','3B','3C','4A','4B'] },
     { email: 'admin@sdm01kukusan.sch.id',       password: 'admin123',  nama: 'Admin Tahsin-Tahfizh',    role: 'admin', kelasAmpu: [] },
   ]));
 }
