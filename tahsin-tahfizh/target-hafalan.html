@@ -126,10 +126,13 @@
   import { SURAH_LIST } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
+  let currentUser = null;
 
   onAuthChange((session) => {
     if (!session) { window.location.href = 'login.html'; return; }
+    currentUser = session;
     $('guruLabel').textContent = session.nama;
+    loadKelas();
   });
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
@@ -149,14 +152,13 @@
   const iqroTargetState = { halaman: 1 };
 
   async function loadKelas() {
-    siswaCache = await getSiswaList();
+    siswaCache = await getSiswaList(undefined, currentUser);
     const kelasList = [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
     $('kelasChipRow').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
     $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
       chip.addEventListener('click', () => pilihKelas(chip.dataset.kelas));
     });
   }
-  loadKelas();
 
   populateSurahList();
   function populateSurahList() {

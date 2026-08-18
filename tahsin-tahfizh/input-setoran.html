@@ -251,6 +251,7 @@
     }
     currentUser = session;
     $('guruLabel').textContent = session.nama;
+    loadSiswaList(); // baru dipanggil setelah scope (role/kelasAmpu) diketahui
   });
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
@@ -287,7 +288,7 @@
   async function loadSiswaList() {
     $('siswaResultList').innerHTML = `<div class="siswa-empty-note">Memuat daftar siswa…</div>`;
     try {
-      siswaCache = await getSiswaList();
+      siswaCache = await getSiswaList(undefined, currentUser);
       renderKelasChips();
       renderSiswaResults();
     } catch (err) {
@@ -780,9 +781,9 @@
   });
 
   /* ---------------------------------------------------------------------
-     Init
+     Init — loadSiswaList() dipanggil dari dalam onAuthChange di atas,
+     setelah scope (role/kelasAmpu) diketahui.
      --------------------------------------------------------------------- */
-  loadSiswaList();
 </script>
 </body>
 </html>

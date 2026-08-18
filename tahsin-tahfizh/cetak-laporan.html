@@ -142,6 +142,7 @@
     if (!session) { window.location.href = 'login.html'; return; }
     currentUser = session;
     $('guruLabel').textContent = session.nama;
+    loadKelas();
   });
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
@@ -179,7 +180,7 @@
   let kelasTerpilih = null;
 
   async function loadKelas() {
-    siswaCache = await getSiswaList();
+    siswaCache = await getSiswaList(undefined, currentUser);
     const kelasList = [...new Set(siswaCache.map(s => s.kelas))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
     $('kelasChipRow').innerHTML = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${k}">${k}</button>`).join('');
     $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
@@ -194,7 +195,6 @@
     setupSiswaPickerCetak();
     handleUrlPreselect();
   }
-  loadKelas();
 
   /* ---- Pilih siswa individual (mode: Per Siswa) ---- */
   let siswaTerpilihCetak = null;
@@ -583,7 +583,7 @@
       const s = daftarSiswa[i];
       if (daftarSiswa.length > 1) $('btnBuatLabel').textContent = `Memproses ${i + 1}/${daftarSiswa.length}: ${s.nama}…`;
       try {
-        const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id), getMenulisLog(s.id)]);
+        const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id, s.kelas), getMenulisLog(s.id, s.kelas)]);
         const setoranPeriode = setoran.filter(r => dalamRentang(r.createdAt, start, end));
         const menulisPeriode = menulis.filter(r => dalamRentang(r.tanggalPeriksa, start, end));
         if (!(s.kelas in targetCacheByKelas)) targetCacheByKelas[s.kelas] = await getTargetHafalan(s.kelas).catch(() => null);
