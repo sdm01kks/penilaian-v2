@@ -59,18 +59,28 @@ export function tingkatanDariKelas(kelas) {
    tanpa perlu tabel terjemahan id↔nama.
    ========================================================================== */
 
-const DEMO_MAPEL = [
+const DEMO_MAPEL_SEED = [
   { id: 'Matematika',       nama: 'Matematika',       kelompok: 'wajib', urutan: 1, bobotSlm: 60, bobotSas: 40 },
   { id: 'Bahasa Indonesia', nama: 'Bahasa Indonesia', kelompok: 'wajib', urutan: 2, bobotSlm: 60, bobotSas: 40 },
   { id: 'IPAS',             nama: 'IPAS',             kelompok: 'wajib', urutan: 3, bobotSlm: 60, bobotSas: 40 },
   { id: 'PJOK',             nama: 'PJOK',              kelompok: 'wajib', urutan: 4, bobotSlm: 60, bobotSas: 40 },
 ];
+const DEMO_MAPEL_KEY = 'akd_demo_mapel';
+
+function readDemoMapel() {
+  const raw = localStorage.getItem(DEMO_MAPEL_KEY);
+  if (!raw) {
+    localStorage.setItem(DEMO_MAPEL_KEY, JSON.stringify(DEMO_MAPEL_SEED));
+    return DEMO_MAPEL_SEED;
+  }
+  return JSON.parse(raw);
+}
 
 /** Ambil semua mapel, terurut. */
 export async function getMapelList() {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 200));
-    return [...DEMO_MAPEL].sort((a, b) => a.urutan - b.urutan);
+    return [...readDemoMapel()].sort((a, b) => a.urutan - b.urutan);
   }
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDocs(fsMod.collection(db, 'mapel'));
@@ -81,7 +91,7 @@ export async function getMapelList() {
 export async function getMapelByNama(nama) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 120));
-    return DEMO_MAPEL.find(m => m.nama === nama) || { id: nama, nama, bobotSlm: 60, bobotSas: 40 };
+    return readDemoMapel().find(m => m.nama === nama) || { id: nama, nama, bobotSlm: 60, bobotSas: 40 };
   }
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDoc(fsMod.doc(db, 'mapel', nama));
