@@ -61,14 +61,14 @@ const DEMO_SESSION_KEY = 'tt_demo_session';
 function _demoSeedUsers() {
   if (localStorage.getItem(DEMO_USERS_KEY)) return;
   localStorage.setItem(DEMO_USERS_KEY, JSON.stringify([
-    { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru' },
-    { email: 'admin@sdm01kukusan.sch.id',       password: 'admin123',  nama: 'Admin Tahsin-Tahfizh',    role: 'admin' },
+    { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru', kelasAmpu: ['3A','3B','3C','4A','4B'] },
+    { email: 'admin@sdm01kukusan.sch.id',       password: 'admin123',  nama: 'Admin Tahsin-Tahfizh',    role: 'admin', kelasAmpu: [] },
   ]));
 }
 
 /**
  * Login dengan email + password.
- * @returns {Promise<{uid:string, email:string, nama:string, role:string}>}
+ * @returns {Promise<{uid:string, email:string, nama:string, role:string, kelasAmpu:string[]}>}
  */
 export async function login(email, password, rememberMe) {
   if (DEMO_MODE) {
@@ -81,7 +81,7 @@ export async function login(email, password, rememberMe) {
       err.code = 'demo/invalid-credential';
       throw err;
     }
-    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role };
+    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [] };
     const store = rememberMe ? localStorage : sessionStorage;
     store.setItem(DEMO_SESSION_KEY, JSON.stringify(session));
     return session;
@@ -94,7 +94,7 @@ export async function login(email, password, rememberMe) {
   );
   const cred = await authMod.signInWithEmailAndPassword(auth, email, password);
 
-  // Ambil profil (nama, role) dari koleksi Firestore `users/{uid}`
+  // Ambil profil (nama, role, kelasAmpu) dari koleksi Firestore `users/{uid}`
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDoc(fsMod.doc(db, 'users', cred.user.uid));
   const profile = snap.exists() ? snap.data() : {};
@@ -104,6 +104,7 @@ export async function login(email, password, rememberMe) {
     email: cred.user.email,
     nama: profile.nama || cred.user.email,
     role: profile.role || 'guru',
+    kelasAmpu: profile.kelasAmpu || [],
   };
 }
 
@@ -153,10 +154,11 @@ export function onAuthChange(callback) {
         email: fbUser.email,
         nama: profile.nama || fbUser.email,
         role: profile.role || 'guru',
+        kelasAmpu: profile.kelasAmpu || [],
       });
     } catch (err) {
       console.error('Gagal memuat profil pengguna:', err);
-      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru' });
+      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [] });
     }
   });
 }
