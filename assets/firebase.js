@@ -1,5 +1,6 @@
 /**
- * firebase.js — Inisialisasi Firebase untuk modul Tahsin-Tahfizh v2
+ * firebase.js — Inisialisasi Firebase, dipakai bersama oleh seluruh modul
+ * (Tahsin-Tahfizh & Akademik & Rapor)
  * SD Muhammadiyah 01 Kukusan
  *
  * PENTING: Ganti firebaseConfig di bawah dengan config asli dari
@@ -62,13 +63,18 @@ function _demoSeedUsers() {
   if (localStorage.getItem(DEMO_USERS_KEY)) return;
   localStorage.setItem(DEMO_USERS_KEY, JSON.stringify([
     { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru_tahsin_tahfizh', kelasAmpu: ['3A','3B','3C','4A','4B'] },
+    { email: 'guru.akademik@sdm01kukusan.sch.id', password: 'akademik123', nama: 'Bapak Rudi Hartono', role: 'guru_akademik', penugasan: [
+      { kelas: '4A', mapel: 'Matematika' },
+      { kelas: '4B', mapel: 'Matematika' },
+      { kelas: '4A', mapel: 'IPAS' },
+    ] },
     { email: 'admin@sdm01kukusan.sch.id',       password: 'admin123',  nama: 'Admin Tahsin-Tahfizh',    role: 'admin', kelasAmpu: [] },
   ]));
 }
 
 /**
  * Login dengan email + password.
- * @returns {Promise<{uid:string, email:string, nama:string, role:string, kelasAmpu:string[]}>}
+ * @returns {Promise<{uid:string, email:string, nama:string, role:string, kelasAmpu:string[], penugasan:Array<{kelas:string,mapel:string}>}>}
  */
 export async function login(email, password, rememberMe) {
   if (DEMO_MODE) {
@@ -81,7 +87,7 @@ export async function login(email, password, rememberMe) {
       err.code = 'demo/invalid-credential';
       throw err;
     }
-    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [] };
+    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [], penugasan: found.penugasan || [] };
     const store = rememberMe ? localStorage : sessionStorage;
     store.setItem(DEMO_SESSION_KEY, JSON.stringify(session));
     return session;
@@ -94,7 +100,10 @@ export async function login(email, password, rememberMe) {
   );
   const cred = await authMod.signInWithEmailAndPassword(auth, email, password);
 
-  // Ambil profil (nama, role, kelasAmpu) dari koleksi Firestore `users/{uid}`
+  // Ambil profil (nama, role, kelasAmpu — Tahsin-Tahfizh, penugasan — Akademik)
+  // dari koleksi Firestore `users/{uid}`. Satu akun biasanya hanya mengisi
+  // salah satu (kelasAmpu ATAU penugasan) sesuai role-nya; keduanya tetap
+  // dibawa di sesi supaya halaman modul mana pun tidak perlu tahu bedanya.
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDoc(fsMod.doc(db, 'users', cred.user.uid));
   const profile = snap.exists() ? snap.data() : {};
@@ -105,6 +114,7 @@ export async function login(email, password, rememberMe) {
     nama: profile.nama || cred.user.email,
     role: profile.role || 'guru',
     kelasAmpu: profile.kelasAmpu || [],
+    penugasan: profile.penugasan || [],
   };
 }
 
@@ -155,10 +165,11 @@ export function onAuthChange(callback) {
         nama: profile.nama || fbUser.email,
         role: profile.role || 'guru',
         kelasAmpu: profile.kelasAmpu || [],
+        penugasan: profile.penugasan || [],
       });
     } catch (err) {
       console.error('Gagal memuat profil pengguna:', err);
-      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [] });
+      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [], penugasan: [] });
     }
   });
 }
