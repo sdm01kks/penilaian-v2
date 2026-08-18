@@ -13,9 +13,15 @@ rules_version = '2';
 // Model akses:
 //   - Hanya pengguna yang punya dokumen di koleksi `users` yang bisa
 //     mengakses data apa pun (dibuat manual dari Firebase Console).
-//   - role "admin": akses penuh ke semua kelas.
-//   - role "guru": hanya boleh baca/tulis data untuk kelas yang ada di
-//     daftar `kelasAmpu` miliknya.
+//   - role "admin": akses penuh ke semua kelas & semua modul.
+//   - role "guru_tahsin_tahfizh": hanya boleh baca/tulis data
+//     Tahsin-Tahfizh untuk kelas yang ada di daftar `kelasAmpu` miliknya.
+//   - role "guru_akademik": hanya boleh baca/tulis data Akademik & Rapor
+//     (lihat blok `mapel` & `tp_kktp` di bawah).
+//   - Role SENGAJA dicek spesifik per modul, bukan sekadar "punya
+//     kelasAmpu/penugasan" — supaya guru satu modul tidak otomatis
+//     kebagian akses ke modul lain hanya karena kebetulan bentuk
+//     datanya mirip. Lihat komentar di bolehKelas() untuk detail.
 // ============================================================================
 
 service cloud.firestore {
@@ -45,6 +51,17 @@ service cloud.firestore {
         myProfile().role == 'admin' ||
         (myProfile().role == 'guru_tahsin_tahfizh' && kelas in myProfile().kelasAmpu)
       );
+    }
+
+    // Guru modul Akademik & Rapor — dicek dengan role spesifik "guru_akademik"
+    // (BUKAN "guru" generik), dengan alasan yang sama seperti bolehKelas() di
+    // atas: users/{uid}.penugasan (dipakai Akademik) berbentuk array
+    // {kelas, mapel}, mirip secara struktur dengan kelasAmpu milik
+    // Tahsin-Tahfizh — kalau role tidak dicek spesifik, ada risiko satu
+    // guru modul lain kebagian akses tak sengaja ke modul ini, atau
+    // sebaliknya.
+    function isGuruAkademik() {
+      return isLoggedIn() && myProfile().role == 'guru_akademik';
     }
 
     // ---- users/{uid} ---------------------------------------------------
@@ -101,6 +118,47 @@ service cloud.firestore {
     match /target_hafalan/{kelas} {
       allow read: if bolehKelas(kelas);
       allow write: if bolehKelas(kelas);
+    }
+
+    // ==========================================================================
+    // Modul Akademik & Rapor
+    // ==========================================================================
+
+    // ---- mapel/{nama} ----------------------------------------------------
+    // Data referensi mapel (bobot SLM/SAS, kelompok, urutan cetak). ID
+    // dokumen SENGAJA berupa nama mapel persis (mis. "Matematika"), bukan
+    // kode singkat, supaya cocok langsung dengan users/{uid}.penugasan[].mapel
+    // tanpa tabel terjemahan. Isinya bukan data sensitif (bukan data siswa),
+    // jadi baca dibuka untuk siapa pun yang login — termasuk guru
+    // Tahsin-Tahfizh, tidak masalah. Tulis khusus admin, mengikuti pola
+    // kktp_tahsin_tahfizh di atas.
+    match /mapel/{nama} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- tp_kktp/{id} ------------------------------------------------------
+    // Tujuan Pembelajaran + 4 level KKTP per mapel & TINGKATAN (angka
+    // kelas, mis. "4" — bukan per kelas paralel, karena 4A & 4B memakai
+    // kurikulum yang sama dan boleh diedit bersama oleh guru mapel yang
+    // mengampu salah satunya).
+    //
+    // CATATAN KEAMANAN — sengaja belum sehalus bolehKelas(): idealnya
+    // aturan di sini mencocokkan mapel & tingkatan pada dokumen terhadap
+    // penugasan spesifik guru (persis seperti bolehKelas() mencocokkan
+    // kelas). Tapi penugasan tersimpan sebagai array {kelas, mapel} per
+    // KELAS PARALEL (mis. "4A"), sedangkan TP disimpan per TINGKATAN
+    // ("4") — mencocokkan keduanya perlu mengambil awalan angka dari tiap
+    // elemen array di dalam rule, yang tidak sederhana ditulis maupun
+    // diuji di Firestore Rules. Karena isi TP/KKTP adalah kriteria
+    // kurikulum (bukan nilai/data pribadi siswa), risikonya jauh lebih
+    // rendah daripada koleksi nilai nanti — untuk saat ini cukup dibatasi
+    // per ROLE (harus guru_akademik atau admin), belum per mapel/tingkatan
+    // spesifik. WAJIB diperketat ke pencocokan penugasan yang sebenarnya
+    // sebelum koleksi nilai (data nilai siswa sungguhan) dibangun.
+    match /tp_kktp/{id} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() || isGuruAkademik();
     }
 
     // ---- Semua koleksi lain: default tertutup --------------------------

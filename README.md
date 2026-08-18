@@ -16,8 +16,8 @@ paling mendesak dikerjakan lebih dulu.
 
 | Modul | Status | Keterangan |
 |---|---|---|
-| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Catat Menulis ✅ · Riwayat Siswa ✅ · Cetak Laporan ✅ |
-| Akademik & Rapor | ⚪ Belum dimulai | Menyusul setelah Tahsin-Tahfizh selesai |
+| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Catat Menulis ✅ · Riwayat Siswa ✅ · Cetak Laporan ✅ · Target Hafalan ✅ |
+| **Akademik & Rapor** | 🟡 Mulai diujicobakan ke guru | Login ✅ · Setup TP & KKTP ✅ · Input Nilai Mapel ⏳ (menyusul) |
 | Ujian Sekolah | ⚪ Belum dimulai | |
 | Presensi Siswa | ⚪ Belum dimulai | |
 
@@ -47,23 +47,34 @@ penilaian-v2/
 │   ├── style.css            #   Design tokens & komponen UI bersama
 │   ├── firebase.js          #   Inisialisasi Firebase + helper Auth
 │   ├── firestore-data.js    #   Akses data siswa & setoran (dgn fallback DEMO_MODE)
+│   ├── firestore-data-akademik.js #   Akses data mapel & TP/KKTP modul Akademik (idem)
 │   ├── quran-surah.js       #   Daftar 114 surah (nama & jumlah ayat)
 │   ├── logo.png             #   Logo sekolah (transparan, 512×512)
 │   ├── favicon-32.png
 │   └── apple-touch-icon.png
-└── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
-    ├── login.html
-    ├── input-setoran.html   # Membaca + Menghapal (harian, per antrean)
-    ├── catat-menulis.html   # Menulis (berkala, bukan per antrean)
-    ├── riwayat-siswa.html   # Riwayat per siswa (3 tab, lintas kelas)
-    ├── cetak-laporan.html   # Laporan cetak per kelas, per periode (semester)
-    ├── target-hafalan.html # Atur target surah/jilid per kelas per semester
-    └── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
+├── tahsin-tahfizh/          # Modul Tahsin-Tahfizh
+│   ├── login.html
+│   ├── input-setoran.html   # Membaca + Menghapal (harian, per antrean)
+│   ├── catat-menulis.html   # Menulis (berkala, bukan per antrean)
+│   ├── riwayat-siswa.html   # Riwayat per siswa (3 tab, lintas kelas)
+│   ├── cetak-laporan.html   # Laporan cetak per kelas, per periode (semester)
+│   ├── target-hafalan.html # Atur target surah/jilid per kelas per semester
+│   └── seed-siswa.html      #   Utilitas sekali-jalan: isi data siswa ke Firestore
+└── akademik/                # Modul Akademik & Rapor (mulai diujicobakan)
+    ├── login.html           #   Sama persis pola & sesi loginnya dengan Tahsin-Tahfizh
+    ├── input-nilai.html     #   Landasan: verifikasi kelas/mapel yang diampu guru,
+                              #   tautan ke Setup TP & KKTP tiap mapel. Grid isi nilai
+                              #   per siswa (SLM per TP + SAS sekali/semester) menyusul.
+    └── setup-tp.html        #   CRUD Tujuan Pembelajaran + 4 level KKTP per mapel &
+                              #   tingkatan (bukan per kelas paralel — 4A/4B berbagi TP).
 ```
 
-Modul berikutnya (Akademik & Rapor, dst.) akan mengikuti pola folder
-yang sama, dan memakai `assets/` bersama di root supaya tampilan &
-sesi login konsisten di seluruh aplikasi.
+Akademik & Rapor memakai `assets/` yang sama dengan Tahsin-Tahfizh
+(termasuk sesi login — satu akun guru berlaku untuk semua modul,
+Firebase Auth bersifat global per browser) supaya tampilan & sesi
+login konsisten di seluruh aplikasi. Data & aturan akses tiap modul
+tetap dipisah lewat role spesifik (`guru_tahsin_tahfizh` vs
+`guru_akademik`) — lihat komentar di `firestore.rules`.
 
 ## Menjalankan secara lokal
 
@@ -145,6 +156,74 @@ waktu, bukan kompetensi yang benar-benar diajar & dinilai). Fase
 sekarang: sekadar tercatat rutin (halaman yang disalin sejak terakhir
 diperiksa). Penilaian kualitas tulisan menyusul di tahap berikutnya,
 setelah pencatatan rutin ini terbiasa dipakai.
+
+## Modul Akademik & Rapor — Mapel, TP & KKTP
+
+Berbeda dari Tahsin-Tahfizh, penilaian akademik memang cocok memakai
+kerangka Tujuan Pembelajaran (TP) berskor — karena mapel akademik
+(Matematika, IPAS, dst.) memang tersusun dari TP-TP diskrit per fase,
+bukan kompetensi kumulatif seperti hafalan.
+
+Konsep ini dipelajari dari repo aplikasi lama (`penilaian-main`,
+lihat `ANTIREGRESI.md` & `assets/js/sheets.js`), lalu **dikoreksi**
+sesuai arahan pemilik sistem — di aplikasi lama, nilai SAS ternyata
+diinput berulang per TP, padahal seharusnya sekali per semester per
+mapel. Versi di sini memakai rumus yang sudah dikoreksi:
+
+- Tiap **mapel** (koleksi `mapel/{nama}`) punya bobot SLM/SAS sendiri
+  (default 60/40). ID dokumen sengaja berupa nama mapel persis (mis.
+  `"Matematika"`), supaya cocok langsung dengan
+  `users/{uid}.penugasan[].mapel` tanpa tabel terjemahan.
+- Tiap mapel punya beberapa **Tujuan Pembelajaran / TP** (koleksi
+  `tp_kktp/{id}`), didefinisikan per **tingkatan** (angka kelas, mis.
+  `"4"`) — bukan per kelas paralel, karena 4A & 4B memakai kurikulum
+  yang sama dan boleh diedit bersama oleh guru yang mengampu salah
+  satunya.
+- Tiap TP bertipe `pengetahuan` (level: Perlu Bimbingan → Cukup →
+  Baik → Sangat Baik) atau `kinerja` (level: Mulai Berkembang → Layak
+  → Cakap → Mahir), dengan 4 level KKTP (rentang nilai + kalimat
+  deskripsi) yang ditulis sendiri oleh guru mapel per TP lewat
+  `akademik/setup-tp.html`.
+- **Nilai SLM** akan diisi per siswa per TP (menentukan level KKTP TP
+  itu). **Nilai SAS** akan diisi **sekali per siswa per mapel per
+  semester** — halaman untuk keduanya belum dibangun, menyusul
+  setelah Setup TP & KKTP.
+- **Nilai akhir mapel di rapor** = (rata-rata SLM semua TP × bobotSLM%)
+  + (SAS × bobotSAS%). Deskripsi capaian di rapor = gabungan deskripsi
+  TP dengan SLM tertinggi + TP dengan SLM terendah. Rumus ini sudah
+  ada di `assets/firestore-data-akademik.js`
+  (`hitungNilaiAkhirMapel`, `tentukanLevel`), dipakai nanti oleh
+  halaman Input Nilai Mapel.
+
+### Penugasan Guru
+
+Guru Akademik hanya boleh mengakses kelas & mapel yang diampunya —
+beda dari Tahsin-Tahfizh yang aksesnya per-kelas datar (`kelasAmpu`).
+Ini disimpan sebagai field `penugasan` pada dokumen `users/{uid}`:
+
+```json
+{
+  "nama": "Bapak Rudi Hartono",
+  "role": "guru_akademik",
+  "penugasan": [
+    { "kelas": "4A", "mapel": "Matematika" },
+    { "kelas": "4B", "mapel": "Matematika" },
+    { "kelas": "4A", "mapel": "IPAS" }
+  ]
+}
+```
+
+Diisi manual lewat Firebase Console per akun guru, sama seperti
+`nama`/`kelasAmpu` milik Tahsin-Tahfizh. Role **wajib** persis
+`"guru_akademik"` (bukan `"guru"` generik) — lihat komentar di
+`firestore.rules` untuk alasannya (supaya tidak ada silang akses tak
+sengaja antar modul).
+
+Aturan akses `tp_kktp` di `firestore.rules` untuk saat ini baru
+dibatasi per role (harus `guru_akademik`/`admin`), belum per
+mapel+tingkatan spesifik — alasannya didokumentasikan langsung di
+komentar `firestore.rules`. **Wajib diperketat** sebelum koleksi
+nilai siswa sungguhan dibangun.
 
 ## Kontribusi & Alur Kerja
 
