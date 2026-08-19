@@ -271,3 +271,205 @@ export function hitungNilaiAkhirMapel(nilaiSlmPerTP, nilaiSas, mapel) {
   const bobotSas = (mapel?.bobotSas ?? 40) / 100;
   return Math.round(rataSlm * bobotSlm + parseFloat(nilaiSas) * bobotSas);
 }
+
+/* ==========================================================================
+   Siswa — baca-saja dari sisi Akademik. Koleksi `siswa` dipakai bersama
+   dengan Tahsin-Tahfizh, tapi fungsi baca ini sengaja berdiri sendiri di
+   sini (bukan import dari firestore-data.js) supaya kedua modul tetap
+   tidak saling bergantung secara kode, walau datanya sama-sama dibaca
+   dari koleksi `siswa`.
+   ========================================================================== */
+
+const DEMO_SISWA = [
+  { id: 'ak-s1', nama: 'Muhammad Idlal Al Matin',  nis: '24257018', kelas: '4A', aktif: true },
+  { id: 'ak-s2', nama: 'Zahra Aulia Ramadhani',    nis: '24257022', kelas: '4A', aktif: true },
+  { id: 'ak-s3', nama: 'Rizky Ananda Pratama',     nis: '24257027', kelas: '4A', aktif: true },
+  { id: 'ak-s4', nama: 'Nadia Putri Salsabila',    nis: '24257031', kelas: '4B', aktif: true },
+  { id: 'ak-s5', nama: 'Fahri Ramadhan Setiawan',  nis: '24257035', kelas: '4B', aktif: true },
+];
+
+/** Ambil siswa aktif satu kelas, terurut nama. */
+export async function getSiswaByKelas(kelas) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    return DEMO_SISWA.filter(s => s.kelas === kelas).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'siswa'),
+    fsMod.where('kelas', '==', kelas),
+    fsMod.where('aktif', '==', true)
+  );
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+}
+
+/* ==========================================================================
+   Config — semester & tahun ajaran aktif, satu dokumen untuk sekolah.
+   ========================================================================== */
+
+const DEMO_CONFIG_KEY = 'akd_demo_config';
+
+/** @returns {Promise<{semesterAktif:string, tahunAjaran:string}>} */
+export async function getConfigAkademik() {
+  const fallback = { semesterAktif: '1', tahunAjaran: '2026/2027' };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 120));
+    const raw = localStorage.getItem(DEMO_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : fallback;
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'config', 'akademik'));
+  return snap.exists() ? { ...fallback, ...snap.data() } : fallback;
+}
+
+/* ==========================================================================
+   Nilai SLM — satu dokumen per (siswa × TP × semester × tahun ajaran).
+   ========================================================================== */
+
+const DEMO_NILAI_SLM_KEY = 'akd_demo_nilai_slm';
+
+function readDemoNilaiSlm() {
+  return JSON.parse(localStorage.getItem(DEMO_NILAI_SLM_KEY) || '[]');
+}
+function writeDemoNilaiSlm(list) {
+  localStorage.setItem(DEMO_NILAI_SLM_KEY, JSON.stringify(list));
+}
+
+/**
+ * Ambil semua nilai SLM untuk satu TP pada satu semester/tahun ajaran
+ * (lintas siswa sekelas), dipakai untuk mengisi grid saat dibuka.
+ * @returns {Promise<Object<string,{id:string, nilai:number}>>} siswaId -> {id, nilai}
+ */
+export async function getNilaiSlmUntukTP({ tpId, semester, tahunAjaran }) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = readDemoNilaiSlm().filter(n => n.tpId === tpId && n.semester === semester && n.tahunAjaran === tahunAjaran);
+    const map = {};
+    list.forEach(n => { map[n.siswaId] = { id: n.id, nilai: n.nilai }; });
+    return map;
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'nilai_slm'),
+    fsMod.where('tpId', '==', tpId),
+    fsMod.where('semester', '==', semester),
+    fsMod.where('tahunAjaran', '==', tahunAjaran)
+  );
+  const snap = await fsMod.getDocs(q);
+  const map = {};
+  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, nilai: d.data().nilai }; });
+  return map;
+}
+
+/**
+ * Simpan nilai SLM untuk satu TP, banyak siswa sekaligus (upsert per
+ * siswa). `existing` = hasil getNilaiSlmUntukTP sebelumnya, dipakai untuk
+ * tahu mana yang perlu update vs create.
+ * @param {{tpId, mapel, kelas, tingkatan, semester, tahunAjaran}} ctx
+ * @param {Array<{siswaId:string, nilai:number}>} entries
+ * @param {Object} existing peta siswaId -> {id, nilai} dari getNilaiSlmUntukTP
+ */
+export async function saveNilaiSlmBatch(ctx, entries, existing) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = readDemoNilaiSlm();
+    entries.forEach(({ siswaId, nilai }) => {
+      const found = existing[siswaId];
+      const data = { tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai };
+      if (found) {
+        const idx = list.findIndex(n => n.id === found.id);
+        if (idx >= 0) list[idx] = { ...list[idx], ...data };
+      } else {
+        list.push({ id: 'demo-slm-' + Date.now() + '-' + siswaId, ...data });
+      }
+    });
+    writeDemoNilaiSlm(list);
+    return;
+  }
+
+  const { db, fsMod, auth } = window.__fb;
+  for (const { siswaId, nilai } of entries) {
+    const found = existing[siswaId];
+    const data = {
+      tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas,
+      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai,
+    };
+    if (found) {
+      await fsMod.updateDoc(fsMod.doc(db, 'nilai_slm', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+    } else {
+      await fsMod.addDoc(fsMod.collection(db, 'nilai_slm'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+    }
+  }
+}
+
+/* ==========================================================================
+   Nilai SAS — SATU dokumen per (siswa × mapel × semester × tahun ajaran).
+   BUKAN per TP — koreksi dari aplikasi lama, lihat README.
+   ========================================================================== */
+
+const DEMO_NILAI_SAS_KEY = 'akd_demo_nilai_sas';
+
+function readDemoNilaiSas() {
+  return JSON.parse(localStorage.getItem(DEMO_NILAI_SAS_KEY) || '[]');
+}
+function writeDemoNilaiSas(list) {
+  localStorage.setItem(DEMO_NILAI_SAS_KEY, JSON.stringify(list));
+}
+
+/** @returns {Promise<Object<string,{id:string, nilai:number}>>} siswaId -> {id, nilai} */
+export async function getNilaiSasUntukMapel({ mapel, kelas, semester, tahunAjaran }) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = readDemoNilaiSas().filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
+    const map = {};
+    list.forEach(n => { map[n.siswaId] = { id: n.id, nilai: n.nilai }; });
+    return map;
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'nilai_sas'),
+    fsMod.where('mapel', '==', mapel),
+    fsMod.where('kelas', '==', kelas),
+    fsMod.where('semester', '==', semester),
+    fsMod.where('tahunAjaran', '==', tahunAjaran)
+  );
+  const snap = await fsMod.getDocs(q);
+  const map = {};
+  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, nilai: d.data().nilai }; });
+  return map;
+}
+
+/** Simpan nilai SAS banyak siswa sekaligus (upsert per siswa). */
+export async function saveNilaiSasBatch(ctx, entries, existing) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = readDemoNilaiSas();
+    entries.forEach(({ siswaId, nilai }) => {
+      const found = existing[siswaId];
+      const data = { mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai };
+      if (found) {
+        const idx = list.findIndex(n => n.id === found.id);
+        if (idx >= 0) list[idx] = { ...list[idx], ...data };
+      } else {
+        list.push({ id: 'demo-sas-' + Date.now() + '-' + siswaId, siswaId, ...data });
+      }
+    });
+    writeDemoNilaiSas(list);
+    return;
+  }
+
+  const { db, fsMod, auth } = window.__fb;
+  for (const { siswaId, nilai } of entries) {
+    const found = existing[siswaId];
+    const data = {
+      siswaId, mapel: ctx.mapel, kelas: ctx.kelas,
+      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai,
+    };
+    if (found) {
+      await fsMod.updateDoc(fsMod.doc(db, 'nilai_sas', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+    } else {
+      await fsMod.addDoc(fsMod.collection(db, 'nilai_sas'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+    }
+  }
+}
