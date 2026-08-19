@@ -22,6 +22,11 @@ rules_version = '2';
 //     kelasAmpu/penugasan" — supaya guru satu modul tidak otomatis
 //     kebagian akses ke modul lain hanya karena kebetulan bentuk
 //     datanya mirip. Lihat komentar di bolehKelas() untuk detail.
+//   - users/{uid} milik guru_akademik juga menyimpan dua field datar
+//     turunan dari `penugasan` khusus untuk pengecekan rule ini:
+//     `penugasanKelas` (kode kelas saja) dan `penugasanKelasMapel`
+//     (string "KELAS::MAPEL"). Keduanya diisi manual bersamaan dengan
+//     `penugasan` — lihat README bagian Akademik & Rapor.
 // ============================================================================
 
 service cloud.firestore {
@@ -64,6 +69,32 @@ service cloud.firestore {
       return isLoggedIn() && myProfile().role == 'guru_akademik';
     }
 
+    // Akses berbasis KELAS SAJA untuk guru_akademik (dipakai baca roster
+    // siswa — bukan data spesifik-mapel, jadi guru mapel apa pun di kelas
+    // itu boleh lihat). Field `penugasanKelas` adalah daftar datar kode
+    // kelas, diturunkan dari `penugasan` — dibuat terpisah supaya
+    // pengecekannya memakai operator `in` pada list datar, pola yang
+    // SUDAH TERBUKTI jalan di bolehKelas() di atas, bukan pencocokan ke
+    // dalam array-berisi-objek yang belum pernah diuji ke Firestore
+    // sungguhan. Data siswa itu data pribadi anak — sengaja tidak dikira-kira.
+    function bolehKelasAkademik(kelas) {
+      return isLoggedIn() && (
+        myProfile().role == 'admin' ||
+        (myProfile().role == 'guru_akademik' && kelas in myProfile().penugasanKelas)
+      );
+    }
+
+    // Akses berbasis KELAS + MAPEL spesifik (dipakai data nilai). Field
+    // `penugasanKelasMapel` berisi string gabungan "KELAS::MAPEL" (mis.
+    // "4A::Matematika"), juga diturunkan manual dari `penugasan` — alasan
+    // sama seperti bolehKelasAkademik() di atas.
+    function bolehMapelKelas(mapel, kelas) {
+      return isLoggedIn() && (
+        myProfile().role == 'admin' ||
+        (myProfile().role == 'guru_akademik' && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
+      );
+    }
+
     // ---- users/{uid} ---------------------------------------------------
     // Profil pengguna (nama, role, kelasAmpu). Dibuat & diubah manual
     // lewat Firebase Console. Pengguna hanya boleh membaca profilnya sendiri.
@@ -73,10 +104,12 @@ service cloud.firestore {
     }
 
     // ---- siswa/{id} ------------------------------------------------------
-    // Data siswa. Guru hanya boleh membaca siswa dari kelas yang diampunya.
-    // Menulis (seed/migrasi data) khusus admin.
+    // Data siswa. Guru hanya boleh membaca siswa dari kelas yang diampunya
+    // — Tahsin-Tahfizh lewat bolehKelas(), Akademik lewat
+    // bolehKelasAkademik() (OR murni tambahan, jalur Tahsin di atas tidak
+    // diubah). Menulis (seed/migrasi data) khusus admin.
     match /siswa/{id} {
-      allow read: if bolehKelas(resource.data.kelas);
+      allow read: if bolehKelas(resource.data.kelas) || bolehKelasAkademik(resource.data.kelas);
       allow write: if isAdmin();
     }
 
@@ -159,6 +192,46 @@ service cloud.firestore {
     match /tp_kktp/{id} {
       allow read: if isLoggedIn();
       allow write: if isAdmin() || isGuruAkademik();
+    }
+
+    // ---- config/akademik ---------------------------------------------------
+    // Semester & tahun ajaran aktif (satu dokumen untuk seluruh sekolah).
+    // Dikelola admin, dibaca semua modul Akademik yang butuh tahu "sekarang
+    // semester berapa" saat menyimpan nilai.
+    match /config/akademik {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- nilai_slm/{id} -----------------------------------------------------
+    // Nilai Sumatif Lingkup Materi — satu dokumen per (siswa × TP × semester
+    // × tahun ajaran). Dibatasi persis per kelas+mapel lewat
+    // bolehMapelKelas() — TIDAK seperti tp_kktp, di sini pencocokannya bisa
+    // presisi karena nilai memang terikat ke kelas spesifik (bukan
+    // tingkatan), jadi tidak ada masalah tebak-tebakan huruf paralel
+    // seperti di tp_kktp.
+    match /nilai_slm/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
+    // ---- nilai_sas/{id} -----------------------------------------------------
+    // Nilai Sumatif Akhir Semester — SATU dokumen per (siswa × mapel ×
+    // semester × tahun ajaran), BUKAN per TP (koreksi dari aplikasi lama,
+    // lihat README). Aturan sama seperti nilai_slm.
+    match /nilai_sas/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
     }
 
     // ---- Semua koleksi lain: default tertutup --------------------------
