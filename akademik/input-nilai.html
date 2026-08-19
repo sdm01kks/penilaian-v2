@@ -234,6 +234,7 @@
     list.innerHTML = penugasan.map(p => {
       const tingkatan = tingkatanDariKelas(p.kelas);
       const tpUrl = `setup-tp.html?mapel=${encodeURIComponent(p.mapel || '')}&tingkatan=${encodeURIComponent(tingkatan)}`;
+      const nilaiUrl = `nilai-mapel.html?mapel=${encodeURIComponent(p.mapel || '')}&kelas=${encodeURIComponent(p.kelas || '')}`;
       return `
       <div class="penugasan-item">
         <div class="penugasan-kelas-badge">${escapeHtml(p.kelas || '-')}</div>
@@ -243,7 +244,7 @@
         </div>
         <div class="penugasan-actions">
           <a href="${tpUrl}">Kelola TP &amp; KKTP</a>
-          <span>Input Nilai (segera)</span>
+          <a href="${nilaiUrl}">Input Nilai</a>
         </div>
       </div>`;
     }).join('');
