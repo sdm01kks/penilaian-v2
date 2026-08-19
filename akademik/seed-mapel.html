@@ -7,36 +7,51 @@
 <link rel="stylesheet" href="../assets/style.css">
 <style>
   body{background:var(--bg-light);color:var(--ink)}
-  .wrap{max-width:640px;margin:0 auto;padding:40px 20px 60px}
+  .wrap{max-width:640px;margin:0 auto;padding:32px 18px 60px}
   h1{font-size:19px;color:var(--green-deep);margin:0 0 6px}
-  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 20px;line-height:1.6}
+  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 18px;line-height:1.6}
   .warn-box{
     background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
-    font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:20px;line-height:1.6;
+    font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:16px;line-height:1.6;
   }
   .log{
     background:#10201a;color:#c8e6d8;font-family:monospace;font-size:12px;
-    border-radius:12px;padding:14px;margin-top:20px;min-height:50px;
+    border-radius:12px;padding:14px;margin-top:18px;min-height:50px;
     white-space:pre-wrap;line-height:1.7;
   }
   .log .ok{color:#6fe3a3}
   .log .err{color:#ff8a7a}
 
-  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
-  th{text-align:left;font-size:10.5px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;padding:0 6px 8px}
-  td{padding:4px 6px 4px 0;vertical-align:middle}
+  .mapel-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:14px;margin-bottom:10px;
+  }
+  .mc-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
+  .mc-top input.f-nama{flex:1;font-weight:700}
+  .btn-del{
+    background:var(--red-light);color:var(--red);border:none;border-radius:9px;
+    width:34px;height:34px;flex-shrink:0;cursor:pointer;font-size:16px;line-height:1;
+  }
+  .mc-row3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;margin-bottom:10px}
   input, select{
-    width:100%;padding:7px 8px;border-radius:8px;border:1.5px solid var(--border);
+    width:100%;padding:8px 9px;border-radius:9px;border:1.5px solid var(--border);
     font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;background:var(--surface);
   }
   input:focus, select:focus{border-color:var(--green-light)}
   input.num{text-align:center}
-  .col-nama{width:34%}
-  .col-kelompok{width:18%}
-  .col-num{width:12%}
-  .col-del{width:24px}
-  .btn-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1;padding:4px}
-  .row-actions{display:flex;gap:10px;margin-top:10px}
+  label.mini{display:block;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
+
+  .tingkatan-label{font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
+  .tingkatan-toggles{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+  .tingkatan-chip{
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:var(--bg-light);border:1.5px solid var(--border);border-radius:9px;
+    padding:7px 0;font-size:12px;font-weight:800;color:var(--ink-muted);user-select:none;
+  }
+  .tingkatan-chip input{display:none}
+  .tingkatan-chip.on{background:var(--green-pale);border-color:var(--green-light);color:var(--green-dark)}
+
+  .row-actions{display:flex;gap:10px;margin-top:6px}
   .row-actions .btn{width:auto;padding:10px 18px;font-size:13px}
 </style>
 </head>
@@ -44,10 +59,11 @@
 <div class="wrap">
   <h1>Kelola Data Mapel</h1>
   <p class="sub">
-    Utilitas untuk mengisi &amp; mengedit koleksi Firestore <code>mapel</code>
-    (dipakai modul Akademik &amp; Rapor — bobot SLM/SAS, kelompok, urutan).
-    Aman dijalankan berkali-kali: menyimpan tiap baris akan menimpa
-    dokumen dengan nama yang sama, bukan menduplikasi.
+    Mengisi &amp; mengedit koleksi Firestore <code>mapel</code> — bobot
+    SLM/SAS dan <strong>tingkatan (kelas) tempat mapel ini diajarkan</strong>.
+    Aman dijalankan berkali-kali: simpan akan menimpa dokumen dengan nama
+    yang sama, bukan menduplikasi. Tingkatan yang tidak dicentang tidak
+    akan muncul sebagai pilihan di Setup TP &amp; KKTP maupun Input Nilai.
   </p>
 
   <div class="warn-box" id="demoWarn" style="display:none">
@@ -60,22 +76,10 @@
     dulu kalau simpan nanti gagal karena izin ditolak.
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th class="col-nama">Nama Mapel</th>
-        <th class="col-kelompok">Kelompok</th>
-        <th class="col-num">Urutan</th>
-        <th class="col-num">Bobot SLM</th>
-        <th class="col-num">Bobot SAS</th>
-        <th class="col-del"></th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <div id="cards"></div>
 
   <div class="row-actions">
-    <button class="btn btn-secondary" id="btnTambah" style="width:auto;padding:9px 16px;font-size:12.5px">+ Tambah Baris</button>
+    <button class="btn btn-secondary" id="btnTambah" style="width:auto;padding:9px 16px;font-size:12.5px">+ Tambah Mapel</button>
     <button class="btn btn-primary-light" id="btnSimpan">Simpan Semua ke Firestore</button>
   </div>
 
@@ -86,7 +90,7 @@
   import { DEMO_MODE } from '../assets/firebase.js';
   import { getMapelList } from '../assets/firestore-data-akademik.js';
 
-  const rowsEl = document.getElementById('rows');
+  const cardsEl = document.getElementById('cards');
   const logEl = document.getElementById('log');
 
   function log(msg, cls) {
@@ -96,88 +100,118 @@
     logEl.appendChild(span);
   }
   function clearLog() { logEl.innerHTML = ''; }
-
-  if (DEMO_MODE) document.getElementById('demoWarn').style.display = 'block';
-
-  function addRow(data = {}) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="text" class="f-nama" value="${data.nama ? escapeHtml(data.nama) : ''}" placeholder="mis. Matematika"></td>
-      <td>
-        <select class="f-kelompok">
-          <option value="wajib" ${data.kelompok === 'wajib' || !data.kelompok ? 'selected' : ''}>Wajib</option>
-          <option value="mulok" ${data.kelompok === 'mulok' ? 'selected' : ''}>Mulok</option>
-          <option value="ismuba" ${data.kelompok === 'ismuba' ? 'selected' : ''}>ISMUBA</option>
-        </select>
-      </td>
-      <td><input type="number" class="f-urutan num" value="${data.urutan ?? ''}"></td>
-      <td><input type="number" class="f-slm num" value="${data.bobotSlm ?? 60}"></td>
-      <td><input type="number" class="f-sas num" value="${data.bobotSas ?? 40}"></td>
-      <td class="col-del"><button class="btn-del" type="button" title="Hapus baris">&times;</button></td>
-    `;
-    tr.querySelector('.btn-del').addEventListener('click', () => tr.remove());
-    rowsEl.appendChild(tr);
-  }
-
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
 
-  /* Muat data mapel yang sudah ada di Firestore/DEMO, supaya bisa
-     dilanjutkan/diedit, bukan mulai dari kosong setiap kali dibuka. */
+  if (DEMO_MODE) document.getElementById('demoWarn').style.display = 'block';
+
+  // Daftar mapel nyata sekolah, dari Master_Jadwal_Pelajaran_2026-2027_v6.xlsx
+  // (sheet "Data Mapel", disilang-cek dengan 182 baris penugasan guru
+  // sungguhan — cocok persis). Tahsin & Tahfizh sengaja TIDAK disertakan,
+  // sudah dikelola modul Tahsin-Tahfizh sendiri.
+  const MAPEL_SEKOLAH = [
+    { nama: 'Al-Islam',             kelompok: 'ismuba', tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Pendidikan Pancasila', kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Bahasa Indonesia',     kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Matematika',           kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'IPAS',                 kelompok: 'wajib',  tingkatanBerlaku: [3,4,5,6] },
+    { nama: 'Seni Budaya',          kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'PJOK',                 kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Bahasa Inggris',       kelompok: 'wajib',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Informatika',          kelompok: 'wajib',  tingkatanBerlaku: [4,5,6] },
+    { nama: 'Bahasa Sunda',         kelompok: 'mulok',  tingkatanBerlaku: [1,2,3,4,5,6] },
+    { nama: 'Bahasa Arab',          kelompok: 'ismuba', tingkatanBerlaku: [3,4,5,6] },
+    { nama: 'Kemuhammadiyahan',     kelompok: 'ismuba', tingkatanBerlaku: [3,4,5,6] },
+  ];
+
+  function addCard(data = {}) {
+    const div = document.createElement('div');
+    div.className = 'mapel-card';
+    const tb = new Set((data.tingkatanBerlaku || []).map(String));
+    div.innerHTML = `
+      <div class="mc-top">
+        <input type="text" class="f-nama" value="${data.nama ? escapeHtml(data.nama) : ''}" placeholder="Nama mapel, mis. Matematika">
+        <button class="btn-del" type="button" title="Hapus">&times;</button>
+      </div>
+      <div class="mc-row3">
+        <div><label class="mini">Kelompok</label>
+          <select class="f-kelompok">
+            <option value="wajib" ${data.kelompok === 'wajib' || !data.kelompok ? 'selected' : ''}>Wajib</option>
+            <option value="mulok" ${data.kelompok === 'mulok' ? 'selected' : ''}>Mulok</option>
+            <option value="ismuba" ${data.kelompok === 'ismuba' ? 'selected' : ''}>ISMUBA</option>
+          </select>
+        </div>
+        <div><label class="mini">Bobot SLM</label><input type="number" class="f-slm num" value="${data.bobotSlm ?? 60}"></div>
+        <div><label class="mini">Bobot SAS</label><input type="number" class="f-sas num" value="${data.bobotSas ?? 40}"></div>
+      </div>
+      <div class="tingkatan-label">Diajarkan di kelas</div>
+      <div class="tingkatan-toggles">
+        ${[1,2,3,4,5,6].map(t => `
+          <label class="tingkatan-chip ${tb.has(String(t)) ? 'on' : ''}">
+            <input type="checkbox" class="f-tingkatan" value="${t}" ${tb.has(String(t)) ? 'checked' : ''}>${t}
+          </label>
+        `).join('')}
+      </div>
+    `;
+    div.querySelector('.btn-del').addEventListener('click', () => div.remove());
+    div.querySelectorAll('.tingkatan-chip').forEach(chip => {
+      chip.addEventListener('click', () => setTimeout(() => chip.classList.toggle('on', chip.querySelector('input').checked), 0));
+    });
+    cardsEl.appendChild(div);
+  }
+
+  /* Muat data yang sudah tersimpan; kalau kosong, isi langsung dengan
+     daftar mapel sekolah yang sudah tervalidasi dari file jadwal —
+     admin tinggal cek & simpan, bukan mulai dari nol. */
   (async () => {
     try {
       const existing = await getMapelList();
       clearLog();
       if (existing.length) {
-        existing.forEach(m => addRow(m));
-        log(`Memuat ${existing.length} mapel yang sudah tersimpan. Edit / tambah baris lalu simpan ulang.`);
+        existing.forEach(m => addCard(m));
+        log(`Memuat ${existing.length} mapel yang sudah tersimpan. Ubah/tambah/hapus lalu simpan ulang kalau perlu.`);
       } else {
-        // Baris kosong contoh secukupnya untuk mulai — SILAKAN sesuaikan
-        // nama & jumlahnya dengan daftar mapel sekolah yang sebenarnya,
-        // ini bukan daftar final.
-        addRow({ nama: 'Matematika',       kelompok: 'wajib', urutan: 1 });
-        addRow({ nama: 'Bahasa Indonesia', kelompok: 'wajib', urutan: 2 });
-        addRow({ nama: 'IPAS',             kelompok: 'wajib', urutan: 3 });
-        log('Belum ada data tersimpan. Empat baris contoh sudah diisi — tambah/ubah/hapus sesuai daftar mapel sekolah, lalu simpan.');
+        MAPEL_SEKOLAH.forEach((m, i) => addCard({ ...m, urutan: i + 1 }));
+        log(`Belum ada data tersimpan. ${MAPEL_SEKOLAH.length} mapel sekolah (dari file jadwal) sudah diisi otomatis — cek dulu, lalu simpan.`);
       }
     } catch (e) {
       console.error(e);
       clearLog();
-      log('Gagal memuat data yang sudah ada (lanjut dengan baris kosong).', 'err');
-      addRow();
+      log('Gagal memuat data yang sudah ada (lanjut dengan daftar kosong).', 'err');
+      addCard();
     }
   })();
 
-  document.getElementById('btnTambah').addEventListener('click', () => addRow());
+  document.getElementById('btnTambah').addEventListener('click', () => addCard());
 
   document.getElementById('btnSimpan').addEventListener('click', async () => {
     clearLog();
-    const rows = [...rowsEl.querySelectorAll('tr')].map(tr => ({
-      nama:     tr.querySelector('.f-nama').value.trim(),
-      kelompok: tr.querySelector('.f-kelompok').value,
-      urutan:   parseInt(tr.querySelector('.f-urutan').value, 10) || 0,
-      bobotSlm: parseInt(tr.querySelector('.f-slm').value, 10) || 60,
-      bobotSas: parseInt(tr.querySelector('.f-sas').value, 10) || 40,
+    const rows = [...cardsEl.querySelectorAll('.mapel-card')].map((card, i) => ({
+      nama:     card.querySelector('.f-nama').value.trim(),
+      kelompok: card.querySelector('.f-kelompok').value,
+      urutan:   i + 1,
+      bobotSlm: parseInt(card.querySelector('.f-slm').value, 10) || 60,
+      bobotSas: parseInt(card.querySelector('.f-sas').value, 10) || 40,
+      tingkatanBerlaku: [...card.querySelectorAll('.f-tingkatan')].filter(c => c.checked).map(c => c.value),
     })).filter(r => r.nama);
 
-    if (!rows.length) { log('Tidak ada baris dengan nama mapel terisi.', 'err'); return; }
+    if (!rows.length) { log('Tidak ada mapel dengan nama terisi.', 'err'); return; }
+    const kosong = rows.filter(r => !r.tingkatanBerlaku.length);
+    if (kosong.length) {
+      log(`Peringatan: ${kosong.map(r => r.nama).join(', ')} belum dicentang tingkatannya — akan dianggap berlaku SEMUA kelas kalau disimpan begitu. Centang dulu kalau itu bukan maksudnya.`, 'err');
+    }
 
     document.getElementById('btnSimpan').disabled = true;
     try {
       if (DEMO_MODE) {
-        // Tulis langsung ke penyimpanan demo yang dipakai getMapelList()
-        // supaya konsisten dengan cara baca modul lain saat DEMO_MODE aktif.
         localStorage.setItem('akd_demo_mapel', JSON.stringify(rows.map(r => ({ id: r.nama, ...r }))));
-        rows.forEach(r => log(`✓ (demo) Tersimpan: mapel/${r.nama}`, 'ok'));
+        rows.forEach(r => log(`✓ (demo) Tersimpan: mapel/${r.nama} — kelas [${r.tingkatanBerlaku.join(',')}]`, 'ok'));
       } else {
         const { db, fsMod } = window.__fb;
         for (const r of rows) {
-          await fsMod.setDoc(fsMod.doc(db, 'mapel', r.nama), {
-            nama: r.nama, kelompok: r.kelompok, urutan: r.urutan,
-            bobotSlm: r.bobotSlm, bobotSas: r.bobotSas,
-          });
-          log(`✓ Tersimpan: mapel/${r.nama}`, 'ok');
+          await fsMod.setDoc(fsMod.doc(db, 'mapel', r.nama), r);
+          log(`✓ Tersimpan: mapel/${r.nama} — kelas [${r.tingkatanBerlaku.join(',')}]`, 'ok');
         }
       }
       log('\nSelesai. Buka lagi Input Nilai Mapel sebagai admin untuk cek hasilnya.', 'ok');

@@ -198,16 +198,21 @@
             </div>`;
           return;
         }
-        list.innerHTML = mapelList.map(m => `
+        list.innerHTML = mapelList.map(m => {
+          const berlaku = Array.isArray(m.tingkatanBerlaku) && m.tingkatanBerlaku.length
+            ? m.tingkatanBerlaku.map(String)
+            : ['1','2','3','4','5','6'];
+          return `
           <div class="mapel-admin-card">
             <div class="mapel-admin-nama">${escapeHtml(m.nama)}</div>
-            <div class="tingkatan-row">
-              ${[1,2,3,4,5,6].map(t => `
+            <div class="tingkatan-row" style="grid-template-columns:repeat(${berlaku.length},1fr)">
+              ${berlaku.map(t => `
                 <a class="tingkatan-btn" href="setup-tp.html?mapel=${encodeURIComponent(m.nama)}&tingkatan=${t}">${t}</a>
               `).join('')}
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       } catch (e) {
         console.error(e);
         list.innerHTML = '<div class="empty-state" style="padding:24px 12px"><p>Gagal memuat daftar mapel.</p></div>';

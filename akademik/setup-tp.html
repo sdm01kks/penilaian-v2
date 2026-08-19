@@ -188,7 +188,7 @@
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
     LEVEL_LABEL, LEVEL_RANGE_DEFAULT, faseDariTingkatan, tingkatanDariKelas,
-    getTPList, saveTP, deleteTP,
+    getTPList, saveTP, deleteTP, getMapelByNama, mapelBerlakuDiTingkatan,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -217,7 +217,7 @@
      Guard: login + parameter valid + guru punya penugasan mapel ini
      di tingkatan ini (atau admin).
      --------------------------------------------------------------------- */
-  onAuthChange((s) => {
+  onAuthChange(async (s) => {
     if (!s) { window.location.href = 'login.html'; return; }
     session = s;
 
@@ -232,6 +232,18 @@
     if (!berhak) {
       showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas tingkat ${tingkatan}.`);
       return;
+    }
+
+    try {
+      const mapel = await getMapelByNama(mapelNama);
+      if (!mapelBerlakuDiTingkatan(mapel, tingkatan)) {
+        showEmptyScope(`${mapelNama} tidak diajarkan di kelas tingkat ${tingkatan}. Cek kembali data mapel (akademik/seed-mapel.html) kalau ini seharusnya diajarkan.`);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      // Gagal memuat data mapel (mis. jaringan) tidak boleh memblokir guru
+      // yang memang berhak — lanjutkan saja, jangan tahan di sini.
     }
 
     $('titleMapel').textContent = mapelNama;
