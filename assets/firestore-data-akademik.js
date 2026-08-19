@@ -60,11 +60,23 @@ export function tingkatanDariKelas(kelas) {
    ========================================================================== */
 
 const DEMO_MAPEL_SEED = [
-  { id: 'Matematika',       nama: 'Matematika',       kelompok: 'wajib', urutan: 1, bobotSlm: 60, bobotSas: 40 },
-  { id: 'Bahasa Indonesia', nama: 'Bahasa Indonesia', kelompok: 'wajib', urutan: 2, bobotSlm: 60, bobotSas: 40 },
-  { id: 'IPAS',             nama: 'IPAS',             kelompok: 'wajib', urutan: 3, bobotSlm: 60, bobotSas: 40 },
-  { id: 'PJOK',             nama: 'PJOK',              kelompok: 'wajib', urutan: 4, bobotSlm: 60, bobotSas: 40 },
+  { id: 'Al-Islam',              nama: 'Al-Islam',              kelompok: 'ismuba', urutan: 1,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Pendidikan Pancasila',  nama: 'Pendidikan Pancasila',  kelompok: 'wajib',  urutan: 2,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Bahasa Indonesia',      nama: 'Bahasa Indonesia',      kelompok: 'wajib',  urutan: 3,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Matematika',            nama: 'Matematika',            kelompok: 'wajib',  urutan: 4,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'IPAS',                  nama: 'IPAS',                  kelompok: 'wajib',  urutan: 5,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['3','4','5','6'] },
+  { id: 'Seni Budaya',           nama: 'Seni Budaya',           kelompok: 'wajib',  urutan: 6,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'PJOK',                  nama: 'PJOK',                  kelompok: 'wajib',  urutan: 7,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Bahasa Inggris',        nama: 'Bahasa Inggris',        kelompok: 'wajib',  urutan: 8,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Informatika',           nama: 'Informatika',           kelompok: 'wajib',  urutan: 9,  bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['4','5','6'] },
+  { id: 'Bahasa Sunda',          nama: 'Bahasa Sunda',          kelompok: 'mulok',  urutan: 10, bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['1','2','3','4','5','6'] },
+  { id: 'Bahasa Arab',           nama: 'Bahasa Arab',           kelompok: 'ismuba', urutan: 11, bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['3','4','5','6'] },
+  { id: 'Kemuhammadiyahan',      nama: 'Kemuhammadiyahan',      kelompok: 'ismuba', urutan: 12, bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: ['3','4','5','6'] },
 ];
+// Sumber: Master_Jadwal_Pelajaran_2026-2027_v6.xlsx (sheet "Data Mapel" +
+// silang-cek 182 baris "Penugasan Guru 2026-2027", cocok persis). Tahsin
+// & Tahfizh SENGAJA tidak dimasukkan — sudah dikelola modul Tahsin-Tahfizh
+// sendiri, bukan lewat sistem mapel/TP ini.
 const DEMO_MAPEL_KEY = 'akd_demo_mapel';
 
 function readDemoMapel() {
@@ -91,11 +103,23 @@ export async function getMapelList() {
 export async function getMapelByNama(nama) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 120));
-    return readDemoMapel().find(m => m.nama === nama) || { id: nama, nama, bobotSlm: 60, bobotSas: 40 };
+    return readDemoMapel().find(m => m.nama === nama) || { id: nama, nama, bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: [] };
   }
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDoc(fsMod.doc(db, 'mapel', nama));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : { id: nama, nama, bobotSlm: 60, bobotSas: 40 };
+  return snap.exists() ? { id: snap.id, ...snap.data() } : { id: nama, nama, bobotSlm: 60, bobotSas: 40, tingkatanBerlaku: [] };
+}
+
+/**
+ * Apakah mapel ini berlaku (diajarkan) di tingkatan tsb? Kalau field
+ * tingkatanBerlaku belum diisi sama sekali di dokumennya (data lama,
+ * sebelum fitur ini ada), dianggap berlaku semua tingkatan — supaya
+ * data yang sudah kadung dibuat sebelum kolom ini ada tidak mendadak
+ * hilang/terkunci.
+ */
+export function mapelBerlakuDiTingkatan(mapel, tingkatan) {
+  if (!mapel || !Array.isArray(mapel.tingkatanBerlaku) || !mapel.tingkatanBerlaku.length) return true;
+  return mapel.tingkatanBerlaku.includes(String(tingkatan));
 }
 
 /* ==========================================================================
