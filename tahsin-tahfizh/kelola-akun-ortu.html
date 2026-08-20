@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelola Akun Orang Tua — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Kelola Akun Ortu</div>
+            <button class="app-header-sub-btn" id="guruLabel" title="Ketuk untuk keluar">
+              <span id="guruLabelText">Memuat…</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data masih tiruan.</span>
+        </div>
+
+        <div id="notAdminBlock" class="hidden">
+          <div class="empty-state">
+            <p>Halaman ini khusus admin.</p>
+          </div>
+        </div>
+
+        <div id="listArea">
+          <div class="siswa-empty-note">Memuat permintaan…</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import { getPermintaanOrangtuaPending, putuskanOrangtua, getSiswaById } from '../assets/firestore-data.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('guruLabelText').textContent = session.nama;
+    if (session.role !== 'admin') {
+      $('notAdminBlock').classList.remove('hidden');
+      $('listArea').classList.add('hidden');
+      return;
+    }
+    loadPermintaan();
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'riwayat-siswa.html'; });
+
+  $('guruLabel').addEventListener('click', async () => {
+    if (!confirm('Keluar dari akun ini?')) return;
+    try { await logout(); } catch (err) { console.error(err); }
+    window.location.href = 'login.html';
+  });
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s || '';
+    return div.innerHTML;
+  }
+
+  async function loadPermintaan() {
+    $('listArea').innerHTML = `<div class="siswa-empty-note">Memuat permintaan…</div>`;
+    try {
+      const list = await getPermintaanOrangtuaPending();
+      if (!list.length) {
+        $('listArea').innerHTML = `<div class="empty-state"><p>Tidak ada permintaan akun yang menunggu.</p></div>`;
+        return;
+      }
+
+      // Cocokkan tiap NIS dengan data siswa asli, untuk verifikasi visual admin.
+      const withAnak = await Promise.all(list.map(async (req) => {
+        const anak = await Promise.all((req.anakIds || []).map(async (nis) => {
+          const siswa = await getSiswaById(nis).catch(() => null);
+          return { nis, siswa };
+        }));
+        return { ...req, anakResolved: anak };
+      }));
+
+      $('listArea').innerHTML = withAnak.map((req, i) => `
+        <div class="permintaan-card" data-idx="${i}">
+          <div class="permintaan-head">
+            <div class="avatar-circle">${escapeHtml((req.nama || '?').slice(0, 2).toUpperCase())}</div>
+            <div>
+              <div class="nama">${escapeHtml(req.nama)}</div>
+              <div class="email">${escapeHtml(req.email || '')}${req.nomorHp ? ' • ' + escapeHtml(req.nomorHp) : ''}</div>
+            </div>
+          </div>
+          <div class="permintaan-anak-list">
+            ${req.anakResolved.map(a => `
+              <div class="permintaan-anak-item ${a.siswa ? 'valid' : 'invalid'}">
+                <span class="nis-badge">${escapeHtml(a.nis)}</span>
+                <span>${a.siswa ? `${escapeHtml(a.siswa.nama)} — Kelas ${escapeHtml(a.siswa.kelas)}` : 'NIS tidak ditemukan'}</span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="permintaan-action-row">
+            <button type="button" class="btn-setujui" data-uid="${req.uid}" data-idx="${i}">Setujui</button>
+            <button type="button" class="btn-tolak" data-uid="${req.uid}">Tolak</button>
+          </div>
+        </div>
+      `).join('');
+
+      $('listArea').querySelectorAll('.btn-setujui').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const req = withAnak[+btn.dataset.idx];
+          const anakValid = req.anakResolved.filter(a => a.siswa).map(a => a.nis);
+          if (!anakValid.length) {
+            showToast('Tidak ada NIS yang valid untuk disetujui. Tolak permintaan ini sebagai gantinya.', true);
+            return;
+          }
+          if (!confirm(`Setujui akun ${req.nama}? Akan tertaut ke ${anakValid.length} anak yang valid.`)) return;
+          btn.disabled = true;
+          try {
+            await putuskanOrangtua(req.uid, true, anakValid);
+            showToast(`Akun ${req.nama} disetujui.`);
+            loadPermintaan();
+          } catch (err) {
+            console.error(err);
+            showToast('Gagal menyetujui. Coba lagi.', true);
+            btn.disabled = false;
+          }
+        });
+      });
+
+      $('listArea').querySelectorAll('.btn-tolak').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Tolak permintaan akun ini?')) return;
+          btn.disabled = true;
+          try {
+            await putuskanOrangtua(btn.dataset.uid, false);
+            showToast('Permintaan ditolak.');
+            loadPermintaan();
+          } catch (err) {
+            console.error(err);
+            showToast('Gagal menolak. Coba lagi.', true);
+            btn.disabled = false;
+          }
+        });
+      });
+
+    } catch (err) {
+      console.error(err);
+      $('listArea').innerHTML = `<div class="siswa-empty-note">Gagal memuat permintaan.</div>`;
+    }
+  }
+</script>
+</body>
+</html>

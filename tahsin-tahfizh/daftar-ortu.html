@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daftar Akun Orang Tua — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+
+  .login-screen{
+    flex:1;display:flex;flex-direction:column;
+    background:
+      radial-gradient(120% 60% at 50% -10%, rgba(47,189,126,.16) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-dark-2) 100%);
+    padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 28px);
+    overflow-y:auto;
+  }
+  .brand-block{text-align:center;margin-bottom:20px}
+  .brand-block .logo-badge{margin:0 auto 14px}
+  .brand-title{font-family:'Amiri',serif;font-weight:700;font-size:19px;color:#fff;margin-bottom:3px}
+  .brand-sub{font-size:11.5px;color:var(--dark-text-muted);font-weight:600}
+
+  .login-card{
+    background:var(--dark-card);border:1px solid var(--dark-card-border);
+    border-radius:26px;padding:24px 20px 22px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  }
+  .form-section-label{
+    font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+    color:var(--gold-accent);margin:18px 0 10px;
+  }
+  .form-section-label:first-child{margin-top:0}
+
+  .anak-row{display:flex;gap:8px;margin-bottom:8px}
+  .anak-row .field-dark{flex:1;margin-bottom:0}
+  .btn-remove-anak{
+    flex-shrink:0;width:44px;border-radius:14px;border:1.5px solid var(--dark-input-border);
+    background:var(--dark-input-bg);color:#ff8a7a;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .btn-add-anak{
+    width:100%;padding:11px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.25);
+    background:transparent;color:var(--dark-text-muted);font-family:inherit;font-size:12.5px;font-weight:700;
+    cursor:pointer;margin-top:2px;
+  }
+  .btn-add-anak:hover{color:var(--dark-text);border-color:rgba(255,255,255,.4)}
+
+  .info-box{
+    background:rgba(47,189,126,.08);border:1px solid rgba(47,189,126,.25);color:var(--dark-text-muted);
+    font-size:11.5px;line-height:1.6;padding:11px 13px;border-radius:12px;margin-bottom:18px;
+  }
+  .spinner{width:17px;height:17px;border-radius:50%;border:2.5px solid rgba(4,20,13,.25);border-top-color:#04140d;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .success-block{text-align:center;padding:20px 6px}
+  .success-block svg{width:52px;height:52px;color:var(--green-accent);margin-bottom:14px}
+  .success-block h2{font-size:16px;color:#fff;margin:0 0 8px}
+  .success-block p{font-size:12.5px;color:var(--dark-text-muted);line-height:1.7;margin:0 0 20px}
+
+  .form-footnote{text-align:center;margin-top:22px;font-size:12px;color:var(--dark-text-muted);line-height:1.7}
+  .form-footnote a{color:var(--gold-accent);text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div class="login-screen">
+
+      <div class="brand-block">
+        <span class="logo-badge size-md">
+          <img src="../assets/logo.png" alt="Logo SD Muhammadiyah 01 Kukusan">
+        </span>
+        <div class="brand-title">Daftar Akun Orang Tua</div>
+        <div class="brand-sub">SD MUHAMMADIYAH 01 KUKUSAN</div>
+      </div>
+
+      <div class="login-card">
+
+        <div id="formBlock">
+          <div class="info-box">
+            Akun akan diperiksa &amp; disetujui admin sekolah sebelum bisa dipakai
+            melihat riwayat Tahsin-Tahfizh anak Anda. Pastikan NIS yang dimasukkan benar.
+          </div>
+
+          <form id="daftarForm" novalidate>
+            <div class="form-section-label">Data Anda</div>
+
+            <div class="field-dark">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="namaOrtu" placeholder="Nama lengkap Anda" autocomplete="name" required>
+            </div>
+            <div class="field-dark">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg>
+              <input type="email" id="email" placeholder="Email" autocomplete="username" required>
+            </div>
+            <div class="field-dark">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+              <input type="tel" id="nomorHp" placeholder="Nomor HP (opsional)" autocomplete="tel">
+            </div>
+            <div class="field-dark">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" id="password" placeholder="Buat kata sandi (min. 6 karakter)" autocomplete="new-password" required>
+            </div>
+
+            <div class="form-section-label">Data Anak (isi NIS)</div>
+            <div id="anakList"></div>
+            <button type="button" class="btn-add-anak" id="btnTambahAnak">+ Tambah anak lain</button>
+
+            <div id="formErrorMsg" class="field-error-msg hidden" style="margin-top:14px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+              <span id="formErrorText"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary-dark" id="submitBtn" style="margin-top:18px">
+              <span id="submitLabel">Daftar</span>
+            </button>
+          </form>
+        </div>
+
+        <div id="successBlock" class="success-block hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <h2>Pendaftaran Terkirim</h2>
+          <p>Akun Anda sedang menunggu persetujuan admin sekolah. Anda akan bisa login begitu disetujui — silakan cek kembali dalam 1-2 hari.</p>
+          <a href="login.html" class="btn btn-primary-dark" style="text-decoration:none;display:flex">Ke Halaman Login</a>
+        </div>
+
+      </div>
+
+      <div class="form-footnote">
+        Sudah punya akun? <a href="login.html">Masuk di sini</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { signupOrangtua, terjemahkanErrorLogin } from '../assets/firebase.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  let anakCount = 0;
+  function tambahBarisAnak() {
+    anakCount++;
+    const id = 'nis-' + anakCount;
+    const row = document.createElement('div');
+    row.className = 'anak-row';
+    row.innerHTML = `
+      <div class="field-dark">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+        <input type="text" id="${id}" placeholder="NIS anak" inputmode="numeric" required>
+      </div>
+      ${anakCount > 1 ? `<button type="button" class="btn-remove-anak" aria-label="Hapus">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>` : ''}
+    `;
+    $('anakList').appendChild(row);
+    const removeBtn = row.querySelector('.btn-remove-anak');
+    if (removeBtn) removeBtn.addEventListener('click', () => row.remove());
+  }
+  tambahBarisAnak(); // baris pertama, tidak bisa dihapus
+  $('btnTambahAnak').addEventListener('click', tambahBarisAnak);
+
+  $('daftarForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('formErrorMsg').classList.add('hidden');
+
+    const nama = $('namaOrtu').value.trim();
+    const email = $('email').value.trim();
+    const nomorHp = $('nomorHp').value.trim();
+    const password = $('password').value;
+    const anakIds = [...$('anakList').querySelectorAll('input')]
+      .map(inp => inp.value.trim())
+      .filter(Boolean);
+
+    if (!nama || !email || !password || !anakIds.length) {
+      $('formErrorText').textContent = 'Nama, email, kata sandi, dan minimal 1 NIS anak wajib diisi.';
+      $('formErrorMsg').classList.remove('hidden');
+      return;
+    }
+    if (password.length < 6) {
+      $('formErrorText').textContent = 'Kata sandi minimal 6 karakter.';
+      $('formErrorMsg').classList.remove('hidden');
+      return;
+    }
+
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    $('submitLabel').innerHTML = '<span class="spinner"></span>';
+
+    try {
+      await signupOrangtua({ nama, email, password, nomorHp, anakIds });
+      $('formBlock').classList.add('hidden');
+      $('successBlock').classList.remove('hidden');
+    } catch (err) {
+      console.error(err);
+      $('formErrorText').textContent = terjemahkanErrorLogin(err) === 'Login gagal. Silakan coba lagi.'
+        ? (err.code === 'auth/email-already-in-use' ? 'Email ini sudah terdaftar. Silakan masuk, atau gunakan email lain.' : 'Pendaftaran gagal. Coba lagi.')
+        : terjemahkanErrorLogin(err);
+      $('formErrorMsg').classList.remove('hidden');
+      btn.disabled = false;
+      $('submitLabel').textContent = 'Daftar';
+    }
+  });
+</script>
+</body>
+</html>

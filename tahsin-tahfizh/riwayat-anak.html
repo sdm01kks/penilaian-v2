@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Riwayat Anak — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Riwayat Anak</div>
+            <button class="app-header-sub-btn" id="guruLabel" title="Ketuk untuk keluar">
+              <span id="guruLabelText">Memuat…</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data masih tiruan.</span>
+        </div>
+
+        <div id="waitingBlock" class="waiting-block hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <h2 id="waitingTitle">Menunggu Persetujuan</h2>
+          <p id="waitingText">Akun Anda sedang diperiksa oleh admin sekolah. Silakan cek kembali dalam 1-2 hari.</p>
+        </div>
+
+        <div id="contentBlock" class="hidden">
+          <div class="anak-tab-row" id="anakTabRow"></div>
+          <div id="ringkasanBody"><div class="siswa-empty-note">Memuat…</div></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import { getSiswaById, getRiwayatSetoran, getMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
+  import { surahByNo } from '../assets/quran-surah.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('guruLabelText').textContent = session.nama;
+
+    if (session.role !== 'orangtua') {
+      window.location.href = 'login.html';
+      return;
+    }
+    if (session.status !== 'approved') {
+      $('waitingBlock').classList.remove('hidden');
+      if (session.status === 'ditolak') {
+        $('waitingTitle').textContent = 'Permintaan Ditolak';
+        $('waitingText').textContent = 'Permintaan akun Anda tidak disetujui. Silakan hubungi admin sekolah untuk informasi lebih lanjut.';
+      }
+      return;
+    }
+    if (!session.anakIds || !session.anakIds.length) {
+      $('waitingBlock').classList.remove('hidden');
+      $('waitingTitle').textContent = 'Belum Ada Anak Tertaut';
+      $('waitingText').textContent = 'Akun Anda disetujui tapi belum ada data anak yang tertaut. Hubungi admin sekolah.';
+      return;
+    }
+
+    $('contentBlock').classList.remove('hidden');
+    initAnak(session.anakIds);
+  });
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  $('guruLabel').addEventListener('click', async () => {
+    if (!confirm('Keluar dari akun ini?')) return;
+    try { await logout(); } catch (err) { console.error(err); }
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s || '';
+    return div.innerHTML;
+  }
+  function toDate(ts) {
+    if (!ts) return null;
+    if (typeof ts?.toDate === 'function') return ts.toDate();
+    return new Date(ts);
+  }
+  function formatTanggal(ts) {
+    const d = toDate(ts);
+    if (!d || isNaN(d)) return '-';
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  let daftarAnak = [];
+
+  async function initAnak(anakIds) {
+    $('ringkasanBody').innerHTML = `<div class="siswa-empty-note">Memuat data anak…</div>`;
+    try {
+      daftarAnak = (await Promise.all(anakIds.map(id => getSiswaById(id)))).filter(Boolean);
+    } catch (err) {
+      console.error(err);
+      $('ringkasanBody').innerHTML = `<div class="siswa-empty-note">Gagal memuat data anak.</div>`;
+      return;
+    }
+    if (!daftarAnak.length) {
+      $('ringkasanBody').innerHTML = `<div class="siswa-empty-note">Data anak tidak ditemukan. Hubungi admin sekolah.</div>`;
+      return;
+    }
+
+    $('anakTabRow').innerHTML = daftarAnak.map((a, i) => `
+      <button type="button" class="anak-tab-btn ${i === 0 ? 'active' : ''}" data-idx="${i}">${escapeHtml(a.nama.split(' ')[0])}</button>
+    `).join('');
+    $('anakTabRow').classList.toggle('hidden', daftarAnak.length <= 1);
+    $('anakTabRow').querySelectorAll('.anak-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $('anakTabRow').querySelectorAll('.anak-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        tampilkanRingkasan(daftarAnak[+btn.dataset.idx]);
+      });
+    });
+
+    tampilkanRingkasan(daftarAnak[0]);
+  }
+
+  async function tampilkanRingkasan(siswa) {
+    $('ringkasanBody').innerHTML = `<div class="siswa-empty-note">Memuat riwayat…</div>`;
+    try {
+      const [setoranCache, menulisCache, targetCache] = await Promise.all([
+        getRiwayatSetoran(siswa.id, siswa.kelas),
+        getMenulisLog(siswa.id, siswa.kelas),
+        getTargetHafalan(siswa.kelas).catch(() => null),
+      ]);
+
+      const isIqro = siswa.jenjang === 'iqro';
+      const ziyadahLulus = setoranCache.filter(r => r.jenis === 'ziyadah' && r.statusHafalan === 'lulus');
+      const totalSesi = setoranCache.length;
+      const now = Date.now();
+      const sesi30Hari = setoranCache.filter(r => {
+        const d = toDate(r.createdAt);
+        return d && (now - d.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+      }).length;
+      let posisiTerakhir = '-';
+      if (setoranCache.length) posisiTerakhir = setoranCache[0].materi?.label || '-';
+
+      const sesiDenganDetail = setoranCache.filter(r => (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro).slice(0, 5);
+      let totalTajwid = 0, totalMakhroj = 0, totalAyatDinilai = 0;
+      sesiDenganDetail.forEach(r => {
+        if (r.detailAyat?.length) {
+          r.detailAyat.forEach(a => {
+            totalAyatDinilai++;
+            (a.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') totalTajwid++; else if (k.jenis === 'makhroj') totalMakhroj++; });
+          });
+        } else if (r.detailBacaanIqro) {
+          totalAyatDinilai++;
+          (r.detailBacaanIqro.kataSalah || []).forEach(k => { if (k.jenis === 'tajwid') totalTajwid++; else if (k.jenis === 'makhroj') totalMakhroj++; });
+        }
+      });
+
+      const menulisTerakhir = menulisCache[0];
+
+      let targetHtml = '';
+      if (targetCache) {
+        if (isIqro) {
+          const entriIqro = setoranCache.filter(r => r.materi?.tipe === 'iqro');
+          const posisiJilid = entriIqro[0]?.materi?.buku || 1;
+          const posisiHalaman = entriIqro[0]?.materi?.halamanAkhir || 0;
+          const tercapai = (posisiJilid > targetCache.targetJilid) ||
+            (posisiJilid === targetCache.targetJilid && posisiHalaman >= targetCache.targetHalaman);
+          targetHtml = `
+            <div class="section-label" style="margin-top:0">Target Hafalan${targetCache.labelSemester ? ' — ' + escapeHtml(targetCache.labelSemester) : ''}</div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="progress-info-row"><span class="k">Target</span><span class="v">Iqro ${targetCache.targetJilid} Hal. ${targetCache.targetHalaman}</span></div>
+              <div class="progress-info-row"><span class="k">Posisi saat ini</span><span class="v">Iqro ${posisiJilid} Hal. ${posisiHalaman || '-'}</span></div>
+              <div class="progress-info-row"><span class="k">Status</span><span class="v" style="color:${tercapai ? 'var(--green-dark)' : 'var(--red)'}">${tercapai ? 'Tercapai' : 'Belum tercapai'}</span></div>
+            </div>
+          `;
+        } else {
+          const progres = hitungProgresSurah(targetCache.targetSurah, setoranCache);
+          const tercapaiCount = progres.filter(p => {
+            const surah = surahByNo(p.surahNo);
+            return surah && p.maxAyatAkhir >= surah.ayat;
+          }).length;
+          targetHtml = `
+            <div class="section-label" style="margin-top:0">Target Hafalan${targetCache.labelSemester ? ' — ' + escapeHtml(targetCache.labelSemester) : ''}</div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="progress-info-row"><span class="k">Surah tercapai</span><span class="v">${tercapaiCount} / ${progres.length}</span></div>
+              ${progres.map(p => {
+                const surah = surahByNo(p.surahNo);
+                if (!surah) return '';
+                const pct = Math.min(100, Math.round((p.maxAyatAkhir / surah.ayat) * 100));
+                const color = pct >= 100 ? '#2d7055' : pct > 0 ? '#c9882a' : '#c0c0c0';
+                return `
+                  <div class="progres-surah-row">
+                    <span class="nm">${escapeHtml(surah.nama)}</span>
+                    <span class="track"><span class="fill" style="width:${pct}%;background:${color}"></span></span>
+                    <span class="pct">${pct}%</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }
+      }
+
+      $('ringkasanBody').innerHTML = `
+        <div class="card" style="margin-bottom:12px;text-align:center">
+          <div style="font-size:15px;font-weight:800;color:var(--ink)">${escapeHtml(siswa.nama)}</div>
+          <div style="font-size:12px;color:var(--ink-muted);font-weight:600;margin-top:2px">${escapeHtml(siswa.nis)} • Kelas ${escapeHtml(siswa.kelas)}</div>
+        </div>
+
+        <div class="progress-stat-grid">
+          <div class="progress-stat-card">
+            <div class="num">${isIqro ? setoranCache.length : ziyadahLulus.length}</div>
+            <div class="label">${isIqro ? 'Total Sesi Setoran' : 'Materi Baru Lulus'}</div>
+          </div>
+          <div class="progress-stat-card">
+            <div class="num">${sesi30Hari}</div>
+            <div class="label">Sesi 30 Hari Terakhir</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px">
+          <div class="progress-info-row"><span class="k">Posisi terakhir</span><span class="v">${escapeHtml(posisiTerakhir)}</span></div>
+          <div class="progress-info-row"><span class="k">Total sesi tercatat</span><span class="v">${totalSesi}</span></div>
+        </div>
+
+        ${sesiDenganDetail.length ? `
+          <div class="section-label" style="margin-top:0">Kualitas Bacaan (5 sesi terbaru)</div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="progress-info-row"><span class="k">Sesi dinilai (Baca &amp; Tandai)</span><span class="v">${totalAyatDinilai}</span></div>
+            <div class="progress-info-row"><span class="k">Kesalahan Tajwid</span><span class="v">${totalTajwid}</span></div>
+            <div class="progress-info-row"><span class="k">Kesalahan Makhroj</span><span class="v">${totalMakhroj}</span></div>
+          </div>
+        ` : ''}
+
+        ${targetHtml}
+
+        <div class="section-label" style="margin-top:0">Menulis</div>
+        <div class="card">
+          ${menulisTerakhir ? `
+            <div class="progress-info-row"><span class="k">Terakhir diperiksa</span><span class="v">${formatTanggal(menulisTerakhir.tanggalPeriksa)}</span></div>
+            <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.jilidIqro ? `Iqro ${menulisTerakhir.jilidIqro} — ` : ''}${menulisTerakhir.halamanAkhir}</span></div>
+            <div class="progress-info-row"><span class="k">Total pemeriksaan</span><span class="v">${menulisCache.length}x</span></div>
+          ` : `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`}
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+      $('ringkasanBody').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
+    }
+  }
+</script>
+</body>
+</html>
