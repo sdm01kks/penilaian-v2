@@ -18,6 +18,11 @@ rules_version = '2';
 //     Tahsin-Tahfizh untuk kelas yang ada di daftar `kelasAmpu` miliknya.
 //   - role "guru_akademik": hanya boleh baca/tulis data Akademik & Rapor
 //     (lihat blok `mapel` & `tp_kktp` di bawah).
+//   - role "orangtua": HANYA kalau status == 'approved', hanya boleh BACA
+//     (read-only) data anak-anaknya sendiri (anakIds) di modul
+//     Tahsin-Tahfizh. Akun dibuat sendiri (self-signup, lihat users/{uid})
+//     tapi tidak bisa mengakses apa pun sampai admin menyetujui lewat
+//     halaman Kelola Akun Ortu di dalam aplikasi.
 //   - Role SENGAJA dicek spesifik per modul, bukan sekadar "punya
 //     kelasAmpu/penugasan" — supaya guru satu modul tidak otomatis
 //     kebagian akses ke modul lain hanya karena kebetulan bentuk
@@ -43,6 +48,17 @@ service cloud.firestore {
 
     function isAdmin() {
       return isLoggedIn() && myProfile().role == 'admin';
+    }
+
+    // Orang tua yang sudah disetujui admin (lihat blok users/{uid} di bawah
+    // untuk alur pendaftaran & persetujuannya).
+    function isApprovedOrangtua() {
+      return isLoggedIn() && myProfile().role == 'orangtua' && myProfile().status == 'approved';
+    }
+
+    // Orang tua boleh lihat data anaknya sendiri (siswaId = NIS = Document ID siswa).
+    function anakSaya(siswaId) {
+      return isApprovedOrangtua() && siswaId in myProfile().anakIds;
     }
 
     // Boleh akses kelas tertentu kalau admin, atau dia guru_tahsin_tahfizh
@@ -96,20 +112,30 @@ service cloud.firestore {
     }
 
     // ---- users/{uid} ---------------------------------------------------
-    // Profil pengguna (nama, role, kelasAmpu). Dibuat & diubah manual
-    // lewat Firebase Console. Pengguna hanya boleh membaca profilnya sendiri.
+    // Profil pengguna (nama, role, kelasAmpu/penugasan). Guru/admin dibuat
+    // manual lewat Console. Orang tua BOLEH bikin akun sendiri (self-signup)
+    // tapi HANYA sebagai role "orangtua" berstatus "pending" — tidak bisa
+    // self-assign admin/guru atau langsung approved. Admin menyetujui lewat
+    // update (dari halaman Kelola Akun Ortu, bukan Console).
     match /users/{uid} {
-      allow read: if isLoggedIn() && request.auth.uid == uid;
-      allow write: if false;
+      allow get: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isLoggedIn() && request.auth.uid == uid
+                     && request.resource.data.role == 'orangtua'
+                     && request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // ---- siswa/{id} ------------------------------------------------------
     // Data siswa. Guru hanya boleh membaca siswa dari kelas yang diampunya
     // — Tahsin-Tahfizh lewat bolehKelas(), Akademik lewat
     // bolehKelasAkademik() (OR murni tambahan, jalur Tahsin di atas tidak
-    // diubah). Menulis (seed/migrasi data) khusus admin.
+    // diubah). Orang tua yang sudah disetujui boleh get (bukan list)
+    // anaknya sendiri. Menulis (seed/migrasi data) khusus admin.
     match /siswa/{id} {
-      allow read: if bolehKelas(resource.data.kelas) || bolehKelasAkademik(resource.data.kelas);
+      allow get: if bolehKelas(resource.data.kelas) || bolehKelasAkademik(resource.data.kelas) || anakSaya(id);
+      allow list: if bolehKelas(resource.data.kelas) || bolehKelasAkademik(resource.data.kelas);
       allow write: if isAdmin();
     }
 
@@ -123,9 +149,11 @@ service cloud.firestore {
 
     // ---- setoran/{id} ------------------------------------------------------
     // Riwayat setoran harian. Guru hanya boleh baca/tambah untuk kelas
-    // yang diampunya. Hapus hanya untuk entri milik sendiri.
+    // yang diampunya. Orang tua boleh baca setoran anaknya sendiri saja
+    // (read-only, tidak pernah bisa create/delete). Hapus hanya untuk
+    // entri milik sendiri.
     match /setoran/{id} {
-      allow read: if bolehKelas(resource.data.kelas);
+      allow read: if bolehKelas(resource.data.kelas) || anakSaya(resource.data.siswaId);
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
                      && bolehKelas(request.resource.data.kelas);
@@ -135,9 +163,9 @@ service cloud.firestore {
 
     // ---- menulis_log/{id} ---------------------------------------------------
     // Catatan pemeriksaan berkala buku salinan Al-Qur'an. Aturan sama
-    // seperti setoran.
+    // seperti setoran (termasuk akses baca-saja untuk orang tua).
     match /menulis_log/{id} {
-      allow read: if bolehKelas(resource.data.kelas);
+      allow read: if bolehKelas(resource.data.kelas) || anakSaya(resource.data.siswaId);
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
                      && bolehKelas(request.resource.data.kelas);
@@ -148,8 +176,10 @@ service cloud.firestore {
     // ---- target_hafalan/{kelas} ---------------------------------------------
     // Target surah (Quran) / jilid+halaman (Iqro) per kelas per semester.
     // ID dokumen = kode kelas, jadi tinggal dicocokkan dengan kelasAmpu.
+    // Target bukan data sensitif per-siswa, jadi orang tua yang sudah
+    // disetujui boleh lihat target kelas mana pun.
     match /target_hafalan/{kelas} {
-      allow read: if bolehKelas(kelas);
+      allow read: if bolehKelas(kelas) || isApprovedOrangtua();
       allow write: if bolehKelas(kelas);
     }
 
