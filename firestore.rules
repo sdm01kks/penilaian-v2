@@ -111,6 +111,21 @@ service cloud.firestore {
       );
     }
 
+    // Akses khusus WALI KELAS (dipakai absensi & keputusan naik kelas).
+    // SENGAJA terpisah dari bolehKelasAkademik()/bolehMapelKelas() — punya
+    // penugasan mengajar mapel di suatu kelas TIDAK otomatis berarti wali
+    // kelas kelas itu (persis seperti di aplikasi lama: guru bidang studi
+    // ditolak akses absensi). Field `waliKelas` adalah daftar datar kode
+    // kelas tempat orang itu berperan sebagai wali kelas — array (bukan
+    // satu string) supaya kelas dengan 2 wali kelas/guru pendamping (mis.
+    // 5A) bisa menandai kedua akun.
+    function bolehWaliKelas(kelas) {
+      return isLoggedIn() && (
+        myProfile().role == 'admin' ||
+        (myProfile().role == 'guru_akademik' && kelas in myProfile().waliKelas)
+      );
+    }
+
     // ---- users/{uid} ---------------------------------------------------
     // Profil pengguna (nama, role, kelasAmpu/penugasan). Guru/admin dibuat
     // manual lewat Console. Orang tua BOLEH bikin akun sendiri (self-signup)
@@ -261,6 +276,21 @@ service cloud.firestore {
                      && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
       allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
                      && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
+    // ---- absensi_rapor/{id} -------------------------------------------------
+    // Rekap absensi semester + catatan wali + keputusan naik/tinggal kelas.
+    // Satu dokumen per (siswa × semester × tahun ajaran). KHUSUS wali
+    // kelas (bolehWaliKelas) — guru mapel biasa di kelas itu TIDAK ikut
+    // kebagian akses, persis pola aplikasi lama.
+    match /absensi_rapor/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
       allow delete: if isAdmin();
     }
 
