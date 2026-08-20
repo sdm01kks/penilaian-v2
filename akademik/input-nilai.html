@@ -124,11 +124,16 @@
 
         <div id="soonStrip" class="soon-strip hidden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          <span>Setup TP &amp; KKTP sudah bisa dipakai. Form isi nilai per siswa untuk tiap mapel di bawah akan menyusul di update berikutnya.</span>
+          <span>Setup TP &amp; KKTP dan Input Nilai sudah bisa dipakai. Kokurikuler &amp; Ekstrakurikuler menyusul.</span>
         </div>
 
         <div class="card" id="penugasanCard">
           <div id="penugasanList" class="penugasan-list"></div>
+        </div>
+
+        <div id="waliKelasSection" class="hidden">
+          <div class="section-label"><span class="bar"></span>Kelas yang Anda Wali-i</div>
+          <div class="card"><div id="waliKelasList" class="penugasan-list"></div></div>
         </div>
 
       </div>
@@ -171,6 +176,7 @@
     currentUser = session;
     renderProfile(session);
     renderPenugasan(session);
+    renderWaliKelas(session);
   });
 
   if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
@@ -181,6 +187,23 @@
     $('profileAvatar').textContent = initials(session.nama) || '--';
     $('profileNama').textContent = session.nama;
     $('profileRole').textContent = session.role === 'admin' ? 'Admin' : 'Guru';
+  }
+
+  function renderWaliKelas(session) {
+    const kelasList = Array.isArray(session.waliKelas) ? session.waliKelas : [];
+    if (!kelasList.length) return; // guru mapel biasa tidak punya bagian ini sama sekali
+    $('waliKelasSection').classList.remove('hidden');
+    $('waliKelasList').innerHTML = kelasList.map(k => `
+      <div class="penugasan-item">
+        <div class="penugasan-kelas-badge">${escapeHtml(k)}</div>
+        <div class="penugasan-info">
+          <div class="penugasan-mapel">Wali Kelas ${escapeHtml(k)}</div>
+          <div class="penugasan-kelas">Absensi, catatan &amp; keputusan naik kelas</div>
+        </div>
+        <div class="penugasan-actions">
+          <a href="absensi.html?kelas=${encodeURIComponent(k)}">Buka</a>
+        </div>
+      </div>`).join('');
   }
 
   async function renderPenugasan(session) {
