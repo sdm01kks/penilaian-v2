@@ -676,3 +676,36 @@ export async function saveKokurikuler(payload, existingId) {
     await fsMod.addDoc(fsMod.collection(db, 'kokurikuler'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
   }
 }
+
+/* ==========================================================================
+   Ringkasan status — dipakai akademik/beranda.html untuk menghitung "tugas
+   belum selesai" tanpa query berulang per TP.
+   ========================================================================== */
+
+/**
+ * Ambil semua nilai SLM untuk satu mapel+kelas SEKALIGUS (bukan per TP),
+ * dikelompokkan per tpId. Lebih hemat query dibanding memanggil
+ * getNilaiSlmUntukTP() satu-satu untuk tiap TP.
+ * @returns {Promise<Object<string, number>>} tpId -> jumlah siswa terisi
+ */
+export async function getNilaiSlmSummary({ mapel, kelas, semester, tahunAjaran }) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    list = readDemoNilaiSlm().filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'nilai_slm'),
+      fsMod.where('mapel', '==', mapel),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => d.data());
+  }
+  const perTp = {};
+  list.forEach(n => { perTp[n.tpId] = (perTp[n.tpId] || 0) + 1; });
+  return perTp;
+}
