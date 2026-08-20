@@ -294,6 +294,29 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- dpl/{id} -----------------------------------------------------------
+    // Referensi 8 Dimensi Profil Lulusan (nama, status aktif, deskripsi per
+    // level). Bukan data sensitif, jadi baca dibuka untuk siapa pun yang
+    // login. Tulis khusus admin — mengikuti pola mapel/{nama}.
+    match /dpl/{id} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- kokurikuler/{id} ---------------------------------------------------
+    // Nilai kokurikuler (level 1-4 per DPL per siswa). KHUSUS wali kelas,
+    // sama seperti absensi_rapor — guru mapel biasa tidak ikut kebagian
+    // akses walau mengajar di kelas itu.
+    match /kokurikuler/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;
