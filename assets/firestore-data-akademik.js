@@ -545,3 +545,134 @@ export async function saveAbsensiRapor(payload, existingId) {
     await fsMod.addDoc(fsMod.collection(db, 'absensi_rapor'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
   }
 }
+
+/* ==========================================================================
+   DPL (Dimensi Profil Lulusan) — data referensi. TIDAK ada isi bawaan di
+   sini (beda dari mapel) — nama 8 dimensi & deskripsi tiap levelnya belum
+   pernah dikonfirmasi dari sumber yang bisa dipercaya, jadi sengaja
+   dikosongkan. Diisi manual oleh admin lewat akademik/seed-dpl.html.
+   ========================================================================== */
+
+const DEMO_DPL_KEY = 'akd_demo_dpl';
+
+function readDemoDpl() {
+  return JSON.parse(localStorage.getItem(DEMO_DPL_KEY) || '[]');
+}
+
+/** Ambil semua DPL, terurut. Pakai {hanyaAktif:true} untuk filter yang aktif saja. */
+export async function getDPLList({ hanyaAktif = false } = {}) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    list = readDemoDpl();
+  } else {
+    const { db, fsMod } = window.__fb;
+    const snap = await fsMod.getDocs(fsMod.collection(db, 'dpl'));
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  list.sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+  return hanyaAktif ? list.filter(d => d.aktif) : list;
+}
+
+/** Simpan satu DPL (upsert berdasar id kalau ada). */
+export async function saveDPL(payload) {
+  const data = {
+    nama: payload.nama, urutan: payload.urutan, aktif: !!payload.aktif,
+    levelDeskripsi: payload.levelDeskripsi,
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoDpl();
+    if (payload.id) {
+      const idx = list.findIndex(d => d.id === payload.id);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-dpl-' + Date.now(), ...data });
+    }
+    localStorage.setItem(DEMO_DPL_KEY, JSON.stringify(list));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  if (payload.id) {
+    await fsMod.setDoc(fsMod.doc(db, 'dpl', payload.id), data);
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'dpl'), data);
+  }
+}
+
+/** Hapus satu DPL. */
+export async function deleteDPL(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    localStorage.setItem(DEMO_DPL_KEY, JSON.stringify(readDemoDpl().filter(d => d.id !== id)));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'dpl', id));
+}
+
+/* ==========================================================================
+   Kokurikuler — nilai (level 1-4) per siswa per DPL per semester. Khusus
+   wali kelas. Satu dokumen per (siswa × dpl × semester × tahun ajaran).
+   ========================================================================== */
+
+const DEMO_KOKURIKULER_KEY = 'akd_demo_kokurikuler';
+
+function readDemoKokurikuler() {
+  return JSON.parse(localStorage.getItem(DEMO_KOKURIKULER_KEY) || '[]');
+}
+function writeDemoKokurikuler(list) {
+  localStorage.setItem(DEMO_KOKURIKULER_KEY, JSON.stringify(list));
+}
+
+/** @returns {Promise<Object<string,object>>} siswaId -> { dplId: {id, level, deskripsi} } */
+export async function getKokurikulerByKelas(kelas, semester, tahunAjaran) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    list = readDemoKokurikuler().filter(k => k.kelas === kelas && k.semester === semester && k.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'kokurikuler'),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  const map = {};
+  list.forEach(k => {
+    if (!map[k.siswaId]) map[k.siswaId] = {};
+    map[k.siswaId][k.dplId] = { id: k.id, level: k.level, deskripsi: k.deskripsi };
+  });
+  return map;
+}
+
+/** Simpan satu nilai kokurikuler (upsert). `existingId` dari getKokurikulerByKelas kalau ada. */
+export async function saveKokurikuler(payload, existingId) {
+  const data = {
+    siswaId: payload.siswaId, dplId: payload.dplId, kelas: payload.kelas,
+    tingkatan: String(payload.tingkatan), semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    level: payload.level, deskripsi: payload.deskripsi || '',
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoKokurikuler();
+    if (existingId) {
+      const idx = list.findIndex(k => k.id === existingId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-kok-' + Date.now() + '-' + payload.siswaId + '-' + payload.dplId, ...data });
+    }
+    writeDemoKokurikuler(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'kokurikuler', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'kokurikuler'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
