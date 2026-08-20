@@ -738,3 +738,48 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
 .progres-surah-row .track{flex:1;height:6px;border-radius:4px;background:var(--border);overflow:hidden}
 .progres-surah-row .fill{height:100%;border-radius:4px}
 .progres-surah-row .pct{width:36px;text-align:right;flex-shrink:0;font-weight:700;color:var(--ink-muted);font-size:11px}
+
+/* ==========================================================================
+   Kelola Akun Ortu (admin)
+   ========================================================================== */
+
+.permintaan-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:14px;margin-bottom:12px;
+}
+.permintaan-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.permintaan-head .nama{font-size:14.5px;font-weight:700;color:var(--ink)}
+.permintaan-head .email{font-size:11.5px;color:var(--ink-muted);margin-top:1px}
+.permintaan-anak-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.permintaan-anak-item{
+  display:flex;align-items:center;gap:8px;font-size:12.5px;
+  background:var(--bg-light);border-radius:9px;padding:8px 10px;
+}
+.permintaan-anak-item.valid{color:var(--ink)}
+.permintaan-anak-item.invalid{color:var(--red)}
+.permintaan-anak-item .nis-badge{
+  font-size:10px;font-weight:800;color:var(--ink-muted);background:var(--surface);
+  padding:2px 7px;border-radius:6px;flex-shrink:0;
+}
+.permintaan-action-row{display:flex;gap:8px}
+.btn-setujui, .btn-tolak{
+  flex:1;padding:10px;border-radius:11px;border:none;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+}
+.btn-setujui{background:var(--green-dark);color:#fff}
+.btn-tolak{background:var(--red-light);color:var(--red)}
+
+/* ==========================================================================
+   Riwayat Anak (orang tua)
+   ========================================================================== */
+
+.anak-tab-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px}
+.anak-tab-btn{
+  flex-shrink:0;padding:9px 16px;border-radius:20px;border:1.5px solid var(--border);
+  background:var(--surface);font-family:inherit;font-size:13px;font-weight:700;color:var(--ink-mid);cursor:pointer;
+}
+.anak-tab-btn.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+.waiting-block{text-align:center;padding:60px 24px}
+.waiting-block svg{width:52px;height:52px;color:var(--gold);margin-bottom:16px}
+.waiting-block h2{font-size:16px;color:var(--ink);margin:0 0 8px}
+.waiting-block p{font-size:13px;color:var(--ink-muted);line-height:1.7}

@@ -156,6 +156,63 @@ export async function getSiswaList(kelasFilter, scope) {
   return sortByNama(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 }
 
+/** Ambil satu siswa langsung dari ID (NIS)-nya. Dipakai oleh halaman
+ *  orang tua (tidak perlu/boleh list, cukup get dokumen yang sudah diketahui). */
+export async function getSiswaById(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    return DEMO_SISWA.find(s => s.id === id) || null;
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'siswa', id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+/* ==========================================================================
+   Akun Orang Tua — pendaftaran mandiri, disetujui admin
+   ========================================================================== */
+
+const DEMO_USERS_LOCAL_KEY = 'tt_demo_users';
+
+/** [Admin] Daftar semua permintaan akun orang tua yang masih pending. */
+export async function getPermintaanOrangtuaPending() {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const users = JSON.parse(localStorage.getItem(DEMO_USERS_LOCAL_KEY) || '[]');
+    return users
+      .filter(u => u.role === 'orangtua' && u.status === 'pending')
+      .map(u => ({ uid: u.email, ...u })); // pakai email sebagai id sementara di mode demo
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'users'),
+    fsMod.where('role', '==', 'orangtua'),
+    fsMod.where('status', '==', 'pending')
+  );
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+/** [Admin] Setujui atau tolak permintaan akun orang tua. `anakIds` opsional
+ *  kalau admin perlu mengoreksi daftar anak sebelum menyetujui. */
+export async function putuskanOrangtua(uid, disetujui, anakIds) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const users = JSON.parse(localStorage.getItem(DEMO_USERS_LOCAL_KEY) || '[]');
+    const idx = users.findIndex(u => u.email === uid);
+    if (idx >= 0) {
+      users[idx].status = disetujui ? 'approved' : 'ditolak';
+      if (anakIds) users[idx].anakIds = anakIds;
+      localStorage.setItem(DEMO_USERS_LOCAL_KEY, JSON.stringify(users));
+    }
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  const data = { status: disetujui ? 'approved' : 'ditolak' };
+  if (anakIds) data.anakIds = anakIds;
+  await fsMod.updateDoc(fsMod.doc(db, 'users', uid), data);
+}
+
 /* ==========================================================================
    Setoran
    ========================================================================== */

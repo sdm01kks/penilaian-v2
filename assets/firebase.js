@@ -69,6 +69,7 @@ function _demoSeedUsers() {
       { kelas: '4A', mapel: 'IPAS' },
     ] },
     { email: 'admin@sdm01kukusan.sch.id',       password: 'admin123',  nama: 'Admin Tahsin-Tahfizh',    role: 'admin', kelasAmpu: [] },
+    { email: 'ortu@contoh.com',                 password: 'ortu123',   nama: 'Bapak Contoh',            role: 'orangtua', status: 'approved', anakIds: ['s1'] },
   ]));
 }
 
@@ -87,7 +88,7 @@ export async function login(email, password, rememberMe) {
       err.code = 'demo/invalid-credential';
       throw err;
     }
-    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [], penugasan: found.penugasan || [] };
+    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [], penugasan: found.penugasan || [], status: found.status || null, anakIds: found.anakIds || [] };
     const store = rememberMe ? localStorage : sessionStorage;
     store.setItem(DEMO_SESSION_KEY, JSON.stringify(session));
     return session;
@@ -115,7 +116,35 @@ export async function login(email, password, rememberMe) {
     role: profile.role || 'guru',
     kelasAmpu: profile.kelasAmpu || [],
     penugasan: profile.penugasan || [],
+    status: profile.status || null,
+    anakIds: profile.anakIds || [],
   };
+}
+
+/**
+ * Daftar mandiri sebagai orang tua. Membuat akun Firebase Auth (self-service,
+ * tidak butuh admin) DAN dokumen profil berstatus "pending" — belum bisa
+ * lihat data apa pun sampai admin menyetujui lewat halaman Kelola Akun Ortu.
+ */
+export async function signupOrangtua({ nama, email, password, nomorHp, anakIds }) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 500));
+    const users = JSON.parse(localStorage.getItem(DEMO_USERS_KEY) || '[]');
+    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      const err = new Error('auth/email-already-in-use');
+      err.code = 'auth/email-already-in-use';
+      throw err;
+    }
+    users.push({ email, password, nama, role: 'orangtua', status: 'pending', anakIds, nomorHp });
+    localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users));
+    return;
+  }
+  const { authMod, auth, db, fsMod } = window.__fb;
+  const cred = await authMod.createUserWithEmailAndPassword(auth, email, password);
+  await fsMod.setDoc(fsMod.doc(db, 'users', cred.user.uid), {
+    nama, nomorHp: nomorHp || '', role: 'orangtua', status: 'pending', anakIds,
+    createdAt: fsMod.serverTimestamp(),
+  });
 }
 
 /** Terjemahkan kode error Firebase Auth / demo ke pesan Bahasa Indonesia. */
@@ -166,10 +195,12 @@ export function onAuthChange(callback) {
         role: profile.role || 'guru',
         kelasAmpu: profile.kelasAmpu || [],
         penugasan: profile.penugasan || [],
+        status: profile.status || null,
+        anakIds: profile.anakIds || [],
       });
     } catch (err) {
       console.error('Gagal memuat profil pengguna:', err);
-      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [], penugasan: [] });
+      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [], penugasan: [], status: null, anakIds: [] });
     }
   });
 }
