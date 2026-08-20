@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kokurikuler — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  .siswa-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+  .siswa-card-head{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+  .siswa-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-pale);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0}
+  .siswa-head-body{flex:1;min-width:0}
+  .siswa-head-nama{font-size:13px;font-weight:700;color:var(--ink)}
+  .siswa-head-meta{font-size:10.5px;color:var(--ink-muted);margin-top:2px}
+  .siswa-card-body{display:none;padding:0 14px 16px}
+  .siswa-card.open .siswa-card-body{display:block}
+  .siswa-card.open .chevron{transform:rotate(180deg)}
+
+  .dpl-block{background:var(--bg-light);border-radius:13px;padding:12px;margin-bottom:10px}
+  .dpl-nama{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:9px}
+  .level-toggle{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
+  .level-toggle button{
+    padding:8px 2px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);
+    font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink-mid);cursor:pointer;
+  }
+  .level-toggle button.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+  .dpl-desc-textarea{
+    width:100%;min-height:52px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);
+    font-family:inherit;font-size:12px;color:var(--ink);outline:none;resize:vertical;background:var(--surface);
+  }
+  .dpl-desc-textarea:focus{border-color:var(--green-light)}
+
+  .btn-simpan-siswa{width:100%;margin-top:2px;padding:10px;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Kokurikuler</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data tersimpan sementara di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+        <div id="siswaList"></div>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getSiswaByKelas, getConfigAkademik,
+    getDPLList, getKokurikulerByKelas, saveKokurikuler,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const kelas = params.get('kelas') || '';
+  const tingkatan = tingkatanDariKelas(kelas);
+
+  let config = null, siswaList = [], dplAktif = [], nilaiMap = {};
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+  function initials(nama) {
+    return (nama || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+
+    if (!kelas) { showEmptyScope('Tautan tidak lengkap — kelas tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
+    if (!berhak) {
+      showEmptyScope(`Anda bukan wali kelas ${kelas}. Kokurikuler khusus diisi wali kelas, sama seperti Absensi.`);
+      return;
+    }
+
+    $('subKelas').textContent = `Kelas ${kelas}`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    try {
+      config = await getConfigAkademik();
+      [siswaList, dplAktif] = await Promise.all([
+        getSiswaByKelas(kelas),
+        getDPLList({ hanyaAktif: true }),
+      ]);
+      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${dplAktif.length} DPL aktif`;
+
+      if (!dplAktif.length) {
+        showEmptyScope('Belum ada DPL yang diaktifkan. Minta admin mengisi/mengaktifkan lewat akademik/seed-dpl.html dulu.');
+        return;
+      }
+      if (!siswaList.length) showToast('Belum ada data siswa aktif untuk kelas ini.', true);
+
+      nilaiMap = await getKokurikulerByKelas(kelas, config.semesterAktif, config.tahunAjaran);
+      renderSiswaList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  function renderSiswaList() {
+    $('siswaList').innerHTML = siswaList.map((sw, i) => {
+      const nilaiSiswa = nilaiMap[sw.id] || {};
+      const terisi = dplAktif.filter(d => nilaiSiswa[d.id]).length;
+      return `
+      <div class="siswa-card" id="swc-${i}">
+        <div class="siswa-card-head" onclick="toggleCard(${i})">
+          <div class="siswa-avatar">${escapeHtml(initials(sw.nama))}</div>
+          <div class="siswa-head-body">
+            <div class="siswa-head-nama">${escapeHtml(sw.nama)}</div>
+            <div class="siswa-head-meta">${terisi}/${dplAktif.length} DPL terisi</div>
+          </div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="siswa-card-body">
+          ${dplAktif.map(d => {
+            const existing = nilaiSiswa[d.id];
+            const lvl = existing ? existing.level : null;
+            return `
+            <div class="dpl-block">
+              <div class="dpl-nama">${escapeHtml(d.nama)}</div>
+              <div class="level-toggle" id="lvltg-${sw.id}-${d.id}">
+                ${[1,2,3,4].map(l => `
+                  <button type="button" class="${lvl === l ? 'active' : ''}" onclick="pilihLevel('${sw.id}','${d.id}',${l})">${l}</button>
+                `).join('')}
+              </div>
+              <textarea class="dpl-desc-textarea" id="desc-${sw.id}-${d.id}" placeholder="Deskripsi capaian…">${escapeHtml(existing ? existing.deskripsi : '')}</textarea>
+            </div>`;
+          }).join('')}
+          <button class="btn btn-primary-light btn-simpan-siswa" onclick="simpanSiswa('${sw.id}')">Simpan Semua DPL Siswa Ini</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.toggleCard = (i) => $('swc-' + i)?.classList.toggle('open');
+
+  window.pilihLevel = (siswaId, dplId, level) => {
+    const wrap = $(`lvltg-${siswaId}-${dplId}`);
+    wrap.dataset.selected = level;
+    [...wrap.querySelectorAll('button')].forEach((btn, idx) => btn.classList.toggle('active', idx + 1 === level));
+
+    // Isi otomatis deskripsi dari bank DPL kalau kotak deskripsi masih kosong —
+    // guru tetap bebas mengedit sebelum menyimpan.
+    const dpl = dplAktif.find(d => d.id === dplId);
+    const box = $(`desc-${siswaId}-${dplId}`);
+    if (dpl && !box.value.trim() && dpl.levelDeskripsi && dpl.levelDeskripsi[level - 1]) {
+      box.value = dpl.levelDeskripsi[level - 1];
+    }
+  };
+
+  window.simpanSiswa = async (siswaId) => {
+    const nilaiSiswa = nilaiMap[siswaId] || {};
+    const toSave = [];
+    for (const d of dplAktif) {
+      const wrap = $(`lvltg-${siswaId}-${d.id}`);
+      const level = wrap.dataset.selected ? parseInt(wrap.dataset.selected, 10) : (nilaiSiswa[d.id]?.level || null);
+      if (!level) continue; // belum dipilih levelnya, lewati
+      toSave.push({
+        dplId: d.id,
+        level,
+        deskripsi: $(`desc-${siswaId}-${d.id}`).value.trim(),
+        existingId: nilaiSiswa[d.id]?.id || null,
+      });
+    }
+    if (!toSave.length) { showToast('Belum ada DPL yang dipilih levelnya.', true); return; }
+
+    try {
+      for (const item of toSave) {
+        await saveKokurikuler(
+          { siswaId, dplId: item.dplId, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, level: item.level, deskripsi: item.deskripsi },
+          item.existingId
+        );
+      }
+      showToast(`Tersimpan ${toSave.length} DPL.`);
+      nilaiMap = await getKokurikulerByKelas(kelas, config.semesterAktif, config.tahunAjaran);
+      renderSiswaList();
+      const idx = siswaList.findIndex(s => s.id === siswaId);
+      $('swc-' + idx)?.classList.add('open');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan.', true);
+    }
+  };
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'input-nilai.html'; });
+</script>
+</body>
+</html>
