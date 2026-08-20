@@ -63,7 +63,7 @@ function _demoSeedUsers() {
   if (localStorage.getItem(DEMO_USERS_KEY)) return;
   localStorage.setItem(DEMO_USERS_KEY, JSON.stringify([
     { email: 'guru.tahsin@sdm01kukusan.sch.id', password: 'tahsin123', nama: 'Ustadzah Fitri Handayani', role: 'guru_tahsin_tahfizh', kelasAmpu: ['3A','3B','3C','4A','4B'] },
-    { email: 'guru.akademik@sdm01kukusan.sch.id', password: 'akademik123', nama: 'Bapak Rudi Hartono', role: 'guru_akademik', penugasan: [
+    { email: 'guru.akademik@sdm01kukusan.sch.id', password: 'akademik123', nama: 'Bapak Rudi Hartono', role: 'guru_akademik', waliKelas: ['4A'], penugasan: [
       { kelas: '4A', mapel: 'Matematika' },
       { kelas: '4B', mapel: 'Matematika' },
       { kelas: '4A', mapel: 'IPAS' },
@@ -88,7 +88,7 @@ export async function login(email, password, rememberMe) {
       err.code = 'demo/invalid-credential';
       throw err;
     }
-    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [], penugasan: found.penugasan || [], status: found.status || null, anakIds: found.anakIds || [] };
+    const session = { uid: 'demo-' + btoa(found.email), email: found.email, nama: found.nama, role: found.role, kelasAmpu: found.kelasAmpu || [], penugasan: found.penugasan || [], waliKelas: found.waliKelas || [], status: found.status || null, anakIds: found.anakIds || [] };
     const store = rememberMe ? localStorage : sessionStorage;
     store.setItem(DEMO_SESSION_KEY, JSON.stringify(session));
     return session;
@@ -116,6 +116,7 @@ export async function login(email, password, rememberMe) {
     role: profile.role || 'guru',
     kelasAmpu: profile.kelasAmpu || [],
     penugasan: profile.penugasan || [],
+    waliKelas: profile.waliKelas || [],
     status: profile.status || null,
     anakIds: profile.anakIds || [],
   };
@@ -195,12 +196,13 @@ export function onAuthChange(callback) {
         role: profile.role || 'guru',
         kelasAmpu: profile.kelasAmpu || [],
         penugasan: profile.penugasan || [],
+        waliKelas: profile.waliKelas || [],
         status: profile.status || null,
         anakIds: profile.anakIds || [],
       });
     } catch (err) {
       console.error('Gagal memuat profil pengguna:', err);
-      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [], penugasan: [], status: null, anakIds: [] });
+      callback({ uid: fbUser.uid, email: fbUser.email, nama: fbUser.email, role: 'guru', kelasAmpu: [], penugasan: [], waliKelas: [], status: null, anakIds: [] });
     }
   });
 }

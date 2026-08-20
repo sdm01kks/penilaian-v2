@@ -473,3 +473,75 @@ export async function saveNilaiSasBatch(ctx, entries, existing) {
     }
   }
 }
+
+/* ==========================================================================
+   Absensi & Keputusan Naik Kelas — KHUSUS wali kelas. Satu dokumen per
+   (siswa × semester × tahun ajaran): rekap sakit/izin/tanpa keterangan,
+   catatan wali, dan keputusan naik/tinggal kelas.
+   ========================================================================== */
+
+export const KEPUTUSAN_OPSI = ['Belum diputuskan', 'Naik Kelas', 'Tinggal Kelas'];
+
+const DEMO_ABSENSI_KEY = 'akd_demo_absensi';
+
+function readDemoAbsensi() {
+  return JSON.parse(localStorage.getItem(DEMO_ABSENSI_KEY) || '[]');
+}
+function writeDemoAbsensi(list) {
+  localStorage.setItem(DEMO_ABSENSI_KEY, JSON.stringify(list));
+}
+
+/** @returns {Promise<Object<string, object>>} siswaId -> record absensi (termasuk `id`) */
+export async function getAbsensiRaporByKelas(kelas, semester, tahunAjaran) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = readDemoAbsensi().filter(a => a.kelas === kelas && a.semester === semester && a.tahunAjaran === tahunAjaran);
+    const map = {};
+    list.forEach(a => { map[a.siswaId] = a; });
+    return map;
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'absensi_rapor'),
+    fsMod.where('kelas', '==', kelas),
+    fsMod.where('semester', '==', semester),
+    fsMod.where('tahunAjaran', '==', tahunAjaran)
+  );
+  const snap = await fsMod.getDocs(q);
+  const map = {};
+  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, ...d.data() }; });
+  return map;
+}
+
+/**
+ * Simpan satu record absensi+keputusan (upsert). `existingId` diisi kalau
+ * ini update dari record yang sudah ada (dari getAbsensiRaporByKelas).
+ */
+export async function saveAbsensiRapor(payload, existingId) {
+  const data = {
+    siswaId: payload.siswaId, kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    sakit: payload.sakit || 0, izin: payload.izin || 0, tanpaKeterangan: payload.tanpaKeterangan || 0,
+    catatanWali: payload.catatanWali || '', keputusan: payload.keputusan || 'Belum diputuskan',
+  };
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = readDemoAbsensi();
+    if (existingId) {
+      const idx = list.findIndex(a => a.id === existingId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-abs-' + Date.now() + '-' + payload.siswaId, ...data });
+    }
+    writeDemoAbsensi(list);
+    return;
+  }
+
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'absensi_rapor', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'absensi_rapor'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
