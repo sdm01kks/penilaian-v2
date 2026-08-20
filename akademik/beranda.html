@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beranda — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .welcome-card{
+    background:linear-gradient(135deg, var(--green-deep) 0%, var(--green-dark) 100%);
+    border-radius:20px;padding:20px;margin-bottom:18px;color:#fff;
+  }
+  .welcome-hai{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.4px}
+  .welcome-nama{font-size:19px;font-weight:800;margin:3px 0 10px}
+  .welcome-meta{font-size:11.5px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:8px}
+  .btn-logout-inline{
+    margin-top:14px;background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:11px;
+    padding:8px 14px;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+
+  .task-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:13px 14px;margin-bottom:10px;
+  }
+  .task-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .task-badge{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800}
+  .task-badge.mapel{background:var(--blue-light);color:var(--blue)}
+  .task-badge.wali{background:var(--gold-light);color:#8a6416}
+  .task-title{font-size:13px;font-weight:800;color:var(--ink)}
+  .task-sub{font-size:10.5px;color:var(--ink-muted);margin-top:1px}
+
+  .status-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--border)}
+  .status-row:first-of-type{border-top:none}
+  .status-label{font-size:12px;font-weight:600;color:var(--ink-mid)}
+  .status-chip{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0}
+  .sc-done{background:var(--green-pale);color:var(--green-dark)}
+  .sc-warn{background:#fbe4e0;color:#a83a2b}
+  .sc-partial{background:var(--gold-light);color:#8a6416}
+  .status-link{font-size:10.5px;font-weight:800;color:var(--green-dark);text-decoration:none;flex-shrink:0}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Akademik &amp; Rapor</div>
+            <div class="app-header-sub">SD Muhammadiyah 01 Kukusan</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+
+        <div class="welcome-card">
+          <div class="welcome-hai">Selamat datang</div>
+          <div class="welcome-nama" id="welcomeNama">…</div>
+          <div class="welcome-meta"><span id="welcomeRole"></span><span>·</span><span id="welcomeInfo"></span></div>
+          <button class="btn-logout-inline" id="btnLogout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Keluar
+          </button>
+        </div>
+
+        <div id="adminSection" class="hidden">
+          <div class="section-label" style="margin-top:0"><span class="bar"></span>Semua Mapel — Pilih Tingkatan</div>
+          <div class="card"><div id="adminMapelList"></div></div>
+          <div class="section-label"><span class="bar"></span>Pengelolaan Data</div>
+          <div class="card">
+            <div class="penugasan-actions" style="border-top:none;padding-top:0;margin-top:0">
+              <a href="seed-mapel.html">Kelola Mapel</a>
+              <a href="seed-dpl.html">Kelola DPL</a>
+            </div>
+          </div>
+        </div>
+
+        <div id="mapelSection" class="hidden">
+          <div class="section-label" style="margin-top:0"><span class="bar"></span>Mapel yang Anda Ampu</div>
+          <div id="mapelTaskList"></div>
+        </div>
+
+        <div id="waliSection" class="hidden">
+          <div class="section-label"><span class="bar"></span>Kelas yang Anda Wali-i</div>
+          <div id="waliTaskList"></div>
+        </div>
+
+        <div id="emptyAll" class="task-card hidden">
+          <div class="empty-state-small">Belum ada penugasan mapel maupun wali kelas untuk akun ini. Hubungi admin Akademik &amp; Rapor sekolah.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getMapelList, getSiswaByKelas, getConfigAkademik,
+    getTPList, getNilaiSlmSummary, getNilaiSasUntukMapel,
+    getAbsensiRaporByKelas, getKokurikulerByKelas, getDPLList,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  let config = null;
+  const siswaCountCache = {};   // kelas -> jumlah siswa
+  const tpCache = {};           // "mapel|tingkatan" -> daftar TP
+
+  async function jumlahSiswa(kelas) {
+    if (!(kelas in siswaCountCache)) {
+      siswaCountCache[kelas] = (await getSiswaByKelas(kelas)).length;
+    }
+    return siswaCountCache[kelas];
+  }
+  async function daftarTP(mapel, tingkatan) {
+    const key = mapel + '|' + tingkatan;
+    if (!(key in tpCache)) tpCache[key] = await getTPList({ mapel, tingkatan });
+    return tpCache[key];
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    $('welcomeNama').textContent = session.nama;
+    $('welcomeRole').textContent = session.role === 'admin' ? 'Admin' : 'Guru Akademik';
+
+    try {
+      config = await getConfigAkademik();
+      $('welcomeInfo').textContent = `Semester ${config.semesterAktif} · TA ${config.tahunAjaran}`;
+
+      if (session.role === 'admin') {
+        $('adminSection').classList.remove('hidden');
+        await renderAdminMapel();
+        return;
+      }
+
+      const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
+      const waliKelas = Array.isArray(session.waliKelas) ? session.waliKelas : [];
+
+      if (!penugasan.length && !waliKelas.length) {
+        $('emptyAll').classList.remove('hidden');
+        return;
+      }
+
+      if (penugasan.length) {
+        $('mapelSection').classList.remove('hidden');
+        await renderMapelTasks(penugasan);
+      }
+      if (waliKelas.length) {
+        $('waliSection').classList.remove('hidden');
+        await renderWaliTasks(waliKelas);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat sebagian data beranda.', true);
+    }
+  });
+
+  async function renderAdminMapel() {
+    try {
+      const mapelList = await getMapelList();
+      if (!mapelList.length) {
+        $('adminMapelList').innerHTML = `<div class="empty-state-small">Belum ada data mapel. Isi lewat "Kelola Mapel" di bawah.</div>`;
+        return;
+      }
+      $('adminMapelList').innerHTML = mapelList.map(m => {
+        const berlaku = Array.isArray(m.tingkatanBerlaku) && m.tingkatanBerlaku.length ? m.tingkatanBerlaku.map(String) : ['1','2','3','4','5','6'];
+        return `
+        <div class="mapel-admin-card-wrap" style="margin-bottom:8px">
+          <div style="font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:6px">${escapeHtml(m.nama)}</div>
+          <div style="display:grid;grid-template-columns:repeat(${berlaku.length},1fr);gap:5px">
+            ${berlaku.map(t => `<a href="setup-tp.html?mapel=${encodeURIComponent(m.nama)}&tingkatan=${t}" style="text-align:center;padding:7px 0;border-radius:9px;background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:800;text-decoration:none">${t}</a>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.error(e);
+      $('adminMapelList').innerHTML = `<div class="empty-state-small">Gagal memuat daftar mapel.</div>`;
+    }
+  }
+
+  async function renderMapelTasks(penugasan) {
+    const wrap = $('mapelTaskList');
+    wrap.innerHTML = penugasan.map((p, i) => `<div class="task-card" id="mapelTask-${i}">
+      <div class="task-top">
+        <div class="task-badge mapel">${escapeHtml(p.kelas)}</div>
+        <div><div class="task-title">${escapeHtml(p.mapel)}</div><div class="task-sub">Kelas ${escapeHtml(p.kelas)} · Memuat status…</div></div>
+      </div>
+    </div>`).join('');
+
+    for (let i = 0; i < penugasan.length; i++) {
+      const p = penugasan[i];
+      const tingkatan = tingkatanDariKelas(p.kelas);
+      try {
+        const [tpList, jmlSiswa] = await Promise.all([daftarTP(p.mapel, tingkatan), jumlahSiswa(p.kelas)]);
+
+        let slmDoneTp = 0, slmTotalTp = tpList.length, sasDone = 0;
+        if (tpList.length) {
+          const slmSummary = await getNilaiSlmSummary({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+          slmDoneTp = tpList.filter(tp => (slmSummary[tp.id] || 0) >= jmlSiswa && jmlSiswa > 0).length;
+          const sasMap = await getNilaiSasUntukMapel({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+          sasDone = Object.keys(sasMap).length;
+        }
+
+        const tpUrl = `setup-tp.html?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${encodeURIComponent(tingkatan)}`;
+        const nilaiUrl = `nilai-mapel.html?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`;
+
+        const tpChip = tpList.length === 0
+          ? `<span class="status-chip sc-warn">Belum ada TP</span>`
+          : `<span class="status-chip sc-done">${tpList.length} TP</span>`;
+        const nilaiChip = tpList.length === 0
+          ? `<span class="status-chip sc-warn">Belum bisa diisi</span>`
+          : slmDoneTp === slmTotalTp
+            ? `<span class="status-chip sc-done">SLM lengkap</span>`
+            : `<span class="status-chip sc-partial">SLM ${slmDoneTp}/${slmTotalTp} TP</span>`;
+        const sasChip = tpList.length === 0
+          ? `<span class="status-chip sc-warn">-</span>`
+          : sasDone >= jmlSiswa && jmlSiswa > 0
+            ? `<span class="status-chip sc-done">SAS lengkap</span>`
+            : `<span class="status-chip sc-warn">SAS ${sasDone}/${jmlSiswa}</span>`;
+
+        $('mapelTask-' + i).innerHTML = `
+          <div class="task-top">
+            <div class="task-badge mapel">${escapeHtml(p.kelas)}</div>
+            <div><div class="task-title">${escapeHtml(p.mapel)}</div><div class="task-sub">Kelas ${escapeHtml(p.kelas)} · ${jmlSiswa} siswa</div></div>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Setup TP &amp; KKTP</span>
+            ${tpChip}
+            <a class="status-link" href="${tpUrl}">Buka →</a>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Nilai SLM</span>
+            ${nilaiChip}
+            <a class="status-link" href="${nilaiUrl}">Buka →</a>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Nilai SAS</span>
+            ${sasChip}
+            <a class="status-link" href="${nilaiUrl}">Buka →</a>
+          </div>`;
+      } catch (e) {
+        console.error(e);
+        $('mapelTask-' + i).querySelector('.task-sub').textContent = `Kelas ${p.kelas} · Gagal memuat status`;
+      }
+    }
+  }
+
+  async function renderWaliTasks(waliKelas) {
+    const wrap = $('waliTaskList');
+    wrap.innerHTML = waliKelas.map((k, i) => `<div class="task-card" id="waliTask-${i}">
+      <div class="task-top">
+        <div class="task-badge wali">${escapeHtml(k)}</div>
+        <div><div class="task-title">Wali Kelas ${escapeHtml(k)}</div><div class="task-sub">Memuat status…</div></div>
+      </div>
+    </div>`).join('');
+
+    let dplAktif = null;
+    for (let i = 0; i < waliKelas.length; i++) {
+      const k = waliKelas[i];
+      try {
+        if (dplAktif === null) dplAktif = await getDPLList({ hanyaAktif: true });
+        const jmlSiswa = await jumlahSiswa(k);
+        const [absensiMap, kokurikulerMap] = await Promise.all([
+          getAbsensiRaporByKelas(k, config.semesterAktif, config.tahunAjaran),
+          getKokurikulerByKelas(k, config.semesterAktif, config.tahunAjaran),
+        ]);
+        const absensiDone = Object.keys(absensiMap).length;
+        const kokDone = Object.values(kokurikulerMap).filter(perSiswa => dplAktif.every(d => perSiswa[d.id])).length;
+
+        const absUrl = `absensi.html?kelas=${encodeURIComponent(k)}`;
+        const kokUrl = `kokurikuler.html?kelas=${encodeURIComponent(k)}`;
+
+        const absChip = absensiDone >= jmlSiswa && jmlSiswa > 0
+          ? `<span class="status-chip sc-done">Lengkap</span>`
+          : `<span class="status-chip sc-warn">${absensiDone}/${jmlSiswa}</span>`;
+        const kokChip = !dplAktif.length
+          ? `<span class="status-chip sc-warn">Belum ada DPL aktif</span>`
+          : kokDone >= jmlSiswa && jmlSiswa > 0
+            ? `<span class="status-chip sc-done">Lengkap</span>`
+            : `<span class="status-chip sc-partial">${kokDone}/${jmlSiswa}</span>`;
+
+        $('waliTask-' + i).innerHTML = `
+          <div class="task-top">
+            <div class="task-badge wali">${escapeHtml(k)}</div>
+            <div><div class="task-title">Wali Kelas ${escapeHtml(k)}</div><div class="task-sub">${jmlSiswa} siswa</div></div>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Absensi &amp; Keputusan</span>
+            ${absChip}
+            <a class="status-link" href="${absUrl}">Buka →</a>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Kokurikuler</span>
+            ${kokChip}
+            <a class="status-link" href="${kokUrl}">Buka →</a>
+          </div>`;
+      } catch (e) {
+        console.error(e);
+        $('waliTask-' + i).querySelector('.task-sub').textContent = 'Gagal memuat status';
+      }
+    }
+  }
+
+  $('btnLogout').addEventListener('click', async () => {
+    try { await logout(); window.location.href = 'login.html'; }
+    catch (e) { console.error(e); showToast('Gagal keluar.', true); }
+  });
+</script>
+</body>
+</html>

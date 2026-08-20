@@ -188,7 +188,7 @@
   if (existing) {
     // Di halaman produksi, arahkan sesuai role. Untuk MVP, guru & admin
     // sama-sama masuk ke Input Nilai Mapel.
-    // window.location.href = 'input-nilai.html';
+    // window.location.href = 'beranda.html';
   }
 
   // ---- Toggle tampilkan/sembunyikan kata sandi ----
@@ -233,7 +233,7 @@
       showToast(`Selamat datang, ${session.nama.split(' ')[0]}!`);
       setTimeout(() => {
         // Arahkan ke halaman Input Nilai Mapel (fokus MVP saat ini).
-        window.location.href = 'input-nilai.html';
+        window.location.href = 'beranda.html';
       }, 700);
     } catch (err) {
       console.error(err);
