@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator Akun Guru — Akademik &amp; Rapor</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:var(--bg-light);color:var(--ink)}
+  .wrap{max-width:640px;margin:0 auto;padding:32px 18px 60px}
+  h1{font-size:19px;color:var(--green-deep);margin:0 0 6px}
+  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 18px;line-height:1.6}
+
+  .card-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:14px}
+  label.mini{display:block;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+  input, select{
+    width:100%;padding:9px 10px;border-radius:9px;border:1.5px solid var(--border);
+    font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;background:var(--surface);margin-bottom:12px;
+  }
+  input:focus, select:focus{border-color:var(--green-light)}
+
+  .kelas-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
+  .kelas-chip{
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:var(--bg-light);border:1.5px solid var(--border);border-radius:9px;
+    padding:8px 0;font-size:12px;font-weight:800;color:var(--ink-muted);user-select:none;
+  }
+  .kelas-chip input{display:none;margin:0}
+  .kelas-chip.on{background:var(--gold-light);border-color:#c9882a;color:#8a6416}
+
+  .penugasan-row{display:grid;grid-template-columns:1fr 1.4fr 32px;gap:6px;align-items:center;margin-bottom:6px}
+  .penugasan-row input{margin-bottom:0}
+  .btn-del-row{background:var(--red-light);color:var(--red);border:none;border-radius:8px;height:34px;cursor:pointer;font-size:15px}
+
+  .row-actions{display:flex;gap:10px;margin-top:4px}
+  .row-actions .btn{width:auto;padding:9px 16px;font-size:12.5px}
+
+  .output-box{
+    background:#10201a;color:#c8e6d8;font-family:monospace;font-size:11.5px;
+    border-radius:12px;padding:14px;margin-top:8px;white-space:pre-wrap;line-height:1.6;
+    max-height:340px;overflow:auto;
+  }
+  .btn-copy{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Generator Akun Guru</h1>
+  <p class="sub">
+    Susun isi dokumen <code>users/{uid}</code> untuk satu guru Akademik —
+    <code>penugasanKelas</code> &amp; <code>penugasanKelasMapel</code>
+    diturunkan otomatis dari <code>penugasan</code> yang Anda isi di bawah,
+    tidak perlu diketik 3×. Hasilnya disalin manual ke Firestore Console
+    (alat ini tidak menulis ke Firestore).
+  </p>
+
+  <div class="card-box">
+    <label class="mini">Nama Guru</label>
+    <input type="text" id="fNama" placeholder="mis. Bapak Rudi Hartono">
+
+    <label class="mini">Peran</label>
+    <select id="fRole">
+      <option value="guru_akademik">Guru Akademik</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <label class="mini">Wali Kelas (boleh lebih dari satu, mis. kasus 2 wali kelas)</label>
+    <div class="kelas-grid" id="waliGrid"></div>
+  </div>
+
+  <div class="card-box">
+    <label class="mini" style="margin-bottom:9px">Penugasan Mengajar (kelas + mapel)</label>
+    <div id="penugasanRows"></div>
+    <div class="row-actions">
+      <button class="btn btn-secondary" id="btnTambahRow" style="width:auto;padding:8px 14px;font-size:12px">+ Tambah Baris</button>
+    </div>
+  </div>
+
+  <div class="row-actions">
+    <button class="btn btn-primary-light" id="btnGenerate">Buat JSON</button>
+  </div>
+
+  <div class="output-box" id="output">Isi form di atas, lalu klik "Buat JSON".</div>
+  <button class="btn btn-secondary btn-copy" id="btnCopy" style="width:auto;padding:8px 16px;font-size:12px">Salin ke Clipboard</button>
+</div>
+
+<script type="module">
+  import { getMapelList } from '../assets/firestore-data-akademik.js';
+
+  const KELAS_SEKOLAH = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
+  const waliGrid = document.getElementById('waliGrid');
+  const rowsWrap = document.getElementById('penugasanRows');
+
+  waliGrid.innerHTML = KELAS_SEKOLAH.map(k => `
+    <label class="kelas-chip">
+      <input type="checkbox" value="${k}">${k}
+    </label>
+  `).join('');
+  waliGrid.querySelectorAll('.kelas-chip').forEach(chip => {
+    chip.addEventListener('click', () => setTimeout(() => chip.classList.toggle('on', chip.querySelector('input').checked), 0));
+  });
+
+  let mapelOptions = [];
+  try { mapelOptions = (await getMapelList()).map(m => m.nama); } catch (e) { console.warn('Gagal memuat daftar mapel, pakai input bebas.', e); }
+
+  function addRow() {
+    const div = document.createElement('div');
+    div.className = 'penugasan-row';
+    const mapelInputHtml = mapelOptions.length
+      ? `<input list="mapelOpts" class="f-mapel" placeholder="Mapel">`
+      : `<input class="f-mapel" placeholder="Mapel (ketik manual)">`;
+    div.innerHTML = `
+      <input class="f-kelas" list="kelasOpts" placeholder="Kelas, mis. 4A">
+      ${mapelInputHtml}
+      <button type="button" class="btn-del-row" title="Hapus">&times;</button>
+    `;
+    div.querySelector('.btn-del-row').addEventListener('click', () => div.remove());
+    rowsWrap.appendChild(div);
+  }
+
+  // Datalist bantu autocomplete, tapi tetap boleh ketik bebas (mapel/kelas baru).
+  const dlKelas = document.createElement('datalist');
+  dlKelas.id = 'kelasOpts';
+  dlKelas.innerHTML = KELAS_SEKOLAH.map(k => `<option value="${k}">`).join('');
+  document.body.appendChild(dlKelas);
+
+  if (mapelOptions.length) {
+    const dlMapel = document.createElement('datalist');
+    dlMapel.id = 'mapelOpts';
+    dlMapel.innerHTML = mapelOptions.map(m => `<option value="${m}">`).join('');
+    document.body.appendChild(dlMapel);
+  }
+
+  addRow(); addRow();
+  document.getElementById('btnTambahRow').addEventListener('click', addRow);
+
+  document.getElementById('btnGenerate').addEventListener('click', () => {
+    const nama = document.getElementById('fNama').value.trim();
+    const role = document.getElementById('fRole').value;
+    const waliKelas = [...waliGrid.querySelectorAll('input:checked')].map(i => i.value).sort();
+
+    const penugasan = [...rowsWrap.querySelectorAll('.penugasan-row')]
+      .map(row => ({
+        kelas: row.querySelector('.f-kelas').value.trim(),
+        mapel: row.querySelector('.f-mapel').value.trim(),
+      }))
+      .filter(p => p.kelas && p.mapel);
+
+    const penugasanKelas = [...new Set(penugasan.map(p => p.kelas))].sort();
+    const penugasanKelasMapel = [...new Set(penugasan.map(p => `${p.kelas}::${p.mapel}`))].sort();
+
+    const hasil = { nama: nama || '(isi nama)', role, waliKelas };
+    if (role === 'guru_akademik') {
+      hasil.penugasan = penugasan;
+      hasil.penugasanKelas = penugasanKelas;
+      hasil.penugasanKelasMapel = penugasanKelasMapel;
+    }
+
+    document.getElementById('output').textContent = JSON.stringify(hasil, null, 2);
+  });
+
+  document.getElementById('btnCopy').addEventListener('click', async () => {
+    const text = document.getElementById('output').textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('btnCopy');
+      const orig = btn.textContent;
+      btn.textContent = 'Tersalin ✓';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (e) {
+      alert('Gagal menyalin otomatis — silakan salin manual dari kotak di atas.');
+    }
+  });
+</script>
+</body>
+</html>
