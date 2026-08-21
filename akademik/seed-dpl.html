@@ -71,10 +71,7 @@
     Mode pratinjau aktif — perubahan di sini hanya tersimpan sementara di
     perangkat ini (localStorage), belum ke Firestore sungguhan.
   </div>
-  <div class="warn-box">
-    Menyimpan ke sini butuh sesi login <strong>admin</strong> di tab lain
-    — sama seperti Kelola Data Mapel.
-  </div>
+  <div class="warn-box" id="sessionWarn" style="display:none"></div>
 
   <div class="counter-box">
     <span>DPL aktif saat ini</span>
@@ -92,11 +89,12 @@
 </div>
 
 <script type="module">
-  import { DEMO_MODE } from '../assets/firebase.js';
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import { getDPLList, saveDPL } from '../assets/firestore-data-akademik.js';
 
   const cardsEl = document.getElementById('cards');
   const logEl = document.getElementById('log');
+  const sessionWarnEl = document.getElementById('sessionWarn');
 
   function log(msg, cls) {
     const span = document.createElement('div');
@@ -147,7 +145,34 @@
     updateCounter();
   }
 
-  (async () => {
+  function showSessionWarn(msg) {
+    sessionWarnEl.innerHTML = msg;
+    sessionWarnEl.style.display = 'block';
+  }
+
+  let sesiSiapAdmin = false; // true kalau sesi aktif & role admin — dicek ulang juga saat simpan
+
+  onAuthChange(async (session) => {
+    if (DEMO_MODE) { sesiSiapAdmin = true; await muatData(); return; }
+
+    if (!session) {
+      showSessionWarn(
+        'Anda belum login di browser ini, jadi data belum bisa dimuat maupun disimpan. ' +
+        'Buka <a href="login.html" target="_blank" style="color:#7a5416;text-decoration:underline">akademik/login.html</a> ' +
+        'di tab baru, login sebagai admin, lalu muat ulang halaman ini.'
+      );
+      clearLog();
+      log('Menunggu login…', 'err');
+      return;
+    }
+    if (session.role !== 'admin') {
+      showSessionWarn(`Anda login sebagai <strong>${session.nama}</strong> (role: ${session.role}) — bukan admin. Anda tetap bisa melihat data DPL yang sudah ada, tapi menyimpan perubahan akan ditolak.`);
+    }
+    sesiSiapAdmin = session.role === 'admin';
+    await muatData();
+  });
+
+  async function muatData() {
     try {
       const existing = await getDPLList();
       clearLog();
@@ -161,13 +186,18 @@
     } catch (e) {
       console.error(e);
       clearLog();
-      log('Gagal memuat data yang sudah ada.', 'err');
+      log('Gagal memuat data yang sudah ada: ' + (e.code || e.message), 'err');
     }
-  })();
+  }
 
   document.getElementById('btnTambah').addEventListener('click', () => addCard());
 
   document.getElementById('btnSimpan').addEventListener('click', async () => {
+    if (!sesiSiapAdmin) {
+      clearLog();
+      log('Tidak bisa menyimpan — Anda belum login sebagai admin di browser ini (lihat pesan di atas).', 'err');
+      return;
+    }
     clearLog();
     const rows = [...cardsEl.querySelectorAll('.dpl-card')].map((card, i) => ({
       nama: card.querySelector('.f-nama').value.trim(),

@@ -70,11 +70,7 @@
     Mode pratinjau aktif — perubahan di sini hanya tersimpan sementara di
     perangkat ini (localStorage), belum ke Firestore sungguhan.
   </div>
-  <div class="warn-box" id="adminWarn">
-    Menyimpan ke sini butuh sesi login <strong>admin</strong> — buka
-    <code>akademik/login.html</code> di tab lain dan login sebagai admin
-    dulu kalau simpan nanti gagal karena izin ditolak.
-  </div>
+  <div class="warn-box" id="adminWarn" style="display:none"></div>
 
   <div id="cards"></div>
 
@@ -87,11 +83,12 @@
 </div>
 
 <script type="module">
-  import { DEMO_MODE } from '../assets/firebase.js';
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import { getMapelList } from '../assets/firestore-data-akademik.js';
 
   const cardsEl = document.getElementById('cards');
   const logEl = document.getElementById('log');
+  const sessionWarnEl = document.getElementById('adminWarn');
 
   function log(msg, cls) {
     const span = document.createElement('div');
@@ -161,10 +158,37 @@
     cardsEl.appendChild(div);
   }
 
+  function showSessionWarn(msg) {
+    sessionWarnEl.innerHTML = msg;
+    sessionWarnEl.style.display = 'block';
+  }
+
+  let sesiSiapAdmin = false;
+
+  onAuthChange(async (session) => {
+    if (DEMO_MODE) { sesiSiapAdmin = true; await muatData(); return; }
+
+    if (!session) {
+      showSessionWarn(
+        'Anda belum login di browser ini, jadi data belum bisa dimuat maupun disimpan. ' +
+        'Buka <a href="login.html" target="_blank" style="color:#7a5416;text-decoration:underline">akademik/login.html</a> ' +
+        'di tab baru, login sebagai admin, lalu muat ulang halaman ini.'
+      );
+      clearLog();
+      log('Menunggu login…', 'err');
+      return;
+    }
+    if (session.role !== 'admin') {
+      showSessionWarn(`Anda login sebagai <strong>${session.nama}</strong> (role: ${session.role}) — bukan admin. Anda tetap bisa melihat data mapel yang sudah ada, tapi menyimpan perubahan akan ditolak.`);
+    }
+    sesiSiapAdmin = session.role === 'admin';
+    await muatData();
+  });
+
   /* Muat data yang sudah tersimpan; kalau kosong, isi langsung dengan
      daftar mapel sekolah yang sudah tervalidasi dari file jadwal —
      admin tinggal cek & simpan, bukan mulai dari nol. */
-  (async () => {
+  async function muatData() {
     try {
       const existing = await getMapelList();
       clearLog();
@@ -178,14 +202,19 @@
     } catch (e) {
       console.error(e);
       clearLog();
-      log('Gagal memuat data yang sudah ada (lanjut dengan daftar kosong).', 'err');
+      log('Gagal memuat data yang sudah ada: ' + (e.code || e.message), 'err');
       addCard();
     }
-  })();
+  }
 
   document.getElementById('btnTambah').addEventListener('click', () => addCard());
 
   document.getElementById('btnSimpan').addEventListener('click', async () => {
+    if (!sesiSiapAdmin) {
+      clearLog();
+      log('Tidak bisa menyimpan — Anda belum login sebagai admin di browser ini (lihat pesan di atas).', 'err');
+      return;
+    }
     clearLog();
     const rows = [...cardsEl.querySelectorAll('.mapel-card')].map((card, i) => ({
       nama:     card.querySelector('.f-nama').value.trim(),

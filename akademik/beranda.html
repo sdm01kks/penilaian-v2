@@ -50,6 +50,13 @@
   .status-link{font-size:10.5px;font-weight:800;color:var(--green-dark);text-decoration:none;flex-shrink:0}
 
   .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+
+  .data-mgmt-row{display:flex;gap:8px}
+  .data-mgmt-link{
+    flex:1;text-align:center;padding:11px 8px;border-radius:12px;
+    background:var(--blue-light);color:var(--blue);
+    font-size:12.5px;font-weight:800;text-decoration:none;line-height:1.3;
+  }
 </style>
 </head>
 <body>
@@ -88,9 +95,9 @@
           <div class="card"><div id="adminMapelList"></div></div>
           <div class="section-label"><span class="bar"></span>Pengelolaan Data</div>
           <div class="card">
-            <div class="penugasan-actions" style="border-top:none;padding-top:0;margin-top:0">
-              <a href="seed-mapel.html">Kelola Mapel</a>
-              <a href="seed-dpl.html">Kelola DPL</a>
+            <div class="data-mgmt-row">
+              <a class="data-mgmt-link" href="seed-mapel.html">Kelola Mapel</a>
+              <a class="data-mgmt-link" href="seed-dpl.html">Kelola DPL</a>
             </div>
           </div>
         </div>
