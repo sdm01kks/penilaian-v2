@@ -186,7 +186,7 @@
       }
 
       for (const tp of tpList) {
-        nilaiTPMap[tp.id] = await getNilaiTPUntukTP({ tpId: tp.id, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+        nilaiTPMap[tp.id] = await getNilaiTPUntukTP({ tpId: tp.id, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
       }
       renderTPList();
       renderRingkasan();
@@ -296,7 +296,7 @@
         entries, nilaiTPMap[tpId] || {}
       );
       showToast(`Nilai TP "${tp.namaTp}" tersimpan untuk ${entries.length} siswa.`);
-      nilaiTPMap[tpId] = await getNilaiTPUntukTP({ tpId, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+      nilaiTPMap[tpId] = await getNilaiTPUntukTP({ tpId, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
       renderTPList();
       renderRingkasan();
       const idx = tpList.findIndex(t => t.id === tpId);
