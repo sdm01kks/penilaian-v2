@@ -188,6 +188,8 @@ export async function saveTP(payload) {
     namaTp:    payload.namaTp,
     cp:        payload.cp || '',
     tipe:      payload.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan',
+    bobotSlm:  payload.bobotSlm ?? 60,
+    bobotSas:  payload.bobotSas ?? 40,
     levels:    payload.levels,
   };
 
@@ -232,17 +234,38 @@ export async function deleteTP(id) {
 }
 
 /* ==========================================================================
-   Kalkulasi — dipakai lagi nanti di halaman Input Nilai Mapel.
-   PENTING (koreksi dari aplikasi lama, per arahan pemilik sistem):
-   SAS bukan per-TP. Nilai akhir mapel = rata-rata SLM semua TP (dengan
-   level KKTP tiap TP ditentukan dari nilai SLM TP itu sendiri) dikombinasi
-   dengan SATU nilai SAS per mapel per semester.
+   Kalkulasi — dipakai halaman Input Nilai Mapel.
+   MODEL YANG BENAR (dikoreksi ulang oleh pemilik sistem, menggantikan
+   asumsi sebelumnya bahwa SAS itu sekali per mapel per semester):
+   - SLM **dan** SAS dua-duanya diisi PER TP.
+   - Tidak semua TP diujikan saat SAS — TP yang SAS-nya kosong itu wajar,
+     bukan data yang belum lengkap.
+   - Nilai akhir PER TP = SLM saja (kalau SAS kosong), atau
+     (SLM×bobotSlm% + SAS×bobotSas%) kalau SAS ada — bobot ditentukan
+     guru PER TP (tersimpan di tp_kktp.bobotSlm/bobotSas), bukan per mapel.
+   - Level KKTP & deskripsi ditentukan dari nilai akhir PER TP itu
+     (setelah dicampur SAS-nya kalau ada), bukan dari SLM mentah — supaya
+     kalau ada TP yang sudah diujikan SAS-nya, levelnya mencerminkan hasil
+     akhir TP itu, bukan cuma proses SLM-nya saja.
+   - Nilai rapor (nilai akhir mapel) = rata-rata nilai akhir dari SEMUA TP.
    ========================================================================== */
 
-/** Tentukan level KKTP dari satu nilai SLM, mengikuti rentang TP tsb. */
-export function tentukanLevel(nilaiSlm, tp) {
+/** Nilai akhir satu TP = campuran SLM+SAS sesuai bobot TP itu, atau SLM saja kalau SAS kosong. */
+export function hitungNilaiAkhirTP(nilaiSlm, nilaiSas, tp) {
   if (nilaiSlm === '' || nilaiSlm === null || nilaiSlm === undefined) return null;
-  const n = parseFloat(nilaiSlm);
+  const slm = parseFloat(nilaiSlm);
+  if (nilaiSas === '' || nilaiSas === null || nilaiSas === undefined) {
+    return Math.round(slm);
+  }
+  const bobotSlm = (tp?.bobotSlm ?? 60) / 100;
+  const bobotSas = (tp?.bobotSas ?? 40) / 100;
+  return Math.round(slm * bobotSlm + parseFloat(nilaiSas) * bobotSas);
+}
+
+/** Tentukan level KKTP dari NILAI AKHIR TP (hasil hitungNilaiAkhirTP), mengikuti rentang TP tsb. */
+export function tentukanLevel(nilaiAkhirTP, tp) {
+  if (nilaiAkhirTP === '' || nilaiAkhirTP === null || nilaiAkhirTP === undefined) return null;
+  const n = parseFloat(nilaiAkhirTP);
   const labels = LEVEL_LABEL[tp.tipe] || LEVEL_LABEL.pengetahuan;
   const levels = tp.levels || [];
   for (let i = 0; i < levels.length; i++) {
@@ -254,22 +277,11 @@ export function tentukanLevel(nilaiSlm, tp) {
   return { index: last, label: labels[last], deskripsi: levels[last]?.deskripsi || '' };
 }
 
-/**
- * Nilai akhir mapel = (rata-rata semua nilai SLM per TP × bobotSlm%)
- *                     + (nilai SAS × bobotSas%).
- * Kalau SAS belum diisi, nilai akhir sementara = rata-rata SLM saja.
- */
-export function hitungNilaiAkhirMapel(nilaiSlmPerTP, nilaiSas, mapel) {
-  const nilaiValid = nilaiSlmPerTP.filter(n => n !== null && n !== undefined && n !== '');
-  if (!nilaiValid.length) return null;
-
-  const rataSlm = nilaiValid.reduce((a, b) => a + parseFloat(b), 0) / nilaiValid.length;
-  if (nilaiSas === null || nilaiSas === undefined || nilaiSas === '') {
-    return Math.round(rataSlm);
-  }
-  const bobotSlm = (mapel?.bobotSlm ?? 60) / 100;
-  const bobotSas = (mapel?.bobotSas ?? 40) / 100;
-  return Math.round(rataSlm * bobotSlm + parseFloat(nilaiSas) * bobotSas);
+/** Nilai akhir mapel (nilai rapor) = rata-rata nilai akhir semua TP. */
+export function hitungNilaiAkhirMapel(nilaiAkhirPerTP) {
+  const valid = nilaiAkhirPerTP.filter(n => n !== null && n !== undefined && n !== '');
+  if (!valid.length) return null;
+  return Math.round(valid.reduce((a, b) => a + parseFloat(b), 0) / valid.length);
 }
 
 /* ==========================================================================
@@ -324,152 +336,116 @@ export async function getConfigAkademik() {
 }
 
 /* ==========================================================================
-   Nilai SLM — satu dokumen per (siswa × TP × semester × tahun ajaran).
+   Nilai TP — SATU dokumen per (siswa × TP × semester × tahun ajaran),
+   berisi SLM dan SAS sekaligus. Digabung dari yang tadinya dua koleksi
+   terpisah (nilai_slm, nilai_sas) — dikoreksi ulang oleh pemilik sistem:
+   SAS itu per TP juga (tidak semua TP diujikan saat SAS, itu wajar), jadi
+   keduanya wajar tersimpan bersebelahan di dokumen yang sama.
    ========================================================================== */
 
-const DEMO_NILAI_SLM_KEY = 'akd_demo_nilai_slm';
+const DEMO_NILAI_TP_KEY = 'akd_demo_nilai_tp';
 
-function readDemoNilaiSlm() {
-  return JSON.parse(localStorage.getItem(DEMO_NILAI_SLM_KEY) || '[]');
+function readDemoNilaiTP() {
+  return JSON.parse(localStorage.getItem(DEMO_NILAI_TP_KEY) || '[]');
 }
-function writeDemoNilaiSlm(list) {
-  localStorage.setItem(DEMO_NILAI_SLM_KEY, JSON.stringify(list));
+function writeDemoNilaiTP(list) {
+  localStorage.setItem(DEMO_NILAI_TP_KEY, JSON.stringify(list));
 }
 
 /**
- * Ambil semua nilai SLM untuk satu TP pada satu semester/tahun ajaran
+ * Ambil semua nilai (SLM+SAS) untuk satu TP pada satu semester/tahun ajaran
  * (lintas siswa sekelas), dipakai untuk mengisi grid saat dibuka.
- * @returns {Promise<Object<string,{id:string, nilai:number}>>} siswaId -> {id, nilai}
+ * @returns {Promise<Object<string,{id:string, slm:number, sas:number|null}>>} siswaId -> {id, slm, sas}
  */
-export async function getNilaiSlmUntukTP({ tpId, semester, tahunAjaran }) {
+export async function getNilaiTPUntukTP({ tpId, semester, tahunAjaran }) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 200));
-    const list = readDemoNilaiSlm().filter(n => n.tpId === tpId && n.semester === semester && n.tahunAjaran === tahunAjaran);
+    const list = readDemoNilaiTP().filter(n => n.tpId === tpId && n.semester === semester && n.tahunAjaran === tahunAjaran);
     const map = {};
-    list.forEach(n => { map[n.siswaId] = { id: n.id, nilai: n.nilai }; });
+    list.forEach(n => { map[n.siswaId] = { id: n.id, slm: n.slm, sas: n.sas ?? null }; });
     return map;
   }
   const { db, fsMod } = window.__fb;
   const q = fsMod.query(
-    fsMod.collection(db, 'nilai_slm'),
+    fsMod.collection(db, 'nilai_tp'),
     fsMod.where('tpId', '==', tpId),
     fsMod.where('semester', '==', semester),
     fsMod.where('tahunAjaran', '==', tahunAjaran)
   );
   const snap = await fsMod.getDocs(q);
   const map = {};
-  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, nilai: d.data().nilai }; });
+  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, slm: d.data().slm, sas: d.data().sas ?? null }; });
   return map;
 }
 
 /**
- * Simpan nilai SLM untuk satu TP, banyak siswa sekaligus (upsert per
- * siswa). `existing` = hasil getNilaiSlmUntukTP sebelumnya, dipakai untuk
- * tahu mana yang perlu update vs create.
- * @param {{tpId, mapel, kelas, tingkatan, semester, tahunAjaran}} ctx
- * @param {Array<{siswaId:string, nilai:number}>} entries
- * @param {Object} existing peta siswaId -> {id, nilai} dari getNilaiSlmUntukTP
+ * Ambil semua nilai TP untuk satu mapel+kelas SEKALIGUS (lintas TP),
+ * dikelompokkan per tpId — dipakai beranda.html untuk hitung status
+ * tanpa query berulang per TP.
+ * @returns {Promise<Object<string, Array<{slm:number, sas:number|null}>>>} tpId -> daftar nilai
  */
-export async function saveNilaiSlmBatch(ctx, entries, existing) {
+export async function getNilaiTPSummary({ mapel, kelas, semester, tahunAjaran }) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    list = readDemoNilaiTP().filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'nilai_tp'),
+      fsMod.where('mapel', '==', mapel),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => d.data());
+  }
+  const perTp = {};
+  list.forEach(n => {
+    if (!perTp[n.tpId]) perTp[n.tpId] = [];
+    perTp[n.tpId].push({ slm: n.slm, sas: n.sas ?? null });
+  });
+  return perTp;
+}
+
+/**
+ * Simpan nilai (SLM+SAS) untuk satu TP, banyak siswa sekaligus (upsert per
+ * siswa). `existing` = hasil getNilaiTPUntukTP sebelumnya.
+ * @param {{tpId, mapel, kelas, tingkatan, semester, tahunAjaran}} ctx
+ * @param {Array<{siswaId:string, slm:number, sas:number|null}>} entries
+ * @param {Object} existing peta siswaId -> {id, slm, sas} dari getNilaiTPUntukTP
+ */
+export async function saveNilaiTPBatch(ctx, entries, existing) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 300));
-    const list = readDemoNilaiSlm();
-    entries.forEach(({ siswaId, nilai }) => {
+    const list = readDemoNilaiTP();
+    entries.forEach(({ siswaId, slm, sas }) => {
       const found = existing[siswaId];
-      const data = { tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai };
+      const data = { tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, slm, sas: sas ?? null };
       if (found) {
         const idx = list.findIndex(n => n.id === found.id);
         if (idx >= 0) list[idx] = { ...list[idx], ...data };
       } else {
-        list.push({ id: 'demo-slm-' + Date.now() + '-' + siswaId, ...data });
+        list.push({ id: 'demo-tp-nilai-' + Date.now() + '-' + siswaId, ...data });
       }
     });
-    writeDemoNilaiSlm(list);
+    writeDemoNilaiTP(list);
     return;
   }
 
   const { db, fsMod, auth } = window.__fb;
-  for (const { siswaId, nilai } of entries) {
+  for (const { siswaId, slm, sas } of entries) {
     const found = existing[siswaId];
     const data = {
       tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas,
-      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai,
+      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran,
+      slm, sas: sas ?? null,
     };
     if (found) {
-      await fsMod.updateDoc(fsMod.doc(db, 'nilai_slm', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+      await fsMod.updateDoc(fsMod.doc(db, 'nilai_tp', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
     } else {
-      await fsMod.addDoc(fsMod.collection(db, 'nilai_slm'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
-    }
-  }
-}
-
-/* ==========================================================================
-   Nilai SAS — SATU dokumen per (siswa × mapel × semester × tahun ajaran).
-   BUKAN per TP — koreksi dari aplikasi lama, lihat README.
-   ========================================================================== */
-
-const DEMO_NILAI_SAS_KEY = 'akd_demo_nilai_sas';
-
-function readDemoNilaiSas() {
-  return JSON.parse(localStorage.getItem(DEMO_NILAI_SAS_KEY) || '[]');
-}
-function writeDemoNilaiSas(list) {
-  localStorage.setItem(DEMO_NILAI_SAS_KEY, JSON.stringify(list));
-}
-
-/** @returns {Promise<Object<string,{id:string, nilai:number}>>} siswaId -> {id, nilai} */
-export async function getNilaiSasUntukMapel({ mapel, kelas, semester, tahunAjaran }) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 200));
-    const list = readDemoNilaiSas().filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
-    const map = {};
-    list.forEach(n => { map[n.siswaId] = { id: n.id, nilai: n.nilai }; });
-    return map;
-  }
-  const { db, fsMod } = window.__fb;
-  const q = fsMod.query(
-    fsMod.collection(db, 'nilai_sas'),
-    fsMod.where('mapel', '==', mapel),
-    fsMod.where('kelas', '==', kelas),
-    fsMod.where('semester', '==', semester),
-    fsMod.where('tahunAjaran', '==', tahunAjaran)
-  );
-  const snap = await fsMod.getDocs(q);
-  const map = {};
-  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, nilai: d.data().nilai }; });
-  return map;
-}
-
-/** Simpan nilai SAS banyak siswa sekaligus (upsert per siswa). */
-export async function saveNilaiSasBatch(ctx, entries, existing) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 300));
-    const list = readDemoNilaiSas();
-    entries.forEach(({ siswaId, nilai }) => {
-      const found = existing[siswaId];
-      const data = { mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai };
-      if (found) {
-        const idx = list.findIndex(n => n.id === found.id);
-        if (idx >= 0) list[idx] = { ...list[idx], ...data };
-      } else {
-        list.push({ id: 'demo-sas-' + Date.now() + '-' + siswaId, siswaId, ...data });
-      }
-    });
-    writeDemoNilaiSas(list);
-    return;
-  }
-
-  const { db, fsMod, auth } = window.__fb;
-  for (const { siswaId, nilai } of entries) {
-    const found = existing[siswaId];
-    const data = {
-      siswaId, mapel: ctx.mapel, kelas: ctx.kelas,
-      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai,
-    };
-    if (found) {
-      await fsMod.updateDoc(fsMod.doc(db, 'nilai_sas', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
-    } else {
-      await fsMod.addDoc(fsMod.collection(db, 'nilai_sas'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+      await fsMod.addDoc(fsMod.collection(db, 'nilai_tp'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
     }
   }
 }
@@ -677,35 +653,3 @@ export async function saveKokurikuler(payload, existingId) {
   }
 }
 
-/* ==========================================================================
-   Ringkasan status — dipakai akademik/beranda.html untuk menghitung "tugas
-   belum selesai" tanpa query berulang per TP.
-   ========================================================================== */
-
-/**
- * Ambil semua nilai SLM untuk satu mapel+kelas SEKALIGUS (bukan per TP),
- * dikelompokkan per tpId. Lebih hemat query dibanding memanggil
- * getNilaiSlmUntukTP() satu-satu untuk tiap TP.
- * @returns {Promise<Object<string, number>>} tpId -> jumlah siswa terisi
- */
-export async function getNilaiSlmSummary({ mapel, kelas, semester, tahunAjaran }) {
-  let list;
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 150));
-    list = readDemoNilaiSlm().filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
-  } else {
-    const { db, fsMod } = window.__fb;
-    const q = fsMod.query(
-      fsMod.collection(db, 'nilai_slm'),
-      fsMod.where('mapel', '==', mapel),
-      fsMod.where('kelas', '==', kelas),
-      fsMod.where('semester', '==', semester),
-      fsMod.where('tahunAjaran', '==', tahunAjaran)
-    );
-    const snap = await fsMod.getDocs(q);
-    list = snap.docs.map(d => d.data());
-  }
-  const perTp = {};
-  list.forEach(n => { perTp[n.tpId] = (perTp[n.tpId] || 0) + 1; });
-  return perTp;
-}
