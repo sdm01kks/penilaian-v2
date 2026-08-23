@@ -248,28 +248,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ---- nilai_slm/{id} -----------------------------------------------------
-    // Nilai Sumatif Lingkup Materi — satu dokumen per (siswa × TP × semester
-    // × tahun ajaran). Dibatasi persis per kelas+mapel lewat
-    // bolehMapelKelas() — TIDAK seperti tp_kktp, di sini pencocokannya bisa
-    // presisi karena nilai memang terikat ke kelas spesifik (bukan
+    // ---- nilai_tp/{id} -----------------------------------------------------
+    // Nilai SLM + SAS satu TP — SATU dokumen per (siswa × TP × semester ×
+    // tahun ajaran), berisi kedua nilai sekaligus (dikoreksi ulang oleh
+    // pemilik sistem: SAS itu per TP juga, bukan sekali per mapel per
+    // semester seperti asumsi sebelumnya — tidak semua TP diujikan saat
+    // SAS, itu wajar). Dibatasi persis per kelas+mapel lewat
+    // bolehMapelKelas() — TIDAK seperti tp_kktp, di sini pencocokannya
+    // bisa presisi karena nilai memang terikat ke kelas spesifik (bukan
     // tingkatan), jadi tidak ada masalah tebak-tebakan huruf paralel
     // seperti di tp_kktp.
-    match /nilai_slm/{id} {
-      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
-      allow create: if isLoggedIn()
-                     && request.resource.data.createdBy == request.auth.uid
-                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
-                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow delete: if isAdmin();
-    }
-
-    // ---- nilai_sas/{id} -----------------------------------------------------
-    // Nilai Sumatif Akhir Semester — SATU dokumen per (siswa × mapel ×
-    // semester × tahun ajaran), BUKAN per TP (koreksi dari aplikasi lama,
-    // lihat README). Aturan sama seperti nilai_slm.
-    match /nilai_sas/{id} {
+    match /nilai_tp/{id} {
       allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
