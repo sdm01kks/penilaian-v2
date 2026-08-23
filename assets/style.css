@@ -783,3 +783,23 @@ textarea.field-textarea:focus{border-color:var(--green-light)}
 .waiting-block svg{width:52px;height:52px;color:var(--gold);margin-bottom:16px}
 .waiting-block h2{font-size:16px;color:var(--ink);margin:0 0 8px}
 .waiting-block p{font-size:13px;color:var(--ink-muted);line-height:1.7}
+.guru-attribusi{
+  font-size:10.5px;color:var(--ink-muted);margin-top:7px;font-weight:700;
+  display:flex;align-items:center;gap:5px;
+}
+.guru-attribusi::before{
+  content:'';width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;
+}
+
+.edit-entry-btn:hover{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
+
+.edit-panel{
+  margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);
+}
+.edit-actions{display:flex;gap:8px;margin-top:10px}
+.btn-edit-save, .btn-edit-cancel{
+  flex:1;padding:9px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+}
+.btn-edit-save{background:var(--green-dark);color:#fff}
+.btn-edit-save:disabled{opacity:.6;cursor:not-allowed}
+.btn-edit-cancel{background:var(--bg-light);color:var(--ink-mid)}
