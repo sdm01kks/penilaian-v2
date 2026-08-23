@@ -355,9 +355,17 @@ function writeDemoNilaiTP(list) {
 /**
  * Ambil semua nilai (SLM+SAS) untuk satu TP pada satu semester/tahun ajaran
  * (lintas siswa sekelas), dipakai untuk mengisi grid saat dibuka.
+ *
+ * PENTING: mapel & kelas WAJIB disertakan sebagai filter query di sini,
+ * bukan cuma tpId — karena aturan Firestore untuk nilai_tp memeriksa
+ * resource.data.mapel/resource.data.kelas (bolehMapelKelas). Firestore
+ * menolak seluruh permintaan baca (bukan per dokumen) kalau bentuk query
+ * tidak secara eksplisit menyertakan field yang sama dengan yang
+ * diperiksa aturan keamanannya — walau secara logis tpId sudah cukup
+ * unik menentukan mapel+kelas yang benar.
  * @returns {Promise<Object<string,{id:string, slm:number, sas:number|null}>>} siswaId -> {id, slm, sas}
  */
-export async function getNilaiTPUntukTP({ tpId, semester, tahunAjaran }) {
+export async function getNilaiTPUntukTP({ tpId, mapel, kelas, semester, tahunAjaran }) {
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 200));
     const list = readDemoNilaiTP().filter(n => n.tpId === tpId && n.semester === semester && n.tahunAjaran === tahunAjaran);
@@ -369,6 +377,8 @@ export async function getNilaiTPUntukTP({ tpId, semester, tahunAjaran }) {
   const q = fsMod.query(
     fsMod.collection(db, 'nilai_tp'),
     fsMod.where('tpId', '==', tpId),
+    fsMod.where('mapel', '==', mapel),
+    fsMod.where('kelas', '==', kelas),
     fsMod.where('semester', '==', semester),
     fsMod.where('tahunAjaran', '==', tahunAjaran)
   );
