@@ -45,6 +45,9 @@
           <a href="kelola-akun-ortu.html" id="linkKelolaOrtu" class="app-header-back hidden" style="text-decoration:none" aria-label="Kelola Akun Ortu" title="Kelola Akun Ortu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </a>
+          <a href="../index.html" class="app-header-back" style="text-decoration:none" aria-label="Ke Halaman Utama" title="Ke Halaman Utama">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          </a>
         </div>
       </div>
 
@@ -122,7 +125,7 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
-  import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog, updateSetoran, updateMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
   import { surahByNo } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
@@ -357,6 +360,11 @@
     return jenis === 'ziyadah' ? 'Ziyadah' : jenis === 'murojaah' ? "Muroja'ah" : 'Tahsin';
   }
 
+  function guruAttributionHtml(r) {
+    if (currentUser.role !== 'admin' || !r.createdByNama) return '';
+    return `<div class="guru-attribusi">Diinput oleh: ${escapeHtml(r.createdByNama)}</div>`;
+  }
+
   function renderMembacaList() {
     const list = setoranCache.filter(r => r.materi?.tipe === 'iqro' || (r.detailAyat && r.detailAyat.length) || r.detailBacaanIqro);
     if (!list.length) {
@@ -370,6 +378,7 @@
           <div class="setoran-card-head">
             <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
             <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
+            ${editBtnHtml(r.id, 'setoran')}
             ${deleteBtnHtml(r.id, 'setoran')}
           </div>
           <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
@@ -377,10 +386,13 @@
             ${miniStat ? `<span class="mini-stat">${miniStat}</span>` : ''}
           </div>
           ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
+          ${guruAttributionHtml(r)}
+          ${editPanelSetoranHtml(r)}
         </div>
       `;
     }).join('');
     attachDeleteHandlers('membacaList', 'setoran');
+    attachEditHandlers('membacaList', 'setoran');
   }
 
   function renderHafalanList() {
@@ -395,6 +407,7 @@
           <div class="setoran-card-head">
             <span class="jenis-badge ${r.jenis}">${jenisLabel(r.jenis)}</span>
             <span class="tanggal-text">${formatTanggal(r.createdAt)}</span>
+            ${editBtnHtml(r.id, 'setoran')}
             ${deleteBtnHtml(r.id, 'setoran')}
           </div>
           <div class="materi-label">${escapeHtml(r.materi?.label || '-')}</div>
@@ -402,10 +415,13 @@
             <span class="status-badge ${r.statusHafalan === 'lulus' ? 'lulus' : 'ulang'}">${r.statusHafalan === 'lulus' ? 'Lulus' : 'Perlu Diulang'}</span>
           </div>
           ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
+          ${guruAttributionHtml(r)}
+          ${editPanelSetoranHtml(r)}
         </div>
       `;
     }).join('');
     attachDeleteHandlers('hafalanList', 'setoran');
+    attachEditHandlers('hafalanList', 'setoran');
   }
 
   function renderMenulisList() {
@@ -418,13 +434,17 @@
         <div class="setoran-card-head">
           <span class="jenis-badge murojaah">Pemeriksaan</span>
           <span class="tanggal-text">${formatTanggal(r.tanggalPeriksa)}</span>
+          ${editBtnHtml(r.id, 'menulis')}
           ${deleteBtnHtml(r.id, 'menulis')}
         </div>
         <div class="materi-label">${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
         ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
+        ${guruAttributionHtml(r)}
+        ${editPanelMenulisHtml(r)}
       </div>
     `).join('');
     attachDeleteHandlers('menulisList', 'menulis');
+    attachEditHandlers('menulisList', 'menulis');
   }
 
   function deleteBtnHtml(id, kind) {
@@ -435,8 +455,85 @@
     `;
   }
 
+  function editBtnHtml(id, kind) {
+    return `
+      <button type="button" class="delete-entry-btn edit-entry-btn" data-id="${id}" data-kind="${kind}" aria-label="Edit catatan">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+      </button>
+    `;
+  }
+
+  /* ---- Panel edit: setoran (jenis, status hafalan, catatan saja —
+     materi & Baca & Tandai sengaja tidak dibuka untuk diedit) ---- */
+  function editPanelSetoranHtml(r) {
+    const isIqroJenjang = selectedSiswa.jenjang === 'iqro';
+    return `
+      <div class="edit-panel hidden" id="editPanel-${r.id}">
+        ${!isIqroJenjang ? `
+          <div class="field-label">Jenis</div>
+          <select class="select-field" id="editJenis-${r.id}" style="margin-bottom:10px">
+            <option value="ziyadah" ${r.jenis === 'ziyadah' ? 'selected' : ''}>Ziyadah</option>
+            <option value="murojaah" ${r.jenis === 'murojaah' ? 'selected' : ''}>Muroja'ah</option>
+            <option value="tahsin" ${r.jenis === 'tahsin' ? 'selected' : ''}>Tahsin</option>
+          </select>
+          <div class="field-label">Status Hafalan</div>
+          <select class="select-field" id="editStatus-${r.id}" style="margin-bottom:10px">
+            <option value="lulus" ${r.statusHafalan === 'lulus' ? 'selected' : ''}>Lulus</option>
+            <option value="ulang" ${r.statusHafalan === 'ulang' ? 'selected' : ''}>Perlu diulang</option>
+          </select>
+        ` : ''}
+        <div class="field-label">Catatan</div>
+        <textarea class="field-textarea" id="editCatatan-${r.id}" style="min-height:56px">${escapeHtml(r.catatan || '')}</textarea>
+        <div class="edit-actions">
+          <button type="button" class="btn-edit-save" data-id="${r.id}" data-kind="setoran">Simpan</button>
+          <button type="button" class="btn-edit-cancel" data-id="${r.id}">Batal</button>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ---- Panel edit: menulis (tanggal, jilid, halaman, catatan) ---- */
+  function editPanelMenulisHtml(r) {
+    const isIqroBelumTamat = selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro;
+    return `
+      <div class="edit-panel hidden" id="editPanel-${r.id}">
+        <div class="field-label">Tanggal Periksa</div>
+        <input type="date" class="select-field" id="editTanggal-${r.id}" value="${toDateInputValue(r.tanggalPeriksa)}" style="margin-bottom:10px">
+        ${isIqroBelumTamat ? `
+          <div class="field-label">Jilid Iqro</div>
+          <select class="select-field" id="editJilid-${r.id}" style="margin-bottom:10px">
+            ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${r.jilidIqro === n ? 'selected' : ''}>Iqro Jilid ${n}</option>`).join('')}
+          </select>
+        ` : ''}
+        <div class="field-row-2">
+          <div>
+            <div class="field-label">Halaman Mulai</div>
+            <input type="number" class="select-field" id="editHalMulai-${r.id}" value="${r.halamanMulai}" min="1">
+          </div>
+          <div>
+            <div class="field-label">Halaman Akhir</div>
+            <input type="number" class="select-field" id="editHalAkhir-${r.id}" value="${r.halamanAkhir}" min="1">
+          </div>
+        </div>
+        <div class="field-label" style="margin-top:10px">Catatan</div>
+        <textarea class="field-textarea" id="editCatatan-${r.id}" style="min-height:56px">${escapeHtml(r.catatan || '')}</textarea>
+        <div class="edit-actions">
+          <button type="button" class="btn-edit-save" data-id="${r.id}" data-kind="menulis">Simpan</button>
+          <button type="button" class="btn-edit-cancel" data-id="${r.id}">Batal</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function toDateInputValue(ts) {
+    const d = toDate(ts);
+    if (!d || isNaN(d)) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   function attachDeleteHandlers(containerId, kind) {
-    $(containerId).querySelectorAll('.delete-entry-btn').forEach(btn => {
+    $(containerId).querySelectorAll('.delete-entry-btn:not(.edit-entry-btn)').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
@@ -460,6 +557,66 @@
           console.error(err);
           showToast('Gagal menghapus. Mungkin ini bukan catatan milik Anda sendiri.', true);
           btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function attachEditHandlers(containerId, kind) {
+    const container = $(containerId);
+
+    container.querySelectorAll('.edit-entry-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        $(`editPanel-${btn.dataset.id}`).classList.toggle('hidden');
+      });
+    });
+
+    container.querySelectorAll('.btn-edit-cancel').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $(`editPanel-${btn.dataset.id}`).classList.add('hidden');
+      });
+    });
+
+    container.querySelectorAll('.btn-edit-save').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        btn.textContent = 'Menyimpan…';
+        try {
+          if (kind === 'setoran') {
+            const patch = { catatan: $(`editCatatan-${id}`).value.trim() };
+            const jenisEl = document.getElementById(`editJenis-${id}`);
+            if (jenisEl) {
+              patch.jenis = jenisEl.value;
+              patch.statusHafalan = patch.jenis === 'tahsin' ? null : document.getElementById(`editStatus-${id}`).value;
+            }
+            await updateSetoran(id, patch);
+            const idx = setoranCache.findIndex(x => x.id === id);
+            if (idx >= 0) setoranCache[idx] = { ...setoranCache[idx], ...patch };
+            renderMembacaList();
+            renderHafalanList();
+          } else {
+            const patch = {
+              tanggalPeriksa: document.getElementById(`editTanggal-${id}`).value,
+              halamanMulai: +document.getElementById(`editHalMulai-${id}`).value,
+              halamanAkhir: +document.getElementById(`editHalAkhir-${id}`).value,
+              catatan: $(`editCatatan-${id}`).value.trim(),
+            };
+            const jilidEl = document.getElementById(`editJilid-${id}`);
+            if (jilidEl) patch.jilidIqro = +jilidEl.value;
+            await updateMenulisLog(id, patch);
+            const idx = menulisCache.findIndex(x => x.id === id);
+            if (idx >= 0) menulisCache[idx] = { ...menulisCache[idx], ...patch };
+            renderMenulisList();
+          }
+          renderRingkasan();
+          showToast('Perubahan disimpan.');
+        } catch (err) {
+          console.error(err);
+          showToast('Gagal menyimpan. Mungkin ini bukan catatan milik Anda sendiri.', true);
+          btn.disabled = false;
+          btn.textContent = 'Simpan';
         }
       });
     });
