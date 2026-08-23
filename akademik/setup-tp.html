@@ -98,6 +98,8 @@
   .num-mini:focus{border-color:var(--green-light)}
 
   .form-btns{display:flex;gap:8px;margin-top:6px}
+  .mini-label{display:block;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+  .hint-text{font-size:11px;color:var(--ink-muted);margin:-6px 0 12px;line-height:1.5}
   .form-btns .btn{flex:1}
 
   .fab-add{
@@ -154,6 +156,19 @@
             <button type="button" id="btnTipePengetahuan" onclick="pilihTipe('pengetahuan')">📖 Pengetahuan</button>
             <button type="button" id="btnTipeKinerja" onclick="pilihTipe('kinerja')">⚙️ Kinerja</button>
           </div>
+
+          <div class="field-label">Bobot Nilai Akhir TP Ini</div>
+          <div class="field-row-2">
+            <div>
+              <label class="mini-label">SLM (%)</label>
+              <input type="number" class="select-field" id="fBobotSlm" min="0" max="100" value="60">
+            </div>
+            <div>
+              <label class="mini-label">SAS (%)</label>
+              <input type="number" class="select-field" id="fBobotSas" min="0" max="100" value="40">
+            </div>
+          </div>
+          <p class="hint-text">Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.</p>
 
           <div class="field-label">4 Level KKTP</div>
           <div id="levelFormWrap"></div>
@@ -298,6 +313,7 @@
           <div class="tp-head-nama">${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
           <div class="tp-head-meta">
             <span class="tipe-pill ${tp.tipe}">${tp.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan'}</span>
+            <span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">SLM ${tp.bobotSlm ?? 60}% · SAS ${tp.bobotSas ?? 40}%</span>
           </div>
         </div>
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
@@ -344,6 +360,8 @@
     $('fNomor').value = allTP.length ? Math.max(...allTP.map(t => t.nomorTp || 0)) + 1 : 1;
     $('fNama').value = '';
     $('fCp').value = '';
+    $('fBobotSlm').value = 60;
+    $('fBobotSas').value = 40;
     levelsForm = JSON.parse(JSON.stringify(LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe('pengetahuan');
     $('formCard').classList.remove('hidden');
@@ -358,6 +376,8 @@
     $('fNomor').value = tp.nomorTp || '';
     $('fNama').value  = tp.namaTp || '';
     $('fCp').value    = tp.cp || '';
+    $('fBobotSlm').value = tp.bobotSlm ?? 60;
+    $('fBobotSas').value = tp.bobotSas ?? 40;
     levelsForm = JSON.parse(JSON.stringify(tp.levels || LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe(tp.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan');
     $('formCard').classList.remove('hidden');
@@ -391,6 +411,8 @@
         namaTp,
         cp: $('fCp').value.trim(),
         tipe: tipeAktif,
+        bobotSlm: parseInt($('fBobotSlm').value, 10) || 60,
+        bobotSas: parseInt($('fBobotSas').value, 10) || 40,
         levels,
       });
       showToast(editingId ? 'TP berhasil diperbarui.' : 'TP baru berhasil ditambahkan.');

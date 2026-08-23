@@ -132,7 +132,7 @@
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
   import {
     tingkatanDariKelas, getMapelList, getSiswaByKelas, getConfigAkademik,
-    getTPList, getNilaiSlmSummary, getNilaiSasUntukMapel,
+    getTPList, getNilaiTPSummary,
     getAbsensiRaporByKelas, getKokurikulerByKelas, getDPLList,
   } from '../assets/firestore-data-akademik.js';
 
@@ -242,12 +242,14 @@
       try {
         const [tpList, jmlSiswa] = await Promise.all([daftarTP(p.mapel, tingkatan), jumlahSiswa(p.kelas)]);
 
-        let slmDoneTp = 0, slmTotalTp = tpList.length, sasDone = 0;
+        let tpLengkap = 0, tpAdaSas = 0;
         if (tpList.length) {
-          const slmSummary = await getNilaiSlmSummary({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
-          slmDoneTp = tpList.filter(tp => (slmSummary[tp.id] || 0) >= jmlSiswa && jmlSiswa > 0).length;
-          const sasMap = await getNilaiSasUntukMapel({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
-          sasDone = Object.keys(sasMap).length;
+          const summary = await getNilaiTPSummary({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+          tpList.forEach(tp => {
+            const nilaiTp = summary[tp.id] || [];
+            if (jmlSiswa > 0 && nilaiTp.filter(n => n.slm !== null && n.slm !== undefined).length >= jmlSiswa) tpLengkap++;
+            if (nilaiTp.some(n => n.sas !== null && n.sas !== undefined)) tpAdaSas++;
+          });
         }
 
         const tpUrl = `setup-tp.html?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${encodeURIComponent(tingkatan)}`;
@@ -258,14 +260,9 @@
           : `<span class="status-chip sc-done">${tpList.length} TP</span>`;
         const nilaiChip = tpList.length === 0
           ? `<span class="status-chip sc-warn">Belum bisa diisi</span>`
-          : slmDoneTp === slmTotalTp
-            ? `<span class="status-chip sc-done">SLM lengkap</span>`
-            : `<span class="status-chip sc-partial">SLM ${slmDoneTp}/${slmTotalTp} TP</span>`;
-        const sasChip = tpList.length === 0
-          ? `<span class="status-chip sc-warn">-</span>`
-          : sasDone >= jmlSiswa && jmlSiswa > 0
-            ? `<span class="status-chip sc-done">SAS lengkap</span>`
-            : `<span class="status-chip sc-warn">SAS ${sasDone}/${jmlSiswa}</span>`;
+          : tpLengkap === tpList.length
+            ? `<span class="status-chip sc-done">SLM lengkap semua TP</span>`
+            : `<span class="status-chip sc-partial">SLM lengkap ${tpLengkap}/${tpList.length} TP</span>`;
 
         $('mapelTask-' + i).innerHTML = `
           <div class="task-top">
@@ -278,15 +275,11 @@
             <a class="status-link" href="${tpUrl}">Buka →</a>
           </div>
           <div class="status-row">
-            <span class="status-label">Nilai SLM</span>
+            <span class="status-label">Nilai (SLM + SAS)</span>
             ${nilaiChip}
             <a class="status-link" href="${nilaiUrl}">Buka →</a>
           </div>
-          <div class="status-row">
-            <span class="status-label">Nilai SAS</span>
-            ${sasChip}
-            <a class="status-link" href="${nilaiUrl}">Buka →</a>
-          </div>`;
+          ${tpList.length ? `<div class="status-row"><span class="status-label" style="color:var(--ink-muted);font-size:11px">SAS sudah diisi di ${tpAdaSas}/${tpList.length} TP (wajar tidak semua TP diujikan SAS)</span></div>` : ''}`;
       } catch (e) {
         console.error(e);
         $('mapelTask-' + i).querySelector('.task-sub').textContent = `Kelas ${p.kelas} · Gagal memuat status`;
