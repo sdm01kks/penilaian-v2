@@ -133,7 +133,7 @@
   import {
     tingkatanDariKelas, getMapelList, getSiswaByKelas, getConfigAkademik,
     getTPList, getNilaiTPSummary,
-    getAbsensiRaporByKelas, getKokurikulerByKelas, getDPLList,
+    getAbsensiRaporByKelas, getKokurikulerByKelas, getDPLList, getProyekStemByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -302,15 +302,17 @@
       try {
         if (dplAktif === null) dplAktif = await getDPLList({ hanyaAktif: true });
         const jmlSiswa = await jumlahSiswa(k);
-        const [absensiMap, kokurikulerMap] = await Promise.all([
+        const [absensiMap, kokurikulerMap, proyekList] = await Promise.all([
           getAbsensiRaporByKelas(k, config.semesterAktif, config.tahunAjaran),
           getKokurikulerByKelas(k, config.semesterAktif, config.tahunAjaran),
+          getProyekStemByKelas(k, config.semesterAktif, config.tahunAjaran),
         ]);
         const absensiDone = Object.keys(absensiMap).length;
         const kokDone = Object.values(kokurikulerMap).filter(perSiswa => dplAktif.every(d => perSiswa[d.id])).length;
 
         const absUrl = `absensi.html?kelas=${encodeURIComponent(k)}`;
         const kokUrl = `kokurikuler.html?kelas=${encodeURIComponent(k)}`;
+        const stemUrl = `proyek-stem.html?kelas=${encodeURIComponent(k)}`;
 
         const absChip = absensiDone >= jmlSiswa && jmlSiswa > 0
           ? `<span class="status-chip sc-done">Lengkap</span>`
@@ -320,6 +322,9 @@
           : kokDone >= jmlSiswa && jmlSiswa > 0
             ? `<span class="status-chip sc-done">Lengkap</span>`
             : `<span class="status-chip sc-partial">${kokDone}/${jmlSiswa}</span>`;
+        const stemChip = proyekList.length
+          ? `<span class="status-chip sc-done">${proyekList.length} proyek</span>`
+          : `<span class="status-chip sc-warn">Belum ada proyek</span>`;
 
         $('waliTask-' + i).innerHTML = `
           <div class="task-top">
@@ -332,7 +337,12 @@
             <a class="status-link" href="${absUrl}">Buka →</a>
           </div>
           <div class="status-row">
-            <span class="status-label">Kokurikuler</span>
+            <span class="status-label">Proyek STEM</span>
+            ${stemChip}
+            <a class="status-link" href="${stemUrl}">Buka →</a>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Nilai Kokurikuler</span>
             ${kokChip}
             <a class="status-link" href="${kokUrl}">Buka →</a>
           </div>`;
