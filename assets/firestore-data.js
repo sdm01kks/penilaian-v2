@@ -334,6 +334,25 @@ export async function deleteSetoran(id) {
   await fsMod.deleteDoc(fsMod.doc(db, 'setoran', id));
 }
 
+/** Ubah field-field sederhana dari satu entri setoran (jenis, status
+ *  hafalan, catatan) — TIDAK termasuk materi/Baca & Tandai, itu sengaja
+ *  tidak dibuka untuk diedit supaya guru hapus & input ulang kalau
+ *  materinya sendiri yang salah (menjaga histori tetap konsisten). */
+export async function updateSetoran(id, patch) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = JSON.parse(localStorage.getItem(DEMO_SETORAN_KEY) || '[]');
+    const idx = list.findIndex(s => s.id === id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...patch };
+      localStorage.setItem(DEMO_SETORAN_KEY, JSON.stringify(list));
+    }
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.updateDoc(fsMod.doc(db, 'setoran', id), patch);
+}
+
 /* ==========================================================================
    Menulis — log progres menyalin Al-Qur'an (pemeriksaan berkala,
    bukan per-sesi antrean). Fase awal: sekadar tercatat rutin,
@@ -389,4 +408,20 @@ export async function deleteMenulisLog(id) {
   }
   const { db, fsMod } = window.__fb;
   await fsMod.deleteDoc(fsMod.doc(db, 'menulis_log', id));
+}
+
+/** Ubah field-field entri menulis (tanggal, halaman, jilid, catatan). */
+export async function updateMenulisLog(id, patch) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = JSON.parse(localStorage.getItem(DEMO_MENULIS_KEY) || '[]');
+    const idx = list.findIndex(s => s.id === id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...patch };
+      localStorage.setItem(DEMO_MENULIS_KEY, JSON.stringify(list));
+    }
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.updateDoc(fsMod.doc(db, 'menulis_log', id), patch);
 }
