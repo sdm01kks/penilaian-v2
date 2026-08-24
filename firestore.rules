@@ -172,20 +172,29 @@ service cloud.firestore {
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
                      && bolehKelas(request.resource.data.kelas);
+      allow update: if isLoggedIn()
+                     && resource.data.createdBy == request.auth.uid
+                     && request.resource.data.createdBy == resource.data.createdBy
+                     && request.resource.data.siswaId == resource.data.siswaId
+                     && request.resource.data.kelas == resource.data.kelas;
       allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
-      allow update: if false;
     }
 
     // ---- menulis_log/{id} ---------------------------------------------------
     // Catatan pemeriksaan berkala buku salinan Al-Qur'an. Aturan sama
-    // seperti setoran (termasuk akses baca-saja untuk orang tua).
+    // seperti setoran (termasuk akses baca-saja untuk orang tua, dan
+    // batasan edit yang sama).
     match /menulis_log/{id} {
       allow read: if bolehKelas(resource.data.kelas) || anakSaya(resource.data.siswaId);
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
                      && bolehKelas(request.resource.data.kelas);
+      allow update: if isLoggedIn()
+                     && resource.data.createdBy == request.auth.uid
+                     && request.resource.data.createdBy == resource.data.createdBy
+                     && request.resource.data.siswaId == resource.data.siswaId
+                     && request.resource.data.kelas == resource.data.kelas;
       allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
-      allow update: if false;
     }
 
     // ---- target_hafalan/{kelas} ---------------------------------------------
