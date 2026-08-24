@@ -306,6 +306,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- proyek_stem/{id} ----------------------------------------------------
+    // Rancangan proyek STEM (kokurikuler tahun ini HANYA lewat proyek STEM,
+    // wajib melibatkan ≥2 mata pelajaran). KHUSUS wali kelas — sama seperti
+    // kokurikuler/absensi_rapor, guru bidang studi tidak ikut kebagian
+    // akses walau salah satu mapel proyek itu diampunya.
+    match /proyek_stem/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow delete: if bolehWaliKelas(resource.data.kelas);
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;
