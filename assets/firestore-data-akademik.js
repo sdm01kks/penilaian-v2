@@ -663,3 +663,85 @@ export async function saveKokurikuler(payload, existingId) {
   }
 }
 
+/* ==========================================================================
+   Proyek STEM — kokurikuler tahun ini HANYA lewat proyek STEM, wajib
+   melibatkan ≥2 mata pelajaran (validasi jumlah mapel dilakukan di sisi
+   tampilan, bukan di sini — supaya pesan errornya bisa langsung jelas ke
+   guru sebelum sempat mencoba simpan). Nilai DPL per siswa untuk proyek
+   ini BELUM dibangun — menyusul setelah mekanismenya disepakati.
+   ========================================================================== */
+
+const DEMO_PROYEK_STEM_KEY = 'akd_demo_proyek_stem';
+
+function readDemoProyekStem() {
+  return JSON.parse(localStorage.getItem(DEMO_PROYEK_STEM_KEY) || '[]');
+}
+function writeDemoProyekStem(list) {
+  localStorage.setItem(DEMO_PROYEK_STEM_KEY, JSON.stringify(list));
+}
+
+/** Ambil semua proyek STEM satu kelas pada semester/tahun ajaran tertentu, terbaru dulu. */
+export async function getProyekStemByKelas(kelas, semester, tahunAjaran) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    list = readDemoProyekStem().filter(p => p.kelas === kelas && p.semester === semester && p.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'proyek_stem'),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  return list.sort((a, b) => (b.tanggalMulai || '').localeCompare(a.tanggalMulai || ''));
+}
+
+/** Simpan satu proyek STEM (upsert kalau payload.id ada). */
+export async function saveProyekStem(payload) {
+  const data = {
+    kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    judul: payload.judul,
+    mapelTerlibat: payload.mapelTerlibat,
+    dplId: payload.dplId,
+    tanggalMulai: payload.tanggalMulai,
+    tanggalSelesai: payload.tanggalSelesai,
+    jumlahPertemuan: payload.jumlahPertemuan,
+  };
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoProyekStem();
+    if (payload.id) {
+      const idx = list.findIndex(p => p.id === payload.id);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-stem-' + Date.now(), ...data });
+    }
+    writeDemoProyekStem(list);
+    return;
+  }
+
+  const { db, fsMod, auth } = window.__fb;
+  if (payload.id) {
+    await fsMod.updateDoc(fsMod.doc(db, 'proyek_stem', payload.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'proyek_stem'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/** Hapus satu proyek STEM. */
+export async function deleteProyekStem(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    writeDemoProyekStem(readDemoProyekStem().filter(p => p.id !== id));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'proyek_stem', id));
+}
+
