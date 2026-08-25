@@ -31,6 +31,15 @@ export const LEVEL_LABEL = {
   kinerja:     ['Mulai Berkembang', 'Layak', 'Cakap', 'Mahir'],
 };
 
+/**
+ * Skala predikat KHUSUS Kokurikuler/DPL — "Skala Predikat Tunggal Sekolah"
+ * dari panduan penilaian proyek STEM. TETAP untuk semua DPL, tidak seperti
+ * LEVEL_LABEL di atas yang beda-beda per tipe TP. Sengaja TIDAK dipakai
+ * untuk TP non-STEM biasa — itu tetap pakai LEVEL_LABEL.pengetahuan/kinerja
+ * seperti sebelumnya (dikonfirmasi eksplisit, bukan diseragamkan).
+ */
+export const DPL_LEVEL_LABEL = ['Belum Terlihat', 'Mulai Terlihat', 'Berkembang Sesuai Harapan', 'Sangat Berkembang'];
+
 /** Rentang nilai bawaan saat TP baru dibuat — guru boleh ubah. */
 export const LEVEL_RANGE_DEFAULT = [
   { min: 0,  maks: 60  },
@@ -598,8 +607,10 @@ export async function deleteDPL(id) {
 }
 
 /* ==========================================================================
-   Kokurikuler — nilai (level 1-4) per siswa per DPL per semester. Khusus
-   wali kelas. Satu dokumen per (siswa × dpl × semester × tahun ajaran).
+   Kokurikuler — nilai (level 1-4, skala BT/MT/BSH/SB) per siswa per DPL,
+   TERIKAT ke satu Proyek STEM tertentu (bukan lagi lepas per semester) —
+   sesuai panduan penilaian STEM: observasi DPL terjadi selama proyek
+   berjalan, bukan floating tanpa konteks. Khusus wali kelas.
    ========================================================================== */
 
 const DEMO_KOKURIKULER_KEY = 'akd_demo_kokurikuler';
@@ -612,18 +623,17 @@ function writeDemoKokurikuler(list) {
 }
 
 /** @returns {Promise<Object<string,object>>} siswaId -> { dplId: {id, level, deskripsi} } */
-export async function getKokurikulerByKelas(kelas, semester, tahunAjaran) {
+export async function getKokurikulerByProyek(proyekStemId, kelas) {
   let list;
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 200));
-    list = readDemoKokurikuler().filter(k => k.kelas === kelas && k.semester === semester && k.tahunAjaran === tahunAjaran);
+    list = readDemoKokurikuler().filter(k => k.proyekStemId === proyekStemId);
   } else {
     const { db, fsMod } = window.__fb;
     const q = fsMod.query(
       fsMod.collection(db, 'kokurikuler'),
-      fsMod.where('kelas', '==', kelas),
-      fsMod.where('semester', '==', semester),
-      fsMod.where('tahunAjaran', '==', tahunAjaran)
+      fsMod.where('proyekStemId', '==', proyekStemId),
+      fsMod.where('kelas', '==', kelas)
     );
     const snap = await fsMod.getDocs(q);
     list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -636,11 +646,12 @@ export async function getKokurikulerByKelas(kelas, semester, tahunAjaran) {
   return map;
 }
 
-/** Simpan satu nilai kokurikuler (upsert). `existingId` dari getKokurikulerByKelas kalau ada. */
+/** Simpan satu nilai kokurikuler (upsert). `existingId` dari getKokurikulerByProyek kalau ada. */
 export async function saveKokurikuler(payload, existingId) {
   const data = {
     siswaId: payload.siswaId, dplId: payload.dplId, kelas: payload.kelas,
     tingkatan: String(payload.tingkatan), semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    proyekStemId: payload.proyekStemId,
     level: payload.level, deskripsi: payload.deskripsi || '',
   };
   if (DEMO_MODE) {
