@@ -133,7 +133,7 @@
   import {
     tingkatanDariKelas, getMapelList, getSiswaByKelas, getConfigAkademik,
     getTPList, getNilaiTPSummary,
-    getAbsensiRaporByKelas, getKokurikulerByKelas, getDPLList, getProyekStemByKelas,
+    getAbsensiRaporByKelas, getKokurikulerByProyek, getProyekStemByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -296,35 +296,34 @@
       </div>
     </div>`).join('');
 
-    let dplAktif = null;
     for (let i = 0; i < waliKelas.length; i++) {
       const k = waliKelas[i];
       try {
-        if (dplAktif === null) dplAktif = await getDPLList({ hanyaAktif: true });
         const jmlSiswa = await jumlahSiswa(k);
-        const [absensiMap, kokurikulerMap, proyekList] = await Promise.all([
+        const [absensiMap, proyekList] = await Promise.all([
           getAbsensiRaporByKelas(k, config.semesterAktif, config.tahunAjaran),
-          getKokurikulerByKelas(k, config.semesterAktif, config.tahunAjaran),
           getProyekStemByKelas(k, config.semesterAktif, config.tahunAjaran),
         ]);
         const absensiDone = Object.keys(absensiMap).length;
-        const kokDone = Object.values(kokurikulerMap).filter(perSiswa => dplAktif.every(d => perSiswa[d.id])).length;
+
+        // Kokurikuler sekarang per-proyek — jumlahkan status isian lintas
+        // semua proyek kelas ini (bukan satu angka global per DPL lagi).
+        let proyekTerisi = 0;
+        for (const p of proyekList) {
+          const nilaiMap = await getKokurikulerByProyek(p.id, k);
+          const lengkapSemua = jmlSiswa > 0 && Object.values(nilaiMap).filter(perSiswa => (p.dplId || []).every(id => perSiswa[id])).length >= jmlSiswa;
+          if (lengkapSemua) proyekTerisi++;
+        }
 
         const absUrl = `absensi.html?kelas=${encodeURIComponent(k)}`;
-        const kokUrl = `kokurikuler.html?kelas=${encodeURIComponent(k)}`;
         const stemUrl = `proyek-stem.html?kelas=${encodeURIComponent(k)}`;
 
         const absChip = absensiDone >= jmlSiswa && jmlSiswa > 0
           ? `<span class="status-chip sc-done">Lengkap</span>`
           : `<span class="status-chip sc-warn">${absensiDone}/${jmlSiswa}</span>`;
-        const kokChip = !dplAktif.length
-          ? `<span class="status-chip sc-warn">Belum ada DPL aktif</span>`
-          : kokDone >= jmlSiswa && jmlSiswa > 0
-            ? `<span class="status-chip sc-done">Lengkap</span>`
-            : `<span class="status-chip sc-partial">${kokDone}/${jmlSiswa}</span>`;
-        const stemChip = proyekList.length
-          ? `<span class="status-chip sc-done">${proyekList.length} proyek</span>`
-          : `<span class="status-chip sc-warn">Belum ada proyek</span>`;
+        const stemChip = !proyekList.length
+          ? `<span class="status-chip sc-warn">Belum ada proyek</span>`
+          : `<span class="status-chip ${proyekTerisi === proyekList.length ? 'sc-done' : 'sc-partial'}">${proyekList.length} proyek · nilai DPL lengkap ${proyekTerisi}/${proyekList.length}</span>`;
 
         $('waliTask-' + i).innerHTML = `
           <div class="task-top">
@@ -337,14 +336,9 @@
             <a class="status-link" href="${absUrl}">Buka →</a>
           </div>
           <div class="status-row">
-            <span class="status-label">Proyek STEM</span>
+            <span class="status-label">Proyek STEM &amp; Nilai DPL</span>
             ${stemChip}
             <a class="status-link" href="${stemUrl}">Buka →</a>
-          </div>
-          <div class="status-row">
-            <span class="status-label">Nilai Kokurikuler</span>
-            ${kokChip}
-            <a class="status-link" href="${kokUrl}">Buka →</a>
           </div>`;
       } catch (e) {
         console.error(e);

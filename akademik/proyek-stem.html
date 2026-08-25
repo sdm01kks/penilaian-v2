@@ -44,6 +44,14 @@
   .helper-text{font-size:11px;color:var(--ink-muted);margin:2px 0 14px;line-height:1.5}
   .helper-text.warn{color:#a83a2b;font-weight:700}
 
+  .mapel-tp-row{margin-bottom:8px}
+  .mapel-tp-select{
+    width:100%;margin-top:6px;padding:8px 10px;border-radius:9px;
+    border:1.5px solid var(--border);font-family:inherit;font-size:12px;color:var(--ink);
+    background:var(--surface);outline:none;
+  }
+  .mapel-tp-select:disabled{background:var(--bg-light);color:var(--ink-muted)}
+
   .form-btns{display:flex;gap:8px;margin-top:4px}
   .form-btns .btn{flex:1}
 
@@ -89,13 +97,13 @@
           <div class="field-label">Judul Proyek</div>
           <textarea class="field-textarea" id="fJudul" style="min-height:50px;margin-bottom:14px" placeholder="mis. Membuat Alat Penjernih Air Sederhana"></textarea>
 
-          <div class="field-label">Mata Pelajaran Terlibat (pilih minimal 2)</div>
-          <div class="pick-grid" id="mapelGrid"></div>
-          <p class="helper-text" id="mapelHelper">Proyek STEM wajib melibatkan minimal 2 mata pelajaran.</p>
+          <div class="field-label">Mata Pelajaran Terlibat (pilih minimal 2, lalu tentukan TP yang dinilai lewat proyek ini untuk tiap mapel)</div>
+          <div id="mapelTpList"></div>
+          <p class="helper-text" id="mapelHelper">Proyek STEM wajib melibatkan minimal 2 mata pelajaran, dan tiap mapel wajib dikaitkan ke satu TP — nilai proyek untuk mapel itu akan masuk sebagai Sumatif Lingkup Materi TP tsb (bukan nilai berdiri sendiri).</p>
 
-          <div class="field-label">DPL yang Dinilai Lewat Proyek Ini</div>
+          <div class="field-label">DPL yang Diamati Lewat Proyek Ini (pilih 2–4 dimensi dominan)</div>
           <div class="pick-grid" id="dplGrid"></div>
-          <p class="helper-text" id="dplHelper">Hanya menampilkan DPL yang sedang aktif semester ini.</p>
+          <p class="helper-text" id="dplHelper">Hanya menampilkan DPL yang sedang aktif semester ini. Fokuskan ke 2–4 dimensi paling relevan, bukan mencentang semua.</p>
 
           <div class="field-row-2">
             <div>
@@ -140,7 +148,7 @@
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
-    tingkatanDariKelas, getMapelList, getDPLList, getConfigAkademik,
+    tingkatanDariKelas, getMapelList, getDPLList, getConfigAkademik, getTPList,
     getProyekStemByKelas, saveProyekStem, deleteProyekStem,
   } from '../assets/firestore-data-akademik.js';
 
@@ -216,7 +224,7 @@
         <div class="proyek-judul">${escapeHtml(p.judul)}</div>
         <div class="proyek-tanggal">${escapeHtml(p.tanggalMulai || '-')} s/d ${escapeHtml(p.tanggalSelesai || '-')} · ${p.jumlahPertemuan || 0}x pertemuan</div>
         <div class="chip-row">
-          ${(p.mapelTerlibat || []).map(m => `<span class="chip-mapel">${escapeHtml(m)}</span>`).join('')}
+          ${(p.mapelTerlibat || []).map(m => `<span class="chip-mapel">${escapeHtml(m.mapel)} — ${escapeHtml(m.namaTp || '(TP tidak ditemukan)')}</span>`).join('')}
         </div>
         <div class="chip-row">
           ${(p.dplId || []).map(id => {
@@ -226,35 +234,85 @@
         </div>
         <div class="proyek-actions">
           <button class="btn btn-secondary" onclick="bukaFormEdit('${p.id}')">Edit</button>
+          <a class="btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center" href="kokurikuler.html?kelas=${encodeURIComponent(kelas)}&proyekId=${p.id}">Isi Nilai DPL</a>
           <button class="btn btn-secondary" style="color:var(--red)" onclick="hapusProyek('${p.id}')">Hapus</button>
         </div>
       </div>`).join('');
   }
 
+  /* ---------------------------------------------------------------------
+     Pemilih mapel + TP. Tiap mapel dicentang -> muncul dropdown TP mapel
+     itu (di-fetch sekali, di-cache). Nilai proyek untuk mapel itu nanti
+     masuk sebagai SLM TP yang dipilih di sini — bukan nilai berdiri
+     sendiri (sesuai panduan penilaian STEM).
+     --------------------------------------------------------------------- */
+  const tpCachePerMapel = {};
+  async function tpUntukMapel(mapelNama) {
+    if (!(mapelNama in tpCachePerMapel)) {
+      tpCachePerMapel[mapelNama] = await getTPList({ mapel: mapelNama, tingkatan });
+    }
+    return tpCachePerMapel[mapelNama];
+  }
+
   function renderPickGrids() {
-    $('mapelGrid').innerHTML = mapelList.map(m => `
-      <label class="pick-chip" data-mapel="${escapeHtml(m.nama)}">
-        <input type="checkbox" value="${escapeHtml(m.nama)}">${escapeHtml(m.nama)}
-      </label>`).join('') || '<p class="helper-text warn">Belum ada data mapel untuk tingkatan ini.</p>';
+    $('mapelTpList').innerHTML = mapelList.map(m => `
+      <div class="mapel-tp-row">
+        <label class="pick-chip" data-mapel="${escapeHtml(m.nama)}">
+          <input type="checkbox" class="mapel-check" value="${escapeHtml(m.nama)}">${escapeHtml(m.nama)}
+        </label>
+        <select class="mapel-tp-select hidden" data-mapel-for="${escapeHtml(m.nama)}" disabled>
+          <option value="">Memuat TP…</option>
+        </select>
+      </div>
+    `).join('') || '<p class="helper-text warn">Belum ada data mapel untuk tingkatan ini.</p>';
+
+    $('mapelTpList').querySelectorAll('.mapel-check').forEach(cb => {
+      cb.addEventListener('change', async () => {
+        const chip = cb.closest('.pick-chip');
+        chip.classList.toggle('on-mapel', cb.checked);
+        const select = $('mapelTpList').querySelector(`.mapel-tp-select[data-mapel-for="${CSS.escape(cb.value)}"]`);
+        if (!cb.checked) { select.classList.add('hidden'); return; }
+        select.classList.remove('hidden');
+        select.disabled = true;
+        select.innerHTML = '<option value="">Memuat TP…</option>';
+        const tpList = await tpUntukMapel(cb.value);
+        if (!tpList.length) {
+          select.innerHTML = '<option value="">Belum ada TP untuk mapel ini — buat dulu lewat Setup TP</option>';
+          return;
+        }
+        select.innerHTML = '<option value="">-- Pilih TP yang dinilai lewat proyek ini --</option>' +
+          tpList.map(tp => `<option value="${tp.id}" data-nama="${escapeHtml(tp.namaTp)}">${escapeHtml(tp.namaTp)}</option>`).join('');
+        select.disabled = false;
+      });
+    });
+
     $('dplGrid').innerHTML = dplAktif.map(d => `
       <label class="pick-chip" data-dpl="${d.id}">
         <input type="checkbox" value="${d.id}">${escapeHtml(d.nama)}
       </label>`).join('') || '<p class="helper-text warn">Belum ada DPL aktif. Isi/aktifkan dulu lewat Kelola DPL.</p>';
-
-    $('mapelGrid').querySelectorAll('.pick-chip').forEach(chip => {
-      chip.addEventListener('click', () => setTimeout(() => chip.classList.toggle('on-mapel', chip.querySelector('input').checked), 0));
-    });
     $('dplGrid').querySelectorAll('.pick-chip').forEach(chip => {
       chip.addEventListener('click', () => setTimeout(() => chip.classList.toggle('on-dpl', chip.querySelector('input').checked), 0));
     });
   }
 
-  function resetPickGrids(mapelTerpilih = [], dplTerpilih = []) {
-    $('mapelGrid').querySelectorAll('.pick-chip').forEach(chip => {
-      const on = mapelTerpilih.includes(chip.dataset.mapel);
-      chip.querySelector('input').checked = on;
-      chip.classList.toggle('on-mapel', on);
-    });
+  async function resetPickGrids(mapelTpTerpilih = [], dplTerpilih = []) {
+    // Reset semua dulu.
+    $('mapelTpList').querySelectorAll('.mapel-check').forEach(cb => { cb.checked = false; cb.closest('.pick-chip').classList.remove('on-mapel'); });
+    $('mapelTpList').querySelectorAll('.mapel-tp-select').forEach(sel => { sel.classList.add('hidden'); sel.value = ''; });
+
+    for (const item of mapelTpTerpilih) {
+      const cb = $('mapelTpList').querySelector(`.mapel-check[value="${CSS.escape(item.mapel)}"]`);
+      if (!cb) continue;
+      cb.checked = true;
+      cb.closest('.pick-chip').classList.add('on-mapel');
+      const select = $('mapelTpList').querySelector(`.mapel-tp-select[data-mapel-for="${CSS.escape(item.mapel)}"]`);
+      select.classList.remove('hidden');
+      const tpList = await tpUntukMapel(item.mapel);
+      select.innerHTML = '<option value="">-- Pilih TP yang dinilai lewat proyek ini --</option>' +
+        tpList.map(tp => `<option value="${tp.id}" data-nama="${escapeHtml(tp.namaTp)}" ${tp.id === item.tpId ? 'selected' : ''}>${escapeHtml(tp.namaTp)}</option>`).join('');
+      select.disabled = false;
+    }
+
     $('dplGrid').querySelectorAll('.pick-chip').forEach(chip => {
       const on = dplTerpilih.includes(chip.dataset.dpl);
       chip.querySelector('input').checked = on;
@@ -262,19 +320,19 @@
     });
   }
 
-  window.bukaFormBaru = () => {
+  window.bukaFormBaru = async () => {
     editingId = null;
     $('formTitle').textContent = 'Rancang Proyek STEM Baru';
     $('fJudul').value = '';
     $('fTanggalMulai').value = '';
     $('fTanggalSelesai').value = '';
     $('fJumlahPertemuan').value = '';
-    resetPickGrids();
+    await resetPickGrids();
     $('formCard').classList.remove('hidden');
     $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  window.bukaFormEdit = (id) => {
+  window.bukaFormEdit = async (id) => {
     const p = proyekList.find(x => x.id === id);
     if (!p) return;
     editingId = id;
@@ -283,7 +341,7 @@
     $('fTanggalMulai').value = p.tanggalMulai || '';
     $('fTanggalSelesai').value = p.tanggalSelesai || '';
     $('fJumlahPertemuan').value = p.jumlahPertemuan || '';
-    resetPickGrids(p.mapelTerlibat || [], p.dplId || []);
+    await resetPickGrids(p.mapelTerlibat || [], p.dplId || []);
     $('formCard').classList.remove('hidden');
     $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -295,7 +353,11 @@
 
   window.simpanForm = async () => {
     const judul = $('fJudul').value.trim();
-    const mapelTerlibat = [...$('mapelGrid').querySelectorAll('input:checked')].map(i => i.value);
+    const mapelTerlibat = [...$('mapelTpList').querySelectorAll('.mapel-check:checked')].map(cb => {
+      const select = $('mapelTpList').querySelector(`.mapel-tp-select[data-mapel-for="${CSS.escape(cb.value)}"]`);
+      const opt = select?.selectedOptions[0];
+      return { mapel: cb.value, tpId: select?.value || '', namaTp: opt?.dataset.nama || '' };
+    });
     const dplId = [...$('dplGrid').querySelectorAll('input:checked')].map(i => i.value);
     const tanggalMulai = $('fTanggalMulai').value;
     const tanggalSelesai = $('fTanggalSelesai').value;
@@ -303,7 +365,8 @@
 
     if (!judul) { showToast('Judul proyek wajib diisi.', true); return; }
     if (mapelTerlibat.length < 2) { showToast('Proyek STEM wajib melibatkan minimal 2 mata pelajaran.', true); return; }
-    if (!dplId.length) { showToast('Pilih minimal 1 DPL yang dinilai lewat proyek ini.', true); return; }
+    if (mapelTerlibat.some(m => !m.tpId)) { showToast('Tiap mapel yang dicentang wajib dikaitkan ke satu TP — masih ada yang belum dipilih.', true); return; }
+    if (dplId.length < 2 || dplId.length > 4) { showToast('Pilih 2–4 DPL dominan yang diamati lewat proyek ini (sesuai panduan, tidak boleh kurang dari 2 atau lebih dari 4).', true); return; }
     if (tanggalMulai && tanggalSelesai && tanggalSelesai < tanggalMulai) {
       showToast('Tanggal selesai tidak boleh sebelum tanggal mulai.', true); return;
     }

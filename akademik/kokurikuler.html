@@ -33,10 +33,10 @@
 
   .dpl-block{background:var(--bg-light);border-radius:13px;padding:12px;margin-bottom:10px}
   .dpl-nama{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:9px}
-  .level-toggle{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
+  .level-toggle{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:9px}
   .level-toggle button{
-    padding:8px 2px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);
-    font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink-mid);cursor:pointer;
+    padding:8px 4px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);
+    font-family:inherit;font-size:10.5px;font-weight:800;color:var(--ink-mid);cursor:pointer;line-height:1.3;
   }
   .level-toggle button.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
   .dpl-desc-textarea{
@@ -92,16 +92,17 @@
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
-    tingkatanDariKelas, getSiswaByKelas, getConfigAkademik,
-    getDPLList, getKokurikulerByKelas, saveKokurikuler,
+    tingkatanDariKelas, getSiswaByKelas, getConfigAkademik, DPL_LEVEL_LABEL,
+    getDPLList, getKokurikulerByProyek, saveKokurikuler, getProyekStemByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const kelas = params.get('kelas') || '';
+  const proyekId = params.get('proyekId') || '';
   const tingkatan = tingkatanDariKelas(kelas);
 
-  let config = null, siswaList = [], dplAktif = [], nilaiMap = {};
+  let config = null, siswaList = [], dplProyek = [], nilaiMap = {}, proyek = null;
 
   function showToast(msg, isError = false) {
     $('toastMsg').textContent = msg;
@@ -124,32 +125,45 @@
   onAuthChange(async (s) => {
     if (!s) { window.location.href = 'login.html'; return; }
 
-    if (!kelas) { showEmptyScope('Tautan tidak lengkap — kelas tidak diketahui.'); return; }
+    if (!kelas || !proyekId) {
+      showEmptyScope('Tautan tidak lengkap — nilai Kokurikuler sekarang harus dibuka lewat proyek STEM tertentu, bukan langsung per kelas. Buka dari halaman Proyek STEM, pilih "Isi Nilai DPL" pada proyek yang dimaksud.');
+      return;
+    }
     const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
     if (!berhak) {
-      showEmptyScope(`Anda bukan wali kelas ${kelas}. Kokurikuler khusus diisi wali kelas, sama seperti Absensi.`);
+      showEmptyScope(`Anda bukan wali kelas ${kelas}. Kokurikuler khusus diisi wali kelas, sama seperti Absensi & Proyek STEM.`);
       return;
     }
 
-    $('subKelas').textContent = `Kelas ${kelas}`;
     if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
     $('appBody').style.display = 'block';
 
     try {
       config = await getConfigAkademik();
-      [siswaList, dplAktif] = await Promise.all([
+      const [semuaProyek, dplSemua, siswa] = await Promise.all([
+        getProyekStemByKelas(kelas, config.semesterAktif, config.tahunAjaran),
+        getDPLList(),
         getSiswaByKelas(kelas),
-        getDPLList({ hanyaAktif: true }),
       ]);
-      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${dplAktif.length} DPL aktif`;
+      proyek = semuaProyek.find(p => p.id === proyekId);
+      siswaList = siswa;
 
-      if (!dplAktif.length) {
-        showEmptyScope('Belum ada DPL yang diaktifkan. Minta admin mengisi/mengaktifkan lewat akademik/seed-dpl.html dulu.');
+      if (!proyek) {
+        showEmptyScope('Proyek STEM ini tidak ditemukan (mungkin sudah dihapus). Kembali ke halaman Proyek STEM.');
+        return;
+      }
+      $('subKelas').textContent = proyek.judul;
+      dplProyek = (proyek.dplId || []).map(id => dplSemua.find(d => d.id === id)).filter(Boolean);
+
+      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${dplProyek.length} DPL diamati lewat proyek ini`;
+
+      if (!dplProyek.length) {
+        showEmptyScope('Proyek ini belum punya DPL yang tercatat (mungkin DPL-nya sudah dinonaktifkan admin). Cek/edit dulu lewat halaman Proyek STEM.');
         return;
       }
       if (!siswaList.length) showToast('Belum ada data siswa aktif untuk kelas ini.', true);
 
-      nilaiMap = await getKokurikulerByKelas(kelas, config.semesterAktif, config.tahunAjaran);
+      nilaiMap = await getKokurikulerByProyek(proyekId, kelas);
       renderSiswaList();
     } catch (e) {
       console.error(e);
@@ -160,27 +174,27 @@
   function renderSiswaList() {
     $('siswaList').innerHTML = siswaList.map((sw, i) => {
       const nilaiSiswa = nilaiMap[sw.id] || {};
-      const terisi = dplAktif.filter(d => nilaiSiswa[d.id]).length;
+      const terisi = dplProyek.filter(d => nilaiSiswa[d.id]).length;
       return `
       <div class="siswa-card" id="swc-${i}">
         <div class="siswa-card-head" onclick="toggleCard(${i})">
           <div class="siswa-avatar">${escapeHtml(initials(sw.nama))}</div>
           <div class="siswa-head-body">
             <div class="siswa-head-nama">${escapeHtml(sw.nama)}</div>
-            <div class="siswa-head-meta">${terisi}/${dplAktif.length} DPL terisi</div>
+            <div class="siswa-head-meta">${terisi}/${dplProyek.length} DPL terisi</div>
           </div>
           <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
         </div>
         <div class="siswa-card-body">
-          ${dplAktif.map(d => {
+          ${dplProyek.map(d => {
             const existing = nilaiSiswa[d.id];
             const lvl = existing ? existing.level : null;
             return `
             <div class="dpl-block">
               <div class="dpl-nama">${escapeHtml(d.nama)}</div>
               <div class="level-toggle" id="lvltg-${sw.id}-${d.id}">
-                ${[1,2,3,4].map(l => `
-                  <button type="button" class="${lvl === l ? 'active' : ''}" onclick="pilihLevel('${sw.id}','${d.id}',${l})">${l}</button>
+                ${DPL_LEVEL_LABEL.map((label, idx) => `
+                  <button type="button" class="${lvl === idx + 1 ? 'active' : ''}" onclick="pilihLevel('${sw.id}','${d.id}',${idx + 1})">${escapeHtml(label)}</button>
                 `).join('')}
               </div>
               <textarea class="dpl-desc-textarea" id="desc-${sw.id}-${d.id}" placeholder="Deskripsi capaian…">${escapeHtml(existing ? existing.deskripsi : '')}</textarea>
@@ -201,7 +215,7 @@
 
     // Isi otomatis deskripsi dari bank DPL kalau kotak deskripsi masih kosong —
     // guru tetap bebas mengedit sebelum menyimpan.
-    const dpl = dplAktif.find(d => d.id === dplId);
+    const dpl = dplProyek.find(d => d.id === dplId);
     const box = $(`desc-${siswaId}-${dplId}`);
     if (dpl && !box.value.trim() && dpl.levelDeskripsi && dpl.levelDeskripsi[level - 1]) {
       box.value = dpl.levelDeskripsi[level - 1];
@@ -211,7 +225,7 @@
   window.simpanSiswa = async (siswaId) => {
     const nilaiSiswa = nilaiMap[siswaId] || {};
     const toSave = [];
-    for (const d of dplAktif) {
+    for (const d of dplProyek) {
       const wrap = $(`lvltg-${siswaId}-${d.id}`);
       const level = wrap.dataset.selected ? parseInt(wrap.dataset.selected, 10) : (nilaiSiswa[d.id]?.level || null);
       if (!level) continue; // belum dipilih levelnya, lewati
@@ -227,12 +241,12 @@
     try {
       for (const item of toSave) {
         await saveKokurikuler(
-          { siswaId, dplId: item.dplId, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, level: item.level, deskripsi: item.deskripsi },
+          { siswaId, dplId: item.dplId, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, proyekStemId: proyekId, level: item.level, deskripsi: item.deskripsi },
           item.existingId
         );
       }
       showToast(`Tersimpan ${toSave.length} DPL.`);
-      nilaiMap = await getKokurikulerByKelas(kelas, config.semesterAktif, config.tahunAjaran);
+      nilaiMap = await getKokurikulerByProyek(proyekId, kelas);
       renderSiswaList();
       const idx = siswaList.findIndex(s => s.id === siswaId);
       $('swc-' + idx)?.classList.add('open');
@@ -242,7 +256,7 @@
     }
   };
 
-  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+  $('btnBack').addEventListener('click', () => { window.location.href = `proyek-stem.html?kelas=${encodeURIComponent(kelas)}`; });
 </script>
 </body>
 </html>

@@ -90,7 +90,7 @@
 
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
-  import { getDPLList, saveDPL } from '../assets/firestore-data-akademik.js';
+  import { getDPLList, saveDPL, DPL_LEVEL_LABEL } from '../assets/firestore-data-akademik.js';
 
   const cardsEl = document.getElementById('cards');
   const logEl = document.getElementById('log');
@@ -132,10 +132,10 @@
         <span class="sw"></span>
         <span class="lbl">Aktif semester ini</span>
       </label>
-      ${[1,2,3,4].map(lvl => `
+      ${DPL_LEVEL_LABEL.map((label, idx) => `
         <div class="level-block">
-          <label>Deskripsi Level ${lvl}</label>
-          <textarea class="f-level" data-lvl="${lvl}" placeholder="Kalimat deskripsi capaian untuk level ${lvl}…">${escapeHtml(lv[lvl-1] || '')}</textarea>
+          <label>${escapeHtml(label)}</label>
+          <textarea class="f-level" data-lvl="${idx + 1}" placeholder="Kalimat deskripsi capaian untuk level &quot;${escapeHtml(label)}&quot;…">${escapeHtml(lv[idx] || '')}</textarea>
         </div>
       `).join('')}
     `;
@@ -172,6 +172,16 @@
     await muatData();
   });
 
+  // 8 Dimensi Profil Lulusan — nama-nama ini dari dokumen panduan penilaian
+  // proyek STEM sekolah (BAB IV), BUKAN 6 Dimensi Profil Pelajar Pancasila
+  // nasional — sengaja beda, jangan disamakan. Deskripsi tiap level TIDAK
+  // saya isi otomatis (itu perlu dirumuskan sesuai konteks tiap dimensi),
+  // cuma namanya yang sudah pasti dari sumber resmi.
+  const DPL_SEKOLAH = [
+    'Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas',
+    'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi',
+  ];
+
   async function muatData() {
     try {
       const existing = await getDPLList();
@@ -180,7 +190,8 @@
         existing.forEach(d => addCard(d));
         log(`Memuat ${existing.length} DPL yang sudah tersimpan.`);
       } else {
-        log('Belum ada data DPL. Klik "+ Tambah DPL" untuk mulai mengisi 8 dimensi.');
+        DPL_SEKOLAH.forEach((nama, i) => addCard({ nama, urutan: i + 1, aktif: false }));
+        log(`Belum ada data tersimpan. 8 nama dimensi (dari panduan penilaian STEM) sudah diisi otomatis — lengkapi deskripsi tiap level, aktifkan yang dipakai semester ini, lalu simpan.`);
       }
       updateCounter();
     } catch (e) {
