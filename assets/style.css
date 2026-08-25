@@ -394,6 +394,32 @@ body{
   background:var(--green-ghost);border-radius:10px;padding:8px;margin-top:12px;
 }
 
+/* ---- Rubrik Menulis (skor 1-4 per kategori) ---- */
+.rubrik-legend{
+  font-size:11px;color:var(--ink-muted);font-weight:600;line-height:1.6;
+  background:var(--bg-light);border-radius:10px;padding:8px 10px;margin-bottom:14px;
+}
+.rubrik-row{margin-bottom:14px}
+.rubrik-row:last-child{margin-bottom:0}
+.rubrik-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px}
+.rubrik-label{font-size:12.5px;font-weight:700;color:var(--ink-mid)}
+.rubrik-sublabel{font-size:10.5px;color:var(--ink-muted);font-weight:600}
+.rubrik-skor-btns{display:flex;gap:6px}
+.rubrik-skor-btns button{
+  flex:1;height:38px;border-radius:10px;border:1.5px solid var(--border);
+  background:var(--surface);font-family:inherit;font-size:14px;font-weight:800;
+  color:var(--ink-muted);cursor:pointer;transition:all .15s ease;
+}
+.rubrik-skor-btns button.active{
+  background:var(--green-dark);border-color:var(--green-dark);color:#fff;
+  box-shadow:0 4px 10px rgba(30,77,59,.22);
+}
+.rubrik-avg-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;
+  padding:3px 9px;border-radius:20px;background:var(--green-pale);color:var(--green-dark);
+  white-space:nowrap;
+}
+
 /* ---- Aspek KKTP (slider) ---- */
 .aspek-row{margin-bottom:18px}
 .aspek-row:last-child{margin-bottom:4px}
