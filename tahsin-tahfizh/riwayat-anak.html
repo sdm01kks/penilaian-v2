@@ -110,6 +110,19 @@
     div.textContent = s || '';
     return div.innerHTML;
   }
+  function menulisPosisiLabel(r) {
+    if (!r) return '-';
+    if (r.materi?.tipe === 'quran') return r.materi.label;
+    if (r.materi?.tipe === 'iqro') return `Iqro ${r.materi.jilidIqro} — Hal. ${r.materi.halamanMulai}${r.materi.halamanAkhir !== r.materi.halamanMulai ? '–' + r.materi.halamanAkhir : ''}`;
+    return `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`;
+  }
+  function menulisRataRata(r) {
+    const p = r?.penilaian;
+    if (!p) return null;
+    const vals = [p.hurufSambungan, p.harakat, p.keutuhanTeks, p.kerapian].filter(v => typeof v === 'number');
+    if (!vals.length) return null;
+    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  }
   function toDate(ts) {
     if (!ts) return null;
     if (typeof ts?.toDate === 'function') return ts.toDate();
@@ -268,7 +281,8 @@
         <div class="card">
           ${menulisTerakhir ? `
             <div class="progress-info-row"><span class="k">Terakhir diperiksa</span><span class="v">${formatTanggal(menulisTerakhir.tanggalPeriksa)}</span></div>
-            <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.jilidIqro ? `Iqro ${menulisTerakhir.jilidIqro} — ` : ''}${menulisTerakhir.halamanAkhir}</span></div>
+            <div class="progress-info-row"><span class="k">Posisi terakhir</span><span class="v">${escapeHtml(menulisPosisiLabel(menulisTerakhir))}</span></div>
+            ${menulisRataRata(menulisTerakhir) ? `<div class="progress-info-row"><span class="k">Rata-rata penilaian</span><span class="v">${menulisRataRata(menulisTerakhir)}/4</span></div>` : ''}
             <div class="progress-info-row"><span class="k">Total pemeriksaan</span><span class="v">${menulisCache.length}x</span></div>
           ` : `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`}
         </div>

@@ -126,7 +126,7 @@
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
   import { getSiswaList, getRiwayatSetoran, getMenulisLog, deleteSetoran, deleteMenulisLog, updateSetoran, updateMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
-  import { surahByNo } from '../assets/quran-surah.js';
+  import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
 
@@ -329,6 +329,22 @@
     return div.innerHTML;
   }
 
+  /* ---- Helper posisi & nilai Menulis (aman untuk entri lama tanpa `materi`) ---- */
+  function menulisPosisiLabel(r) {
+    if (!r) return '-';
+    if (r.materi?.tipe === 'quran') return r.materi.label;
+    if (r.materi?.tipe === 'iqro') return `Iqro ${r.materi.jilidIqro} — Hal. ${r.materi.halamanMulai}${r.materi.halamanAkhir !== r.materi.halamanMulai ? '–' + r.materi.halamanAkhir : ''}`;
+    // Entri lama sebelum field `materi` ditambahkan
+    return `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`;
+  }
+  function menulisRataRata(r) {
+    const p = r?.penilaian;
+    if (!p) return null;
+    const vals = [p.hurufSambungan, p.harakat, p.keutuhanTeks, p.kerapian].filter(v => typeof v === 'number');
+    if (!vals.length) return null;
+    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  }
+
   function ringkasDetailAyat(detailAyat) {
     if (!detailAyat || !detailAyat.length) return '';
     let lulus = 0, gagal = 0, tajwid = 0, makhroj = 0;
@@ -429,7 +445,9 @@
       $('menulisList').innerHTML = `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`;
       return;
     }
-    $('menulisList').innerHTML = menulisCache.map(r => `
+    $('menulisList').innerHTML = menulisCache.map(r => {
+      const rata = menulisRataRata(r);
+      return `
       <div class="setoran-card">
         <div class="setoran-card-head">
           <span class="jenis-badge murojaah">Pemeriksaan</span>
@@ -437,12 +455,14 @@
           ${editBtnHtml(r.id, 'menulis')}
           ${deleteBtnHtml(r.id, 'menulis')}
         </div>
-        <div class="materi-label">${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
+        <div class="materi-label">${escapeHtml(menulisPosisiLabel(r))}</div>
+        ${rata ? `<span class="rubrik-avg-badge" style="margin-top:6px">Rata-rata penilaian ${rata}/4</span>` : ''}
         ${r.catatan ? `<div class="setoran-catatan">"${escapeHtml(r.catatan)}"</div>` : ''}
         ${guruAttributionHtml(r)}
         ${editPanelMenulisHtml(r)}
       </div>
-    `).join('');
+    `;
+    }).join('');
     attachDeleteHandlers('menulisList', 'menulis');
     attachEditHandlers('menulisList', 'menulis');
   }
@@ -492,27 +512,76 @@
     `;
   }
 
-  /* ---- Panel edit: menulis (tanggal, jilid, halaman, catatan) ---- */
+  /* ---- Panel edit: menulis (cabang berdasarkan tipe materi ENTRI itu sendiri,
+     bukan status siswa saat ini — supaya riwayat lama tetap akurat kalau siswa
+     sudah naik jenjang dari Iqro ke Al-Qur'an) ---- */
   function editPanelMenulisHtml(r) {
-    const isIqroBelumTamat = selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro;
+    const isQuranEntry = r.materi?.tipe === 'quran';
+
+    if (isQuranEntry) {
+      const surahOpts = SURAH_LIST.map(s => `<option value="${s.no}">${s.no}. ${s.nama}</option>`).join('');
+      return `
+        <div class="edit-panel hidden" id="editPanel-${r.id}">
+          <div class="field-label">Tanggal Periksa</div>
+          <input type="date" class="select-field" id="editTanggal-${r.id}" value="${toDateInputValue(r.tanggalPeriksa)}" style="margin-bottom:10px">
+          <div class="field-row-2">
+            <div>
+              <div class="field-label">Surah Awal</div>
+              <select class="select-field" id="editSurahAwal-${r.id}">${surahOpts}</select>
+            </div>
+            <div>
+              <div class="field-label">Ayat Mulai</div>
+              <input type="number" class="select-field" id="editAyatMulai-${r.id}" value="${r.materi.ayatMulai}" min="1">
+            </div>
+          </div>
+          <div class="field-row-2">
+            <div>
+              <div class="field-label">Surah Akhir</div>
+              <select class="select-field" id="editSurahAkhir-${r.id}">${surahOpts}</select>
+            </div>
+            <div>
+              <div class="field-label">Ayat Akhir</div>
+              <input type="number" class="select-field" id="editAyatAkhir-${r.id}" value="${r.materi.ayatAkhir}" min="1">
+            </div>
+          </div>
+
+          <div class="field-label" style="margin-top:10px">Penilaian Menulis</div>
+          <div class="rubrik-legend" style="margin-top:6px;margin-bottom:10px">Skor 1 = perlu bimbingan &middot; 2 = cukup &middot; 3 = baik &middot; 4 = sangat baik</div>
+          ${rubrikEditRowHtml(r.id, 'hurufSambungan', 'Kebenaran Huruf & Sambungan', r.penilaian?.hurufSambungan)}
+          ${rubrikEditRowHtml(r.id, 'harakat', 'Kelengkapan Harakat', r.penilaian?.harakat)}
+          ${rubrikEditRowHtml(r.id, 'keutuhanTeks', 'Keutuhan Teks', r.penilaian?.keutuhanTeks)}
+          ${rubrikEditRowHtml(r.id, 'kerapian', 'Kerapian & Keterbacaan', r.penilaian?.kerapian)}
+
+          <div class="field-label" style="margin-top:10px">Catatan</div>
+          <textarea class="field-textarea" id="editCatatan-${r.id}" style="min-height:56px">${escapeHtml(r.catatan || '')}</textarea>
+          <div class="edit-actions">
+            <button type="button" class="btn-edit-save" data-id="${r.id}" data-kind="menulis">Simpan</button>
+            <button type="button" class="btn-edit-cancel" data-id="${r.id}">Batal</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Entri jenjang Iqro (termasuk entri lama sebelum field `materi` ditambahkan)
+    const jilidAwal = r.materi?.jilidIqro ?? r.jilidIqro ?? 1;
+    const halMulaiAwal = r.materi?.halamanMulai ?? r.halamanMulai;
+    const halAkhirAwal = r.materi?.halamanAkhir ?? r.halamanAkhir;
     return `
       <div class="edit-panel hidden" id="editPanel-${r.id}">
         <div class="field-label">Tanggal Periksa</div>
         <input type="date" class="select-field" id="editTanggal-${r.id}" value="${toDateInputValue(r.tanggalPeriksa)}" style="margin-bottom:10px">
-        ${isIqroBelumTamat ? `
-          <div class="field-label">Jilid Iqro</div>
-          <select class="select-field" id="editJilid-${r.id}" style="margin-bottom:10px">
-            ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${r.jilidIqro === n ? 'selected' : ''}>Iqro Jilid ${n}</option>`).join('')}
-          </select>
-        ` : ''}
+        <div class="field-label">Jilid Iqro</div>
+        <select class="select-field" id="editJilid-${r.id}" style="margin-bottom:10px">
+          ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${jilidAwal === n ? 'selected' : ''}>Iqro Jilid ${n}</option>`).join('')}
+        </select>
         <div class="field-row-2">
           <div>
             <div class="field-label">Halaman Mulai</div>
-            <input type="number" class="select-field" id="editHalMulai-${r.id}" value="${r.halamanMulai}" min="1">
+            <input type="number" class="select-field" id="editHalMulai-${r.id}" value="${halMulaiAwal}" min="1">
           </div>
           <div>
             <div class="field-label">Halaman Akhir</div>
-            <input type="number" class="select-field" id="editHalAkhir-${r.id}" value="${r.halamanAkhir}" min="1">
+            <input type="number" class="select-field" id="editHalAkhir-${r.id}" value="${halAkhirAwal}" min="1">
           </div>
         </div>
         <div class="field-label" style="margin-top:10px">Catatan</div>
@@ -521,6 +590,17 @@
           <button type="button" class="btn-edit-save" data-id="${r.id}" data-kind="menulis">Simpan</button>
           <button type="button" class="btn-edit-cancel" data-id="${r.id}">Batal</button>
         </div>
+      </div>
+    `;
+  }
+
+  function rubrikEditRowHtml(id, key, label, val) {
+    return `
+      <div class="rubrik-row" style="margin-bottom:10px">
+        <div class="rubrik-head" style="margin-bottom:5px"><span class="rubrik-label">${label}</span></div>
+        <select class="select-field" id="editRubrik-${key}-${id}">
+          ${[1,2,3,4].map(n => `<option value="${n}" ${val === n ? 'selected' : ''}>${n}</option>`).join('')}
+        </select>
       </div>
     `;
   }
@@ -597,14 +677,45 @@
             renderMembacaList();
             renderHafalanList();
           } else {
-            const patch = {
-              tanggalPeriksa: document.getElementById(`editTanggal-${id}`).value,
-              halamanMulai: +document.getElementById(`editHalMulai-${id}`).value,
-              halamanAkhir: +document.getElementById(`editHalAkhir-${id}`).value,
-              catatan: $(`editCatatan-${id}`).value.trim(),
-            };
-            const jilidEl = document.getElementById(`editJilid-${id}`);
-            if (jilidEl) patch.jilidIqro = +jilidEl.value;
+            const isQuranEntry = !!document.getElementById(`editSurahAwal-${id}`);
+            let patch;
+            if (isQuranEntry) {
+              const surahAwal = +document.getElementById(`editSurahAwal-${id}`).value;
+              const surahAkhir = +document.getElementById(`editSurahAkhir-${id}`).value;
+              const ayatMulai = Math.max(1, +document.getElementById(`editAyatMulai-${id}`).value || 1);
+              const ayatAkhir = Math.max(1, +document.getElementById(`editAyatAkhir-${id}`).value || 1);
+              const label = surahAwal === surahAkhir
+                ? `${surahByNo(surahAwal).nama} ayat ${ayatMulai}-${ayatAkhir}`
+                : `${surahByNo(surahAwal).nama}:${ayatMulai} — ${surahByNo(surahAkhir).nama}:${ayatAkhir}`;
+              patch = {
+                tanggalPeriksa: document.getElementById(`editTanggal-${id}`).value,
+                catatan: $(`editCatatan-${id}`).value.trim(),
+                materi: {
+                  tipe: 'quran', surahAwal, ayatMulai, surahAkhir, ayatAkhir,
+                  totalAyat: hitungTotalAyat(surahAwal, ayatMulai, surahAkhir, ayatAkhir),
+                  label,
+                },
+                penilaian: {
+                  hurufSambungan: +document.getElementById(`editRubrik-hurufSambungan-${id}`).value,
+                  harakat: +document.getElementById(`editRubrik-harakat-${id}`).value,
+                  keutuhanTeks: +document.getElementById(`editRubrik-keutuhanTeks-${id}`).value,
+                  kerapian: +document.getElementById(`editRubrik-kerapian-${id}`).value,
+                },
+              };
+            } else {
+              const jilidIqro = +document.getElementById(`editJilid-${id}`).value;
+              const halamanMulai = +document.getElementById(`editHalMulai-${id}`).value;
+              const halamanAkhir = +document.getElementById(`editHalAkhir-${id}`).value;
+              patch = {
+                tanggalPeriksa: document.getElementById(`editTanggal-${id}`).value,
+                jilidIqro, halamanMulai, halamanAkhir,
+                catatan: $(`editCatatan-${id}`).value.trim(),
+                materi: {
+                  tipe: 'iqro', jilidIqro, halamanMulai, halamanAkhir,
+                  label: `Iqro ${jilidIqro} — Hal. ${halamanMulai}${halamanAkhir !== halamanMulai ? '–' + halamanAkhir : ''}`,
+                },
+              };
+            }
             await updateMenulisLog(id, patch);
             const idx = menulisCache.findIndex(x => x.id === id);
             if (idx >= 0) menulisCache[idx] = { ...menulisCache[idx], ...patch };
@@ -687,7 +798,8 @@
       <div class="card">
         ${menulisTerakhir ? `
           <div class="progress-info-row"><span class="k">Terakhir diperiksa</span><span class="v">${formatTanggal(menulisTerakhir.tanggalPeriksa)}</span></div>
-          <div class="progress-info-row"><span class="k">Halaman terakhir</span><span class="v">${menulisTerakhir.jilidIqro ? `Iqro ${menulisTerakhir.jilidIqro} — ` : ''}${menulisTerakhir.halamanAkhir}</span></div>
+          <div class="progress-info-row"><span class="k">Posisi terakhir</span><span class="v">${escapeHtml(menulisPosisiLabel(menulisTerakhir))}</span></div>
+          ${menulisRataRata(menulisTerakhir) ? `<div class="progress-info-row"><span class="k">Rata-rata penilaian</span><span class="v">${menulisRataRata(menulisTerakhir)}/4</span></div>` : ''}
           <div class="progress-info-row"><span class="k">Total pemeriksaan</span><span class="v">${menulisCache.length}x</span></div>
         ` : `<div class="siswa-empty-note">Belum ada catatan pemeriksaan menulis.</div>`}
       </div>

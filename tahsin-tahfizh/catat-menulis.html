@@ -102,7 +102,7 @@
 
         <!-- ============ FORM ============ -->
         <div id="formSection" class="hidden">
-          <div class="section-label"><span class="bar"></span>Progres Menyalin</div>
+          <div class="section-label"><span class="bar"></span>Materi Salinan</div>
           <div class="card">
             <div id="jilidIqroWrap" class="hidden" style="margin-bottom:12px">
               <div class="field-label">Jilid Iqro</div>
@@ -118,28 +118,124 @@
             <div class="field-label">Tanggal Periksa</div>
             <input type="date" class="select-field" id="tanggalPeriksa" style="margin-bottom:12px">
 
-            <div class="field-row-2">
-              <div>
-                <div class="stepper-label">Halaman Mulai</div>
-                <div class="stepper">
-                  <button type="button" data-step="halMulai" data-dir="-1">−</button>
-                  <span class="val" id="halMulaiVal">1</span>
-                  <button type="button" data-step="halMulai" data-dir="1">+</button>
+            <!-- Materi Iqro (jilid & halaman) -->
+            <div id="materiIqroWrap">
+              <div class="field-row-2">
+                <div>
+                  <div class="stepper-label">Halaman Mulai</div>
+                  <div class="stepper">
+                    <button type="button" data-step="halMulai" data-dir="-1">−</button>
+                    <span class="val" id="halMulaiVal">1</span>
+                    <button type="button" data-step="halMulai" data-dir="1">+</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="stepper-label">Halaman Akhir</div>
+                  <div class="stepper">
+                    <button type="button" data-step="halAkhir" data-dir="-1">−</button>
+                    <span class="val" id="halAkhirVal">1</span>
+                    <button type="button" data-step="halAkhir" data-dir="1">+</button>
+                  </div>
                 </div>
               </div>
-              <div>
-                <div class="stepper-label">Halaman Akhir</div>
-                <div class="stepper">
-                  <button type="button" data-step="halAkhir" data-dir="-1">−</button>
-                  <span class="val" id="halAkhirVal">1</span>
-                  <button type="button" data-step="halAkhir" data-dir="1">+</button>
+              <div class="total-materi-note" id="totalHalNote">Total: 1 halaman sejak terakhir diperiksa</div>
+            </div>
+
+            <!-- Materi Al-Qur'an (surah & ayat) -->
+            <div id="materiQuranWrap" class="hidden">
+              <div class="field-row-2">
+                <div>
+                  <div class="field-label">Surah Awal</div>
+                  <select class="select-field" id="surahAwal"></select>
+                </div>
+                <div>
+                  <div class="field-label">Surah Akhir</div>
+                  <select class="select-field" id="surahAkhir"></select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div>
+                  <div class="stepper-label">Ayat Mulai</div>
+                  <div class="stepper">
+                    <button type="button" data-step="ayatMulai" data-dir="-1">−</button>
+                    <span class="val" id="ayatMulaiVal">1</span>
+                    <button type="button" data-step="ayatMulai" data-dir="1">+</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="stepper-label">Ayat Akhir</div>
+                  <div class="stepper">
+                    <button type="button" data-step="ayatAkhir" data-dir="-1">−</button>
+                    <span class="val" id="ayatAkhirVal">7</span>
+                    <button type="button" data-step="ayatAkhir" data-dir="1">+</button>
+                  </div>
+                </div>
+              </div>
+              <div class="total-materi-note" id="totalAyatNote">Total: 7 ayat</div>
+            </div>
+
+            <div class="field-label" style="margin-top:14px">Catatan (opsional)</div>
+            <textarea class="field-textarea" id="catatanMenulis" placeholder="Catatan tambahan di luar rubrik, mis. konteks atau saran latihan…" style="min-height:60px"></textarea>
+          </div>
+
+          <!-- ============ PENILAIAN MENULIS (rubrik, khusus jenjang Al-Qur'an) ============ -->
+          <div id="penilaianSection" class="hidden">
+            <div class="section-label"><span class="bar"></span>Penilaian Menulis</div>
+            <div class="card">
+              <div class="rubrik-legend">Skor 1 = perlu bimbingan &middot; 2 = cukup &middot; 3 = baik &middot; 4 = sangat baik</div>
+
+              <div class="rubrik-row">
+                <div class="rubrik-head">
+                  <span class="rubrik-label">Kebenaran Huruf &amp; Sambungan</span>
+                  <span class="rubrik-sublabel">Shurah huruf hijaiyah</span>
+                </div>
+                <div class="rubrik-skor-btns" data-rubrik="hurufSambungan">
+                  <button type="button" data-skor="1">1</button>
+                  <button type="button" data-skor="2">2</button>
+                  <button type="button" data-skor="3">3</button>
+                  <button type="button" data-skor="4">4</button>
+                </div>
+              </div>
+
+              <div class="rubrik-row">
+                <div class="rubrik-head">
+                  <span class="rubrik-label">Kelengkapan Harakat</span>
+                  <span class="rubrik-sublabel">Tasykil</span>
+                </div>
+                <div class="rubrik-skor-btns" data-rubrik="harakat">
+                  <button type="button" data-skor="1">1</button>
+                  <button type="button" data-skor="2">2</button>
+                  <button type="button" data-skor="3">3</button>
+                  <button type="button" data-skor="4">4</button>
+                </div>
+              </div>
+
+              <div class="rubrik-row">
+                <div class="rubrik-head">
+                  <span class="rubrik-label">Keutuhan Teks</span>
+                  <span class="rubrik-sublabel">Kesesuaian mushaf</span>
+                </div>
+                <div class="rubrik-skor-btns" data-rubrik="keutuhanTeks">
+                  <button type="button" data-skor="1">1</button>
+                  <button type="button" data-skor="2">2</button>
+                  <button type="button" data-skor="3">3</button>
+                  <button type="button" data-skor="4">4</button>
+                </div>
+              </div>
+
+              <div class="rubrik-row">
+                <div class="rubrik-head">
+                  <span class="rubrik-label">Kerapian &amp; Keterbacaan</span>
+                  <span class="rubrik-sublabel">Khat</span>
+                </div>
+                <div class="rubrik-skor-btns" data-rubrik="kerapian">
+                  <button type="button" data-skor="1">1</button>
+                  <button type="button" data-skor="2">2</button>
+                  <button type="button" data-skor="3">3</button>
+                  <button type="button" data-skor="4">4</button>
                 </div>
               </div>
             </div>
-            <div class="total-materi-note" id="totalHalNote">Total: 1 halaman sejak terakhir diperiksa</div>
-
-            <div class="field-label" style="margin-top:14px">Catatan (opsional)</div>
-            <textarea class="field-textarea" id="catatanMenulis" placeholder="Mis. tulisan makin rapi, perlu perhatikan sambungan huruf…" style="min-height:60px"></textarea>
           </div>
 
           <div class="section-label"><span class="bar"></span>Riwayat Pemeriksaan</div>
@@ -169,6 +265,7 @@
 <script type="module">
   import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
   import { getSiswaList, saveMenulisLog, getMenulisLog } from '../assets/firestore-data.js';
+  import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../assets/quran-surah.js';
 
   const $ = (id) => document.getElementById(id);
   let currentUser = null;
@@ -301,11 +398,26 @@
     $('formSection').classList.remove('hidden');
     $('footerBlock').classList.remove('hidden');
 
-    $('jilidIqroWrap').classList.toggle('hidden', s.jenjang !== 'iqro' || !!s.tamatIqro);
+    // Jenjang Iqro (belum tamat) menyalin buku Iqro (jilid & halaman).
+    // Jenjang Al-Qur'an (sudah tamat Iqro / kelas atas) menyalin mushaf,
+    // dipilih lewat surah & ayat, dan mendapat rubrik penilaian menulis.
+    const isIqroBelumTamat = s.jenjang === 'iqro' && !s.tamatIqro;
+
+    $('jilidIqroWrap').classList.toggle('hidden', !isIqroBelumTamat);
     $('jilidIqro').value = '1';
+    $('materiIqroWrap').classList.toggle('hidden', !isIqroBelumTamat);
+    $('materiQuranWrap').classList.toggle('hidden', isIqroBelumTamat);
+    $('penilaianSection').classList.toggle('hidden', isIqroBelumTamat);
 
     iqroLikeState.halMulai = 1; iqroLikeState.halAkhir = 1;
     refreshHalaman();
+
+    quranState.surahAwal = 1; quranState.ayatMulai = 1; quranState.surahAkhir = 1; quranState.ayatAkhir = 7;
+    refreshQuranMateri();
+
+    rubrikState = { hurufSambungan: null, harakat: null, keutuhanTeks: null, kerapian: null };
+    renderRubrikButtons();
+
     $('catatanMenulis').value = '';
 
     await loadRiwayat(s.id);
@@ -323,7 +435,7 @@
     renderSiswaResults();
   });
 
-  /* ---- Stepper halaman ---- */
+  /* ---- Stepper halaman (Iqro) & ayat (Al-Qur'an) ---- */
   const iqroLikeState = { halMulai: 1, halAkhir: 1 };
   function refreshHalaman() {
     if (iqroLikeState.halAkhir < iqroLikeState.halMulai) iqroLikeState.halAkhir = iqroLikeState.halMulai;
@@ -332,14 +444,80 @@
     const total = iqroLikeState.halAkhir - iqroLikeState.halMulai + 1;
     $('totalHalNote').textContent = `Total: ${total} halaman sejak terakhir diperiksa`;
   }
+
+  function populateSurahSelects() {
+    const opts = SURAH_LIST.map(s => `<option value="${s.no}">${s.no}. ${s.nama} (${s.ayat} ayat)</option>`).join('');
+    $('surahAwal').innerHTML = opts;
+    $('surahAkhir').innerHTML = opts;
+  }
+  populateSurahSelects();
+
+  const quranState = { surahAwal: 1, ayatMulai: 1, surahAkhir: 1, ayatAkhir: 7 };
+  function clampAyat(surahNo, ayat) {
+    const s = surahByNo(surahNo);
+    return Math.min(Math.max(1, ayat), s.ayat);
+  }
+  function refreshQuranMateri() {
+    quranState.ayatMulai = clampAyat(quranState.surahAwal, quranState.ayatMulai);
+    quranState.ayatAkhir = clampAyat(quranState.surahAkhir, quranState.ayatAkhir);
+    $('surahAwal').value = quranState.surahAwal;
+    $('surahAkhir').value = quranState.surahAkhir;
+    $('ayatMulaiVal').textContent = quranState.ayatMulai;
+    $('ayatAkhirVal').textContent = quranState.ayatAkhir;
+    const total = hitungTotalAyat(quranState.surahAwal, quranState.ayatMulai, quranState.surahAkhir, quranState.ayatAkhir);
+    $('totalAyatNote').textContent = `Total: ${total} ayat`;
+  }
+  $('surahAwal').addEventListener('change', (e) => { quranState.surahAwal = +e.target.value; refreshQuranMateri(); });
+  $('surahAkhir').addEventListener('change', (e) => { quranState.surahAkhir = +e.target.value; refreshQuranMateri(); });
+
   document.querySelectorAll('[data-step]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.step;
       const dir = +btn.dataset.dir;
-      iqroLikeState[key] = Math.max(1, iqroLikeState[key] + dir);
-      refreshHalaman();
+      if (key === 'ayatMulai' || key === 'ayatAkhir') {
+        quranState[key] += dir;
+        refreshQuranMateri();
+      } else {
+        iqroLikeState[key] = Math.max(1, iqroLikeState[key] + dir);
+        refreshHalaman();
+      }
     });
   });
+
+  function materiQuranLabel() {
+    return quranState.surahAwal === quranState.surahAkhir
+      ? `${surahByNo(quranState.surahAwal).nama} ayat ${quranState.ayatMulai}-${quranState.ayatAkhir}`
+      : `${surahByNo(quranState.surahAwal).nama}:${quranState.ayatMulai} — ${surahByNo(quranState.surahAkhir).nama}:${quranState.ayatAkhir}`;
+  }
+
+  /* ---- Rubrik Penilaian Menulis (skor 1-4 per kategori) ---- */
+  let rubrikState = { hurufSambungan: null, harakat: null, keutuhanTeks: null, kerapian: null };
+  function renderRubrikButtons() {
+    document.querySelectorAll('.rubrik-skor-btns').forEach(group => {
+      const key = group.dataset.rubrik;
+      group.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', +b.dataset.skor === rubrikState[key]);
+      });
+    });
+  }
+  document.querySelectorAll('.rubrik-skor-btns').forEach(group => {
+    const key = group.dataset.rubrik;
+    group.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        rubrikState[key] = +b.dataset.skor;
+        renderRubrikButtons();
+      });
+    });
+  });
+  function rubrikLengkap() {
+    return Object.values(rubrikState).every(v => v !== null);
+  }
+  function rataRataRubrik(p) {
+    if (!p) return null;
+    const vals = [p.hurufSambungan, p.harakat, p.keutuhanTeks, p.kerapian].filter(v => typeof v === 'number');
+    if (!vals.length) return null;
+    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  }
 
   /* ---- Riwayat ---- */
   async function loadRiwayat(siswaId) {
@@ -350,16 +528,24 @@
         $('riwayatList').innerHTML = `<div class="siswa-empty-note">Belum ada catatan pemeriksaan.</div>`;
         return;
       }
-      $('riwayatList').innerHTML = list.map(r => `
+      $('riwayatList').innerHTML = list.map(r => {
+        const isQuranEntry = r.materi?.tipe === 'quran';
+        const materiLabel = isQuranEntry
+          ? r.materi.label
+          : `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`;
+        const rata = rataRataRubrik(r.penilaian);
+        return `
         <div class="riwayat-item">
           <div class="riwayat-dot"></div>
           <div class="riwayat-body">
             <div class="riwayat-tanggal">${formatTanggal(r.tanggalPeriksa)}</div>
-            <div class="riwayat-halaman">${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}</div>
+            <div class="riwayat-halaman">${escapeHtml(materiLabel)}</div>
+            ${rata ? `<span class="rubrik-avg-badge" style="margin-top:5px">Rata-rata ${rata}/4</span>` : ''}
             ${r.catatan ? `<div class="riwayat-catatan">${escapeHtml(r.catatan)}</div>` : ''}
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } catch (err) {
       console.error(err);
       $('riwayatList').innerHTML = `<div class="siswa-empty-note">Gagal memuat riwayat.</div>`;
@@ -380,23 +566,51 @@
   /* ---- Simpan ---- */
   $('btnSimpan').addEventListener('click', async () => {
     if (!selectedSiswa) { showToast('Pilih siswa terlebih dahulu.', true); return; }
+    const isIqroBelumTamat = selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro;
+    if (!isIqroBelumTamat && !rubrikLengkap()) {
+      showToast('Lengkapi keempat skor penilaian menulis terlebih dahulu.', true);
+      return;
+    }
     const btn = $('btnSimpan');
     btn.disabled = true;
     $('btnSimpanLabel').textContent = 'Menyimpan…';
     try {
-      await saveMenulisLog({
+      const payload = {
         siswaId: selectedSiswa.id,
         siswaNama: selectedSiswa.nama,
         kelas: selectedSiswa.kelas,
         tanggalPeriksa: $('tanggalPeriksa').value,
-        jilidIqro: (selectedSiswa.jenjang === 'iqro' && !selectedSiswa.tamatIqro) ? +$('jilidIqro').value : null,
-        halamanMulai: iqroLikeState.halMulai,
-        halamanAkhir: iqroLikeState.halAkhir,
         catatan: $('catatanMenulis').value.trim(),
         createdByNama: currentUser.nama, // untuk kontrol kerja guru oleh admin
-      });
+      };
+      if (isIqroBelumTamat) {
+        payload.jilidIqro = +$('jilidIqro').value;
+        payload.halamanMulai = iqroLikeState.halMulai;
+        payload.halamanAkhir = iqroLikeState.halAkhir;
+        payload.materi = {
+          tipe: 'iqro',
+          jilidIqro: +$('jilidIqro').value,
+          halamanMulai: iqroLikeState.halMulai,
+          halamanAkhir: iqroLikeState.halAkhir,
+          label: `Iqro ${$('jilidIqro').value} — Hal. ${iqroLikeState.halMulai}${iqroLikeState.halAkhir !== iqroLikeState.halMulai ? '–' + iqroLikeState.halAkhir : ''}`,
+        };
+      } else {
+        payload.materi = {
+          tipe: 'quran',
+          surahAwal: quranState.surahAwal,
+          ayatMulai: quranState.ayatMulai,
+          surahAkhir: quranState.surahAkhir,
+          ayatAkhir: quranState.ayatAkhir,
+          totalAyat: hitungTotalAyat(quranState.surahAwal, quranState.ayatMulai, quranState.surahAkhir, quranState.ayatAkhir),
+          label: materiQuranLabel(),
+        };
+        payload.penilaian = { ...rubrikState };
+      }
+      await saveMenulisLog(payload);
       showToast(`Catatan menulis ${selectedSiswa.nama.split(' ')[0]} tersimpan.`);
       $('catatanMenulis').value = '';
+      rubrikState = { hurufSambungan: null, harakat: null, keutuhanTeks: null, kerapian: null };
+      renderRubrikButtons();
       await loadRiwayat(selectedSiswa.id);
     } catch (err) {
       console.error(err);
