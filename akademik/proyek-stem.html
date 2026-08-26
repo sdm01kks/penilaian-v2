@@ -51,6 +51,14 @@
     background:var(--surface);outline:none;
   }
   .mapel-tp-select:disabled{background:var(--bg-light);color:var(--ink-muted)}
+  .jenis-nilai-toggle{display:none;gap:6px;margin-top:6px}
+  .jenis-nilai-toggle.show{display:flex}
+  .jenis-nilai-toggle button{
+    flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
+    font-family:inherit;font-size:11px;font-weight:800;color:var(--ink-mid);cursor:pointer;
+  }
+  .jenis-nilai-toggle button.active-slm{background:var(--blue);border-color:var(--blue);color:#fff}
+  .jenis-nilai-toggle button.active-sas{background:#8a6416;border-color:#8a6416;color:#fff}
 
   .form-btns{display:flex;gap:8px;margin-top:4px}
   .form-btns .btn{flex:1}
@@ -224,7 +232,7 @@
         <div class="proyek-judul">${escapeHtml(p.judul)}</div>
         <div class="proyek-tanggal">${escapeHtml(p.tanggalMulai || '-')} s/d ${escapeHtml(p.tanggalSelesai || '-')} · ${p.jumlahPertemuan || 0}x pertemuan</div>
         <div class="chip-row">
-          ${(p.mapelTerlibat || []).map(m => `<span class="chip-mapel">${escapeHtml(m.mapel)} — ${escapeHtml(m.namaTp || '(TP tidak ditemukan)')}</span>`).join('')}
+          ${(p.mapelTerlibat || []).map(m => `<span class="chip-mapel">${escapeHtml(m.mapel)} — ${escapeHtml(m.namaTp || '(TP tidak ditemukan)')} <strong>(${escapeHtml(m.jenisNilai || 'SLM')})</strong></span>`).join('')}
         </div>
         <div class="chip-row">
           ${(p.dplId || []).map(id => {
@@ -263,6 +271,10 @@
         <select class="mapel-tp-select hidden" data-mapel-for="${escapeHtml(m.nama)}" disabled>
           <option value="">Memuat TP…</option>
         </select>
+        <div class="jenis-nilai-toggle" data-jenis-for="${escapeHtml(m.nama)}">
+          <button type="button" data-val="SLM" class="active-slm" onclick="pilihJenisNilai('${escapeHtml(m.nama)}','SLM')">Isi sebagai SLM</button>
+          <button type="button" data-val="SAS" onclick="pilihJenisNilai('${escapeHtml(m.nama)}','SAS')">Isi sebagai SAS</button>
+        </div>
       </div>
     `).join('') || '<p class="helper-text warn">Belum ada data mapel untuk tingkatan ini.</p>';
 
@@ -271,7 +283,8 @@
         const chip = cb.closest('.pick-chip');
         chip.classList.toggle('on-mapel', cb.checked);
         const select = $('mapelTpList').querySelector(`.mapel-tp-select[data-mapel-for="${CSS.escape(cb.value)}"]`);
-        if (!cb.checked) { select.classList.add('hidden'); return; }
+        const toggle = $('mapelTpList').querySelector(`.jenis-nilai-toggle[data-jenis-for="${CSS.escape(cb.value)}"]`);
+        if (!cb.checked) { select.classList.add('hidden'); toggle.classList.remove('show'); return; }
         select.classList.remove('hidden');
         select.disabled = true;
         select.innerHTML = '<option value="">Memuat TP…</option>';
@@ -283,6 +296,8 @@
         select.innerHTML = '<option value="">-- Pilih TP yang dinilai lewat proyek ini --</option>' +
           tpList.map(tp => `<option value="${tp.id}" data-nama="${escapeHtml(tp.namaTp)}">${escapeHtml(tp.namaTp)}</option>`).join('');
         select.disabled = false;
+        toggle.classList.add('show');
+        if (!toggle.dataset.selected) window.pilihJenisNilai(cb.value, 'SLM');
       });
     });
 
@@ -299,6 +314,7 @@
     // Reset semua dulu.
     $('mapelTpList').querySelectorAll('.mapel-check').forEach(cb => { cb.checked = false; cb.closest('.pick-chip').classList.remove('on-mapel'); });
     $('mapelTpList').querySelectorAll('.mapel-tp-select').forEach(sel => { sel.classList.add('hidden'); sel.value = ''; });
+    $('mapelTpList').querySelectorAll('.jenis-nilai-toggle').forEach(t => { t.classList.remove('show'); delete t.dataset.selected; });
 
     for (const item of mapelTpTerpilih) {
       const cb = $('mapelTpList').querySelector(`.mapel-check[value="${CSS.escape(item.mapel)}"]`);
@@ -311,6 +327,7 @@
       select.innerHTML = '<option value="">-- Pilih TP yang dinilai lewat proyek ini --</option>' +
         tpList.map(tp => `<option value="${tp.id}" data-nama="${escapeHtml(tp.namaTp)}" ${tp.id === item.tpId ? 'selected' : ''}>${escapeHtml(tp.namaTp)}</option>`).join('');
       select.disabled = false;
+      window.pilihJenisNilai(item.mapel, item.jenisNilai || 'SLM');
     }
 
     $('dplGrid').querySelectorAll('.pick-chip').forEach(chip => {
@@ -319,6 +336,16 @@
       chip.classList.toggle('on-dpl', on);
     });
   }
+
+  window.pilihJenisNilai = (mapelNama, jenis) => {
+    const toggle = $('mapelTpList').querySelector(`.jenis-nilai-toggle[data-jenis-for="${CSS.escape(mapelNama)}"]`);
+    toggle.classList.add('show');
+    toggle.dataset.selected = jenis;
+    [...toggle.querySelectorAll('button')].forEach(btn => {
+      btn.className = btn.dataset.val === jenis ? (jenis === 'SLM' ? 'active-slm' : 'active-sas') : '';
+    });
+  };
+
 
   window.bukaFormBaru = async () => {
     editingId = null;
@@ -356,7 +383,8 @@
     const mapelTerlibat = [...$('mapelTpList').querySelectorAll('.mapel-check:checked')].map(cb => {
       const select = $('mapelTpList').querySelector(`.mapel-tp-select[data-mapel-for="${CSS.escape(cb.value)}"]`);
       const opt = select?.selectedOptions[0];
-      return { mapel: cb.value, tpId: select?.value || '', namaTp: opt?.dataset.nama || '' };
+      const toggle = $('mapelTpList').querySelector(`.jenis-nilai-toggle[data-jenis-for="${CSS.escape(cb.value)}"]`);
+      return { mapel: cb.value, tpId: select?.value || '', namaTp: opt?.dataset.nama || '', jenisNilai: toggle?.dataset.selected || 'SLM' };
     });
     const dplId = [...$('dplGrid').querySelectorAll('input:checked')].map(i => i.value);
     const tanggalMulai = $('fTanggalMulai').value;
