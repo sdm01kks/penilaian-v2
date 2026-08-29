@@ -542,10 +542,12 @@ export async function saveAbsensiRapor(payload, existingId) {
 }
 
 /* ==========================================================================
-   DPL (Dimensi Profil Lulusan) — data referensi. TIDAK ada isi bawaan di
-   sini (beda dari mapel) — nama 8 dimensi & deskripsi tiap levelnya belum
-   pernah dikonfirmasi dari sumber yang bisa dipercaya, jadi sengaja
-   dikosongkan. Diisi manual oleh admin lewat akademik/seed-dpl.html.
+   DPL (Dimensi Profil Lulusan) — SEKARANG milik masing-masing WALI KELAS,
+   bukan daftar global admin lagi. Tiap kelas punya set DPL-nya sendiri
+   (nama 8 dimensi resmi sama, tapi deskripsi tiap level & status aktif
+   ditentukan sendiri oleh wali kelasnya, karena wajar beda kebutuhan
+   antara kelas 1 dan kelas 6). Hasil setup ini otomatis jadi pilihan DPL
+   di Proyek STEM kelas yang sama.
    ========================================================================== */
 
 const DEMO_DPL_KEY = 'akd_demo_dpl';
@@ -554,24 +556,26 @@ function readDemoDpl() {
   return JSON.parse(localStorage.getItem(DEMO_DPL_KEY) || '[]');
 }
 
-/** Ambil semua DPL, terurut. Pakai {hanyaAktif:true} untuk filter yang aktif saja. */
-export async function getDPLList({ hanyaAktif = false } = {}) {
+/** Ambil semua DPL milik satu kelas, terurut. Pakai {hanyaAktif:true} untuk filter yang aktif saja. */
+export async function getDPLListByKelas(kelas, { hanyaAktif = false } = {}) {
   let list;
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 150));
-    list = readDemoDpl();
+    list = readDemoDpl().filter(d => d.kelas === kelas);
   } else {
     const { db, fsMod } = window.__fb;
-    const snap = await fsMod.getDocs(fsMod.collection(db, 'dpl'));
+    const q = fsMod.query(fsMod.collection(db, 'dpl'), fsMod.where('kelas', '==', kelas));
+    const snap = await fsMod.getDocs(q);
     list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
   list.sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
   return hanyaAktif ? list.filter(d => d.aktif) : list;
 }
 
-/** Simpan satu DPL (upsert berdasar id kalau ada). */
+/** Simpan satu DPL milik satu kelas (upsert berdasar id kalau ada). */
 export async function saveDPL(payload) {
   const data = {
+    kelas: payload.kelas, tingkatan: String(payload.tingkatan),
     nama: payload.nama, urutan: payload.urutan, aktif: !!payload.aktif,
     levelDeskripsi: payload.levelDeskripsi,
   };
@@ -587,11 +591,11 @@ export async function saveDPL(payload) {
     localStorage.setItem(DEMO_DPL_KEY, JSON.stringify(list));
     return;
   }
-  const { db, fsMod } = window.__fb;
+  const { db, fsMod, auth } = window.__fb;
   if (payload.id) {
-    await fsMod.setDoc(fsMod.doc(db, 'dpl', payload.id), data);
+    await fsMod.updateDoc(fsMod.doc(db, 'dpl', payload.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
   } else {
-    await fsMod.addDoc(fsMod.collection(db, 'dpl'), data);
+    await fsMod.addDoc(fsMod.collection(db, 'dpl'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
   }
 }
 
