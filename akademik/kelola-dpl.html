@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelola DPL — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  .counter-box{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:11px 14px;margin-bottom:14px;font-size:12.5px;font-weight:700;color:var(--ink);
+  }
+  .counter-box .n{font-size:15px;color:var(--green-dark)}
+  .counter-box .n.kurang{color:#c0392b}
+
+  .dpl-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+  .dpl-card-head{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+  .dpl-badge{width:28px;height:28px;border-radius:9px;background:var(--gold-light);color:#8a6416;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+  .dpl-head-body{flex:1;min-width:0}
+  .dpl-head-nama{font-size:13px;font-weight:700;color:var(--ink)}
+  .dpl-head-meta{font-size:10.5px;color:var(--ink-muted);margin-top:2px}
+  .aktif-pill{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px}
+  .aktif-on{background:var(--green-pale);color:var(--green-dark)}
+  .aktif-off{background:#eceae6;color:var(--ink-muted)}
+  .dpl-card-body{display:none;padding:0 14px 16px}
+  .dpl-card.open .dpl-card-body{display:block}
+  .dpl-card.open .chevron{transform:rotate(180deg)}
+
+  .aktif-toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;user-select:none}
+  .aktif-toggle-row .sw{width:36px;height:20px;border-radius:20px;background:#ddd8cd;position:relative;flex-shrink:0;transition:background .15s}
+  .aktif-toggle-row .sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+  .aktif-toggle-row input{display:none}
+  .aktif-toggle-row input:checked ~ .sw{background:var(--green-dark)}
+  .aktif-toggle-row input:checked ~ .sw::after{left:18px}
+  .aktif-toggle-row .lbl{font-size:12px;font-weight:700;color:var(--ink-mid)}
+
+  .level-block{background:var(--bg-light);border-radius:12px;padding:10px 11px;margin-bottom:8px}
+  .level-block label{display:block;font-size:10.5px;font-weight:800;color:var(--ink);margin-bottom:6px}
+  .level-block textarea{
+    width:100%;min-height:48px;padding:8px 9px;border-radius:9px;border:1.5px solid var(--border);
+    font-family:inherit;font-size:12px;color:var(--ink);outline:none;resize:vertical;background:var(--surface);
+  }
+  .level-block textarea:focus{border-color:var(--green-light)}
+
+  .btn-simpan-dpl{width:100%;margin-top:4px;padding:10px;font-size:12.5px}
+  .btn-hapus-dpl{width:100%;margin-top:8px;padding:8px;font-size:11.5px;color:var(--red)}
+
+  .fab-add{
+    position:sticky;bottom:16px;width:100%;margin-top:6px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--green-dark);color:#fff;border:none;border-radius:14px;
+    padding:13px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+    box-shadow:0 8px 20px rgba(30,77,59,.28);
+  }
+  .field-label-sm{font-size:11px;font-weight:800;color:var(--ink-muted);margin:0 0 6px 2px;text-transform:uppercase;letter-spacing:.3px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Kelola DPL</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data tersimpan sementara di perangkat ini.</span>
+        </div>
+        <div class="info-strip">Dimensi Profil Lulusan khusus kelas ini — dipakai sebagai pilihan DPL saat merancang Proyek STEM.</div>
+
+        <div class="counter-box">
+          <span>DPL aktif saat ini</span>
+          <span><span class="n" id="counterN">0</span> / <span id="counterTotal">0</span></span>
+        </div>
+
+        <div id="dplList"></div>
+
+        <button class="fab-add" id="btnTambah" onclick="bukaFormBaru()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Tambah DPL
+        </button>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getDPLListByKelas, saveDPL, deleteDPL, DPL_LEVEL_LABEL,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const kelas = params.get('kelas') || '';
+  const tingkatan = tingkatanDariKelas(kelas);
+
+  let dplList = [];
+
+  // 8 Dimensi Profil Lulusan resmi (dari panduan penilaian proyek STEM,
+  // BAB IV) — dipakai isian awal kalau kelas ini belum punya DPL sama
+  // sekali. Bukan Profil Pelajar Pancasila nasional, sengaja beda.
+  const DPL_SEKOLAH = [
+    'Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas',
+    'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi',
+  ];
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+
+    if (!kelas) { showEmptyScope('Tautan tidak lengkap — kelas tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
+    if (!berhak) {
+      showEmptyScope(`Anda bukan wali kelas ${kelas}. DPL sekarang dikelola masing-masing wali kelas, bukan admin — guru bidang studi maupun wali kelas lain tidak punya akses ke DPL kelas ini.`);
+      return;
+    }
+
+    $('subKelas').textContent = `Kelas ${kelas}`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    await muatDPL();
+  });
+
+  async function muatDPL() {
+    try {
+      dplList = await getDPLListByKelas(kelas);
+      if (!dplList.length) {
+        // Isi otomatis 8 nama resmi, belum aktif — wali kelas yang putuskan
+        // mana yang dipakai & isi deskripsi tiap levelnya.
+        for (let i = 0; i < DPL_SEKOLAH.length; i++) {
+          await saveDPL({ kelas, tingkatan, nama: DPL_SEKOLAH[i], urutan: i + 1, aktif: false, levelDeskripsi: ['', '', '', ''] });
+        }
+        dplList = await getDPLListByKelas(kelas);
+        showToast('8 nama dimensi resmi sudah diisikan otomatis — lengkapi deskripsi & aktifkan yang dipakai.');
+      }
+      renderDPLList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data DPL.', true);
+    }
+  }
+
+  function updateCounter() {
+    $('counterTotal').textContent = dplList.length;
+    const aktif = dplList.filter(d => d.aktif).length;
+    $('counterN').textContent = aktif;
+    $('counterN').className = 'n' + (aktif < 2 ? ' kurang' : '');
+  }
+
+  function renderDPLList() {
+    updateCounter();
+    $('dplList').innerHTML = dplList.map((d, i) => `
+      <div class="dpl-card" id="dplc-${i}">
+        <div class="dpl-card-head" onclick="toggleCard(${i})">
+          <div class="dpl-badge">${i + 1}</div>
+          <div class="dpl-head-body">
+            <div class="dpl-head-nama">${escapeHtml(d.nama)}</div>
+            <div class="dpl-head-meta"><span class="aktif-pill ${d.aktif ? 'aktif-on' : 'aktif-off'}">${d.aktif ? 'Aktif' : 'Tidak aktif'}</span></div>
+          </div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="dpl-card-body">
+          <div class="field-label-sm">Nama Dimensi</div>
+          <input type="text" class="select-field" id="nama-${d.id}" value="${escapeHtml(d.nama)}" style="margin-bottom:12px">
+
+          <label class="aktif-toggle-row">
+            <input type="checkbox" id="aktif-${d.id}" ${d.aktif ? 'checked' : ''}>
+            <span class="sw"></span>
+            <span class="lbl">Aktif — muncul sebagai pilihan di Proyek STEM</span>
+          </label>
+
+          ${DPL_LEVEL_LABEL.map((label, lvl) => `
+            <div class="level-block">
+              <label>${escapeHtml(label)}</label>
+              <textarea id="lv-${d.id}-${lvl}" placeholder="Kalimat deskripsi capaian untuk level ini…">${escapeHtml((d.levelDeskripsi || [])[lvl] || '')}</textarea>
+            </div>
+          `).join('')}
+
+          <button class="btn btn-primary-light btn-simpan-dpl" onclick="simpanDPL('${d.id}')">Simpan</button>
+          <button class="btn btn-secondary btn-hapus-dpl" onclick="hapusDPL('${d.id}')">Hapus DPL Ini</button>
+        </div>
+      </div>`).join('');
+  }
+
+  window.toggleCard = (i) => $('dplc-' + i)?.classList.toggle('open');
+
+  window.bukaFormBaru = async () => {
+    try {
+      await saveDPL({ kelas, tingkatan, nama: 'Dimensi Baru', urutan: dplList.length + 1, aktif: false, levelDeskripsi: ['', '', '', ''] });
+      showToast('DPL baru ditambahkan — buka untuk mengisi nama & deskripsinya.');
+      await muatDPL();
+      $('dplc-' + (dplList.length - 1))?.classList.add('open');
+      $('dplc-' + (dplList.length - 1))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menambah DPL.', true);
+    }
+  };
+
+  window.simpanDPL = async (id) => {
+    const d = dplList.find(x => x.id === id);
+    if (!d) return;
+    const nama = $('nama-' + id).value.trim();
+    if (!nama) { showToast('Nama dimensi wajib diisi.', true); return; }
+    const levelDeskripsi = DPL_LEVEL_LABEL.map((_, lvl) => $(`lv-${id}-${lvl}`).value.trim());
+    const aktif = $('aktif-' + id).checked;
+    try {
+      await saveDPL({ id, kelas, tingkatan, nama, urutan: d.urutan, aktif, levelDeskripsi });
+      showToast('Tersimpan.');
+      await muatDPL();
+      const idx = dplList.findIndex(x => x.id === id);
+      $('dplc-' + idx)?.classList.add('open');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan.', true);
+    }
+  };
+
+  window.hapusDPL = async (id) => {
+    if (!confirm('Hapus DPL ini? Kalau sudah dipakai di suatu Proyek STEM, referensinya di proyek itu akan tampil sebagai "tidak ditemukan".')) return;
+    try {
+      await deleteDPL(id);
+      showToast('DPL dihapus.');
+      await muatDPL();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menghapus.', true);
+    }
+  };
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+</script>
+</body>
+</html>

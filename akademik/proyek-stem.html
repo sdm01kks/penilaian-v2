@@ -156,7 +156,7 @@
 <script type="module">
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
-    tingkatanDariKelas, getMapelList, getDPLList, getConfigAkademik, getTPList,
+    tingkatanDariKelas, getMapelList, getDPLListByKelas, getConfigAkademik, getTPList,
     getProyekStemByKelas, saveProyekStem, deleteProyekStem,
   } from '../assets/firestore-data-akademik.js';
 
@@ -198,7 +198,7 @@
 
     try {
       config = await getConfigAkademik();
-      const [semuaMapel, dplList] = await Promise.all([getMapelList(), getDPLList({ hanyaAktif: true })]);
+      const [semuaMapel, dplList] = await Promise.all([getMapelList(), getDPLListByKelas(kelas, { hanyaAktif: true })]);
       mapelList = semuaMapel.filter(m => {
         const berlaku = Array.isArray(m.tingkatanBerlaku) && m.tingkatanBerlaku.length ? m.tingkatanBerlaku.map(String) : null;
         return !berlaku || berlaku.includes(String(tingkatan));

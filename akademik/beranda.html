@@ -97,9 +97,6 @@
           <div class="card">
             <div class="data-mgmt-row">
               <a class="data-mgmt-link" href="seed-mapel.html">Kelola Mapel</a>
-              <a class="data-mgmt-link" href="seed-dpl.html">Kelola DPL</a>
-            </div>
-            <div class="data-mgmt-row" style="margin-top:8px">
               <a class="data-mgmt-link" href="generator-akun.html">Generator Akun Guru</a>
             </div>
           </div>
@@ -133,7 +130,7 @@
   import {
     tingkatanDariKelas, getMapelList, getSiswaByKelas, getConfigAkademik,
     getTPList, getNilaiTPSummary,
-    getAbsensiRaporByKelas, getKokurikulerByProyek, getProyekStemByKelas,
+    getAbsensiRaporByKelas, getKokurikulerByProyek, getProyekStemByKelas, getDPLListByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -315,8 +312,11 @@
           if (lengkapSemua) proyekTerisi++;
         }
 
+        const dplAktifKelas = await getDPLListByKelas(k, { hanyaAktif: true });
+
         const absUrl = `absensi.html?kelas=${encodeURIComponent(k)}`;
         const stemUrl = `proyek-stem.html?kelas=${encodeURIComponent(k)}`;
+        const dplUrl = `kelola-dpl.html?kelas=${encodeURIComponent(k)}`;
 
         const absChip = absensiDone >= jmlSiswa && jmlSiswa > 0
           ? `<span class="status-chip sc-done">Lengkap</span>`
@@ -324,6 +324,9 @@
         const stemChip = !proyekList.length
           ? `<span class="status-chip sc-warn">Belum ada proyek</span>`
           : `<span class="status-chip ${proyekTerisi === proyekList.length ? 'sc-done' : 'sc-partial'}">${proyekList.length} proyek · nilai DPL lengkap ${proyekTerisi}/${proyekList.length}</span>`;
+        const dplChip = dplAktifKelas.length < 2
+          ? `<span class="status-chip sc-warn">${dplAktifKelas.length} aktif — minimal 2</span>`
+          : `<span class="status-chip sc-done">${dplAktifKelas.length} DPL aktif</span>`;
 
         $('waliTask-' + i).innerHTML = `
           <div class="task-top">
@@ -334,6 +337,11 @@
             <span class="status-label">Absensi &amp; Keputusan</span>
             ${absChip}
             <a class="status-link" href="${absUrl}">Buka →</a>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Kelola DPL</span>
+            ${dplChip}
+            <a class="status-link" href="${dplUrl}">Buka →</a>
           </div>
           <div class="status-row">
             <span class="status-label">Proyek STEM &amp; Nilai DPL</span>

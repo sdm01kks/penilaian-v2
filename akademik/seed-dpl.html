@@ -3,241 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Seed DPL — Akademik &amp; Rapor</title>
-<link rel="stylesheet" href="../assets/style.css">
-<style>
-  body{background:var(--bg-light);color:var(--ink)}
-  .wrap{max-width:640px;margin:0 auto;padding:32px 18px 60px}
-  h1{font-size:19px;color:var(--green-deep);margin:0 0 6px}
-  p.sub{font-size:13px;color:var(--ink-muted);margin:0 0 18px;line-height:1.6}
-  .warn-box{
-    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
-    font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:16px;line-height:1.6;
-  }
-  .counter-box{
-    display:flex;align-items:center;justify-content:space-between;
-    background:var(--surface);border:1px solid var(--border);border-radius:12px;
-    padding:11px 14px;margin-bottom:16px;font-size:12.5px;font-weight:700;color:var(--ink);
-  }
-  .counter-box .n{font-size:15px;color:var(--green-dark)}
-  .counter-box .n.kurang{color:#c0392b}
-
-  .log{
-    background:#10201a;color:#c8e6d8;font-family:monospace;font-size:12px;
-    border-radius:12px;padding:14px;margin-top:18px;min-height:50px;
-    white-space:pre-wrap;line-height:1.7;
-  }
-  .log .ok{color:#6fe3a3}
-  .log .err{color:#ff8a7a}
-
-  .dpl-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px}
-  .dpl-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
-  .dpl-top input.f-nama{flex:1;font-weight:700}
-  .btn-del{background:var(--red-light);color:var(--red);border:none;border-radius:9px;width:34px;height:34px;flex-shrink:0;cursor:pointer;font-size:16px;line-height:1}
-  input, select, textarea{
-    width:100%;padding:8px 9px;border-radius:9px;border:1.5px solid var(--border);
-    font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;background:var(--surface);
-  }
-  input:focus, textarea:focus{border-color:var(--green-light)}
-
-  .aktif-toggle{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;user-select:none}
-  .aktif-toggle .sw{width:36px;height:20px;border-radius:20px;background:#ddd8cd;position:relative;flex-shrink:0;transition:background .15s}
-  .aktif-toggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
-  .aktif-toggle input{display:none}
-  .aktif-toggle input:checked ~ .sw{background:var(--green-dark)}
-  .aktif-toggle input:checked ~ .sw::after{left:18px}
-  .aktif-toggle .lbl{font-size:12px;font-weight:700;color:var(--ink-mid)}
-
-  .level-block{background:var(--bg-light);border-radius:12px;padding:10px 11px;margin-bottom:8px}
-  .level-block label{display:block;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
-  .level-block textarea{min-height:44px;resize:vertical}
-
-  .row-actions{display:flex;gap:10px;margin-top:6px}
-  .row-actions .btn{width:auto;padding:10px 18px;font-size:13px}
-</style>
+<title>DPL sudah pindah — Akademik &amp; Rapor</title>
 </head>
-<body>
-<div class="wrap">
-  <h1>Kelola 8 Dimensi Profil Lulusan</h1>
-  <p class="sub">
-    Mengisi &amp; mengedit koleksi Firestore <code>dpl</code>. Sengaja
-    dimulai <strong>kosong</strong> — nama dimensi &amp; deskripsi tiap
-    level tidak bisa saya tebak, harus diisi sesuai rumusan resmi sekolah.
-    Toggle "Aktif" menentukan DPL mana yang muncul di halaman Kokurikuler
-    guru kelas semester ini.
-  </p>
-
-  <div class="warn-box" id="demoWarn" style="display:none">
-    Mode pratinjau aktif — perubahan di sini hanya tersimpan sementara di
-    perangkat ini (localStorage), belum ke Firestore sungguhan.
-  </div>
-  <div class="warn-box" id="sessionWarn" style="display:none"></div>
-
-  <div class="counter-box">
-    <span>DPL aktif saat ini</span>
-    <span><span class="n" id="counterN">0</span> / <span id="counterTotal">0</span></span>
-  </div>
-
-  <div id="cards"></div>
-
-  <div class="row-actions">
-    <button class="btn btn-secondary" id="btnTambah" style="width:auto;padding:9px 16px;font-size:12.5px">+ Tambah DPL</button>
-    <button class="btn btn-primary-light" id="btnSimpan">Simpan Semua ke Firestore</button>
-  </div>
-
-  <div class="log" id="log">Memuat data DPL yang sudah ada…</div>
-</div>
-
-<script type="module">
-  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
-  import { getDPLList, saveDPL, DPL_LEVEL_LABEL } from '../assets/firestore-data-akademik.js';
-
-  const cardsEl = document.getElementById('cards');
-  const logEl = document.getElementById('log');
-  const sessionWarnEl = document.getElementById('sessionWarn');
-
-  function log(msg, cls) {
-    const span = document.createElement('div');
-    if (cls) span.className = cls;
-    span.textContent = msg;
-    logEl.appendChild(span);
-  }
-  function clearLog() { logEl.innerHTML = ''; }
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  }
-
-  if (DEMO_MODE) document.getElementById('demoWarn').style.display = 'block';
-
-  function updateCounter() {
-    const cards = [...cardsEl.querySelectorAll('.dpl-card')];
-    const total = cards.length;
-    const aktif = cards.filter(c => c.querySelector('.f-aktif').checked).length;
-    document.getElementById('counterN').textContent = aktif;
-    document.getElementById('counterN').className = 'n' + (aktif < 3 ? ' kurang' : '');
-    document.getElementById('counterTotal').textContent = total;
-  }
-
-  function addCard(data = {}) {
-    const div = document.createElement('div');
-    div.className = 'dpl-card';
-    const lv = data.levelDeskripsi || ['', '', '', ''];
-    div.innerHTML = `
-      <div class="dpl-top">
-        <input type="text" class="f-nama" value="${data.nama ? escapeHtml(data.nama) : ''}" placeholder="Nama dimensi, mis. Beriman & Bertakwa">
-        <button class="btn-del" type="button" title="Hapus">&times;</button>
-      </div>
-      <label class="aktif-toggle">
-        <input type="checkbox" class="f-aktif" ${data.aktif ? 'checked' : ''}>
-        <span class="sw"></span>
-        <span class="lbl">Aktif semester ini</span>
-      </label>
-      ${DPL_LEVEL_LABEL.map((label, idx) => `
-        <div class="level-block">
-          <label>${escapeHtml(label)}</label>
-          <textarea class="f-level" data-lvl="${idx + 1}" placeholder="Kalimat deskripsi capaian untuk level &quot;${escapeHtml(label)}&quot;…">${escapeHtml(lv[idx] || '')}</textarea>
-        </div>
-      `).join('')}
-    `;
-    div.querySelector('.btn-del').addEventListener('click', () => { div.remove(); updateCounter(); });
-    div.querySelector('.f-aktif').addEventListener('change', updateCounter);
-    cardsEl.appendChild(div);
-    updateCounter();
-  }
-
-  function showSessionWarn(msg) {
-    sessionWarnEl.innerHTML = msg;
-    sessionWarnEl.style.display = 'block';
-  }
-
-  let sesiSiapAdmin = false; // true kalau sesi aktif & role admin — dicek ulang juga saat simpan
-
-  onAuthChange(async (session) => {
-    if (DEMO_MODE) { sesiSiapAdmin = true; await muatData(); return; }
-
-    if (!session) {
-      showSessionWarn(
-        'Anda belum login di browser ini, jadi data belum bisa dimuat maupun disimpan. ' +
-        'Buka <a href="login.html" target="_blank" style="color:#7a5416;text-decoration:underline">akademik/login.html</a> ' +
-        'di tab baru, login sebagai admin, lalu muat ulang halaman ini.'
-      );
-      clearLog();
-      log('Menunggu login…', 'err');
-      return;
-    }
-    if (session.role !== 'admin') {
-      showSessionWarn(`Anda login sebagai <strong>${session.nama}</strong> (role: ${session.role}) — bukan admin. Anda tetap bisa melihat data DPL yang sudah ada, tapi menyimpan perubahan akan ditolak.`);
-    }
-    sesiSiapAdmin = session.role === 'admin';
-    await muatData();
-  });
-
-  // 8 Dimensi Profil Lulusan — nama-nama ini dari dokumen panduan penilaian
-  // proyek STEM sekolah (BAB IV), BUKAN 6 Dimensi Profil Pelajar Pancasila
-  // nasional — sengaja beda, jangan disamakan. Deskripsi tiap level TIDAK
-  // saya isi otomatis (itu perlu dirumuskan sesuai konteks tiap dimensi),
-  // cuma namanya yang sudah pasti dari sumber resmi.
-  const DPL_SEKOLAH = [
-    'Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas',
-    'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi',
-  ];
-
-  async function muatData() {
-    try {
-      const existing = await getDPLList();
-      clearLog();
-      if (existing.length) {
-        existing.forEach(d => addCard(d));
-        log(`Memuat ${existing.length} DPL yang sudah tersimpan.`);
-      } else {
-        DPL_SEKOLAH.forEach((nama, i) => addCard({ nama, urutan: i + 1, aktif: false }));
-        log(`Belum ada data tersimpan. 8 nama dimensi (dari panduan penilaian STEM) sudah diisi otomatis — lengkapi deskripsi tiap level, aktifkan yang dipakai semester ini, lalu simpan.`);
-      }
-      updateCounter();
-    } catch (e) {
-      console.error(e);
-      clearLog();
-      log('Gagal memuat data yang sudah ada: ' + (e.code || e.message), 'err');
-    }
-  }
-
-  document.getElementById('btnTambah').addEventListener('click', () => addCard());
-
-  document.getElementById('btnSimpan').addEventListener('click', async () => {
-    if (!sesiSiapAdmin) {
-      clearLog();
-      log('Tidak bisa menyimpan — Anda belum login sebagai admin di browser ini (lihat pesan di atas).', 'err');
-      return;
-    }
-    clearLog();
-    const rows = [...cardsEl.querySelectorAll('.dpl-card')].map((card, i) => ({
-      nama: card.querySelector('.f-nama').value.trim(),
-      urutan: i + 1,
-      aktif: card.querySelector('.f-aktif').checked,
-      levelDeskripsi: [1,2,3,4].map(lvl => card.querySelector(`.f-level[data-lvl="${lvl}"]`).value.trim()),
-    })).filter(r => r.nama);
-
-    if (!rows.length) { log('Tidak ada DPL dengan nama terisi.', 'err'); return; }
-    const aktifCount = rows.filter(r => r.aktif).length;
-    if (aktifCount < 3) {
-      log(`Peringatan: cuma ${aktifCount} DPL aktif (minimal 3 setahu saya dari aplikasi lama — tolong pastikan ini benar untuk sekolah Anda). Tetap disimpan, cek lagi kalau perlu.`, 'err');
-    }
-
-    document.getElementById('btnSimpan').disabled = true;
-    try {
-      for (const r of rows) {
-        await saveDPL(r);
-        log(`✓ Tersimpan: ${r.nama}${r.aktif ? ' (aktif)' : ''}`, 'ok');
-      }
-      log('\nSelesai.', 'ok');
-    } catch (err) {
-      console.error(err);
-      log('✗ Gagal: ' + err.message, 'err');
-      log('Pastikan Anda login sebagai admin di tab lain.', 'err');
-    } finally {
-      document.getElementById('btnSimpan').disabled = false;
-    }
-  });
-</script>
+<body style="font-family:sans-serif;max-width:480px;margin:60px auto;padding:0 20px;line-height:1.6">
+<!--
+  Halaman ini dulu tempat ADMIN mengelola satu daftar DPL global untuk
+  seluruh sekolah. Sejak DPL dipindah jadi milik masing-masing WALI KELAS
+  (setiap kelas punya set DPL & deskripsinya sendiri, otomatis jadi
+  pilihan di Proyek STEM kelas itu), halaman ini sudah tidak dipakai.
+  Dibiarkan sebagai catatan, bukan dihapus total, supaya tautan/bookmark
+  lama tidak 404 begitu saja.
+-->
+<h2>Halaman ini sudah tidak dipakai</h2>
+<p>
+  DPL (Dimensi Profil Lulusan) sekarang dikelola masing-masing
+  <strong>wali kelas</strong>, bukan admin secara global lagi — setiap
+  kelas punya daftar &amp; deskripsi levelnya sendiri.
+</p>
+<p>
+  Kalau Anda wali kelas, buka <strong>Beranda → Kelola DPL</strong> pada
+  kelas yang Anda ampu. Kalau Anda admin, tidak ada lagi yang perlu
+  dikelola di sini.
+</p>
+<p><a href="beranda.html">← Kembali ke Beranda</a></p>
 </body>
 </html>

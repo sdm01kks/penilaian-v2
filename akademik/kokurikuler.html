@@ -93,7 +93,7 @@
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
     tingkatanDariKelas, getSiswaByKelas, getConfigAkademik, DPL_LEVEL_LABEL,
-    getDPLList, getKokurikulerByProyek, saveKokurikuler, getProyekStemByKelas,
+    getDPLListByKelas, getKokurikulerByProyek, saveKokurikuler, getProyekStemByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -142,7 +142,7 @@
       config = await getConfigAkademik();
       const [semuaProyek, dplSemua, siswa] = await Promise.all([
         getProyekStemByKelas(kelas, config.semesterAktif, config.tahunAjaran),
-        getDPLList(),
+        getDPLListByKelas(kelas),
         getSiswaByKelas(kelas),
       ]);
       proyek = semuaProyek.find(p => p.id === proyekId);
@@ -158,7 +158,7 @@
       $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${dplProyek.length} DPL diamati lewat proyek ini`;
 
       if (!dplProyek.length) {
-        showEmptyScope('Proyek ini belum punya DPL yang tercatat (mungkin DPL-nya sudah dinonaktifkan admin). Cek/edit dulu lewat halaman Proyek STEM.');
+        showEmptyScope('Proyek ini belum punya DPL yang tercatat (mungkin DPL-nya sudah dinonaktifkan/dihapus lewat Kelola DPL). Cek/edit dulu lewat halaman Proyek STEM.');
         return;
       }
       if (!siswaList.length) showToast('Belum ada data siswa aktif untuk kelas ini.', true);
