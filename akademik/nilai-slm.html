@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nilai SLM — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  /* ---- Kartu TP ---- */
+  .tp-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+  .tp-card-head{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+  .tp-num-badge{width:28px;height:28px;border-radius:9px;background:var(--green-pale);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex-shrink:0}
+  .tp-head-body{flex:1;min-width:0}
+  .tp-head-nama{font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
+  .tp-head-meta{font-size:11px;color:var(--ink-muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .bobot-tag{font-size:9.5px;font-weight:800;color:var(--ink-mid);background:var(--bg-light);padding:1px 7px;border-radius:20px}
+  .tp-card-body{display:none;padding:0 14px 14px}
+  .tp-card.open .tp-card-body{display:block}
+  .tp-card.open .chevron{transform:rotate(180deg)}
+
+  /* ---- Baris siswa: nama + level + satu input SLM ---- */
+  .roster-block{padding:9px 0;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .roster-block:first-of-type{border-top:none}
+  .roster-nama{font-size:12.5px;font-weight:700;color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .roster-level{
+    flex-shrink:0;font-size:9.5px;font-weight:800;text-align:center;
+    padding:3px 8px;border-radius:20px;color:var(--ink-muted);background:var(--bg-light);line-height:1.3;
+  }
+  .lv-0{background:#fbe4e0;color:#a83a2b}
+  .lv-1{background:var(--gold-light);color:#8a6416}
+  .lv-2{background:var(--blue-light);color:var(--blue)}
+  .lv-3{background:var(--green-pale);color:var(--green-dark)}
+
+  .roster-input{
+    width:52px;flex-shrink:0;text-align:center;padding:6px 3px;border-radius:8px;
+    border:1.5px solid var(--border);font-family:inherit;font-size:12.5px;font-weight:700;
+    color:var(--ink);outline:none;
+  }
+  .roster-input:focus{border-color:var(--green-light)}
+
+  .btn-simpan-tp{width:100%;margin-top:12px;padding:10px;font-size:12.5px}
+
+  .ringkasan-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:6px}
+  .ringkasan-hint{font-size:11px;color:var(--ink-muted);line-height:1.5;margin-bottom:8px}
+  .ringkasan-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
+  .ringkasan-row:first-of-type{border-top:none}
+  .ringkasan-row .roster-nama{flex:1}
+  .ringkasan-nilai{width:44px;text-align:center;font-size:13px;font-weight:800;color:var(--green-dark);flex-shrink:0}
+  .ringkasan-nilai.kosong{color:var(--ink-muted);font-weight:600;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleMapel">Nilai SLM</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — nilai tersimpan sementara di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Nilai SLM per Tujuan Pembelajaran</div>
+        <div id="tpList"></div>
+
+        <div class="section-label"><span class="bar"></span>Ringkasan SLM (Sementara)</div>
+        <div class="ringkasan-card">
+          <p class="ringkasan-hint">Rata-rata tertimbang SLM saja, sesuai bobot TP dalam mapel. Belum termasuk STS/SAS — nilai akhir rapor dihitung terpisah setelah ketiganya lengkap.</p>
+          <div id="ringkasanList"></div>
+        </div>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getTPList, getSiswaByKelas, getConfigAkademik,
+    getNilaiTPUntukTP, saveNilaiTPBatch, tentukanLevel,
+    hitungNilaiAkhirTP, hitungNilaiAkhirMapel,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const mapelNama = params.get('mapel') || '';
+  const kelas     = params.get('kelas') || '';
+  const tingkatan = tingkatanDariKelas(kelas);
+
+  let config = null, siswaList = [], tpList = [];
+  const nilaiTPMap = {};  // tpId -> { siswaId: {id, slm} } (field sas dari nilai_tp diabaikan di sini — sudah pindah ke nilai_sas)
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+
+    if (!mapelNama || !kelas) {
+      showEmptyScope('Tautan tidak lengkap — mapel atau kelas tidak diketahui.');
+      return;
+    }
+    const berhak = s.role === 'admin' || (s.penugasan || []).some(p => p.mapel === mapelNama && p.kelas === kelas);
+    if (!berhak) {
+      showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas ${kelas}.`);
+      return;
+    }
+
+    $('titleMapel').textContent = mapelNama;
+    $('subKelas').textContent = `Kelas ${kelas} · SLM`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    try {
+      [config, siswaList, tpList] = await Promise.all([
+        getConfigAkademik(),
+        getSiswaByKelas(kelas),
+        getTPList({ mapel: mapelNama, tingkatan }),
+      ]);
+      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${siswaList.length} siswa`;
+
+      if (!siswaList.length) showToast('Belum ada data siswa aktif untuk kelas ini.', true);
+      if (!tpList.length) {
+        $('tpList').innerHTML = `<div class="card" style="text-align:center;color:var(--ink-muted);font-size:12.5px;padding:20px">
+          Belum ada TP untuk ${escapeHtml(mapelNama)} tingkat ${escapeHtml(tingkatan)}.<br>
+          Buat dulu lewat Setup TP &amp; KKTP.
+        </div>`;
+      }
+
+      for (const tp of tpList) {
+        nilaiTPMap[tp.id] = await getNilaiTPUntukTP({ tpId: tp.id, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+      }
+      renderTPList();
+      renderRingkasan();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  /* ---------------------------------------------------------------------
+     Nilai per TP — SLM murni, satu input per siswa. Level KKTP dihitung
+     langsung dari SLM (tidak dicampur SAS/STS di halaman ini — itu urusan
+     halaman Nilai STS/SAS dan rapor nanti).
+     --------------------------------------------------------------------- */
+  function renderTPList() {
+    $('tpList').innerHTML = tpList.map((tp, i) => {
+      const nilaiTP = nilaiTPMap[tp.id] || {};
+      const terisi = Object.values(nilaiTP).filter(n => n.slm !== null && n.slm !== undefined).length;
+
+      const roster = siswaList.map(sw => {
+        const existing = nilaiTP[sw.id];
+        const slmVal = existing?.slm ?? '';
+        const lvl = existing?.slm != null ? tentukanLevel(hitungNilaiAkhirTP(existing.slm, null, tp), tp) : null;
+        return `
+        <div class="roster-block">
+          <span class="roster-nama">${escapeHtml(sw.nama)}</span>
+          <span class="roster-level ${lvl ? 'lv-' + lvl.index : ''}" id="lvl-${tp.id}-${sw.id}">${lvl ? escapeHtml(lvl.label) : '—'}</span>
+          <input type="number" min="0" max="100" class="roster-input" id="slm-${tp.id}-${sw.id}"
+                 value="${slmVal}" placeholder="-" oninput="window._onNilaiInput('${tp.id}','${sw.id}')">
+        </div>`;
+      }).join('');
+
+      return `
+      <div class="tp-card" id="tpc-${i}">
+        <div class="tp-card-head" onclick="toggleCard(${i})">
+          <div class="tp-num-badge">${tp.nomorTp || i + 1}</div>
+          <div class="tp-head-body">
+            <div class="tp-head-nama">${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
+            <div class="tp-head-meta">
+              <span>${terisi}/${siswaList.length} siswa</span>
+              <span class="bobot-tag">Bobot mapel ${tp.bobotMapel ?? 1}×</span>
+            </div>
+          </div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="tp-card-body">
+          ${roster}
+          <button class="btn btn-primary-light btn-simpan-tp" onclick="simpanTP('${tp.id}')">Simpan Nilai SLM TP Ini</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.toggleCard = (i) => $('tpc-' + i)?.classList.toggle('open');
+
+  window._onNilaiInput = (tpId, siswaId) => {
+    const tp = tpList.find(t => t.id === tpId);
+    const slmEl = $(`slm-${tpId}-${siswaId}`);
+    const slm = slmEl.value !== '' ? slmEl.value : null;
+    const lvl = slm !== null ? tentukanLevel(hitungNilaiAkhirTP(slm, null, tp), tp) : null;
+
+    const badge = $(`lvl-${tpId}-${siswaId}`);
+    badge.className = 'roster-level' + (lvl ? ' lv-' + lvl.index : '');
+    badge.textContent = lvl ? lvl.label : '—';
+  };
+
+  window.simpanTP = async (tpId) => {
+    const tp = tpList.find(t => t.id === tpId);
+    const entries = siswaList
+      .map(sw => ({ siswaId: sw.id, slm: $(`slm-${tpId}-${sw.id}`).value }))
+      .filter(e => e.slm !== '')
+      .map(e => ({ siswaId: e.siswaId, slm: parseFloat(e.slm), sas: null }));
+
+    if (!entries.length) { showToast('Belum ada nilai SLM yang diisi untuk TP ini.', true); return; }
+
+    try {
+      await saveNilaiTPBatch(
+        { tpId, mapel: mapelNama, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran },
+        entries, nilaiTPMap[tpId] || {}
+      );
+      showToast(`Nilai SLM TP "${tp.namaTp}" tersimpan untuk ${entries.length} siswa.`);
+      nilaiTPMap[tpId] = await getNilaiTPUntukTP({ tpId, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+      renderTPList();
+      renderRingkasan();
+      const idx = tpList.findIndex(t => t.id === tpId);
+      $('tpc-' + idx)?.classList.add('open');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan nilai.', true);
+    }
+  };
+
+  /* ---------------------------------------------------------------------
+     Ringkasan SLM sementara per siswa = rata-rata tertimbang SLM semua TP
+     (bobotMapel per TP). Bukan nilai akhir rapor — itu baru dihitung nanti
+     setelah STS/SAS ikut masuk lewat halaman masing-masing.
+     --------------------------------------------------------------------- */
+  function renderRingkasan() {
+    $('ringkasanList').innerHTML = siswaList.map(sw => {
+      const entriesPerTp = tpList.map(tp => {
+        const n = (nilaiTPMap[tp.id] || {})[sw.id];
+        const nilai = n?.slm != null ? hitungNilaiAkhirTP(n.slm, null, tp) : null;
+        return { nilai, bobot: tp.bobotMapel ?? 1 };
+      });
+      const akhir = hitungNilaiAkhirMapel(entriesPerTp);
+      return `
+      <div class="ringkasan-row">
+        <div class="roster-nama">${escapeHtml(sw.nama)}</div>
+        <div class="ringkasan-nilai ${akhir === null ? 'kosong' : ''}">${akhir === null ? '-' : akhir}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // TODO: arahkan ke nilai-slm-hub.html secara konsisten begitu alur akses
+  // langsung (mis. dari hasil pencarian/bookmark lama) juga dirapikan.
+  $('btnBack').addEventListener('click', () => { window.location.href = 'nilai-slm-hub.html'; });
+</script>
+</body>
+</html>

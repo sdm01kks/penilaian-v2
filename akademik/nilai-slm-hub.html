@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nilai SLM — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .intro-text{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:16px}
+
+  .task-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:13px 14px;margin-bottom:10px;text-decoration:none;display:block;
+  }
+  .task-top{display:flex;align-items:center;gap:10px}
+  .task-badge{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;background:var(--blue-light);color:var(--blue)}
+  .task-title{font-size:13px;font-weight:800;color:var(--ink)}
+  .task-sub{font-size:10.5px;color:var(--ink-muted);margin-top:1px}
+  .task-chip-row{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .status-chip{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0}
+  .sc-done{background:var(--green-pale);color:var(--green-dark)}
+  .sc-warn{background:#fbe4e0;color:#a83a2b}
+  .sc-partial{background:var(--gold-light);color:#8a6416}
+  .setup-hint{font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:underline}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Nilai SLM</div>
+            <div class="app-header-sub">Sumatif Lingkup Materi</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <p class="intro-text">Pilih mata pelajaran &amp; kelas untuk input nilai SLM per Tujuan Pembelajaran.</p>
+        <div id="taskList"></div>
+        <div id="emptyState" class="task-card hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getTPList, getSiswaByKelas, getConfigAkademik, getNilaiTPSummary,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  let config = null;
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role === 'admin') {
+      $('emptyStateMsg').textContent = 'Nilai SLM diinput oleh guru mata pelajaran, bukan admin. Admin dapat memeriksa Setup TP & KKTP lewat menu Administrasi.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
+    if (!penugasan.length) {
+      $('emptyStateMsg').textContent = 'Belum ada penugasan mata pelajaran untuk akun ini. Hubungi admin Akademik & Rapor sekolah.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    try {
+      config = await getConfigAkademik();
+      await renderTaskList(penugasan);
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  async function renderTaskList(penugasan) {
+    const wrap = $('taskList');
+    wrap.innerHTML = penugasan.map((p, i) => `
+      <a class="task-card" id="task-${i}" href="nilai-slm.html?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}">
+        <div class="task-top">
+          <div class="task-badge">${escapeHtml(p.kelas)}</div>
+          <div><div class="task-title">${escapeHtml(p.mapel)}</div><div class="task-sub">Kelas ${escapeHtml(p.kelas)} · Memuat status…</div></div>
+        </div>
+      </a>`).join('');
+
+    for (let i = 0; i < penugasan.length; i++) {
+      const p = penugasan[i];
+      const tingkatan = tingkatanDariKelas(p.kelas);
+      try {
+        const [tpList, siswaList] = await Promise.all([
+          getTPList({ mapel: p.mapel, tingkatan }),
+          getSiswaByKelas(p.kelas),
+        ]);
+        const jmlSiswa = siswaList.length;
+
+        let chipHtml;
+        if (!tpList.length) {
+          chipHtml = `<span class="status-chip sc-warn">Belum ada TP</span>
+            <a class="setup-hint" href="setup-tp.html?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${encodeURIComponent(tingkatan)}">Buat TP dulu →</a>`;
+        } else {
+          const summary = await getNilaiTPSummary({ mapel: p.mapel, kelas: p.kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+          let tpLengkap = 0;
+          tpList.forEach(tp => {
+            const nilaiTp = summary[tp.id] || [];
+            if (jmlSiswa > 0 && nilaiTp.filter(n => n.slm !== null && n.slm !== undefined).length >= jmlSiswa) tpLengkap++;
+          });
+          chipHtml = tpLengkap === tpList.length
+            ? `<span class="status-chip sc-done">SLM lengkap semua TP (${tpList.length})</span>`
+            : `<span class="status-chip sc-partial">SLM lengkap ${tpLengkap}/${tpList.length} TP</span>`;
+        }
+
+        $('task-' + i).querySelector('.task-sub').textContent = `Kelas ${p.kelas} · ${jmlSiswa} siswa`;
+        const chipRow = document.createElement('div');
+        chipRow.className = 'task-chip-row';
+        chipRow.innerHTML = chipHtml;
+        $('task-' + i).appendChild(chipRow);
+      } catch (e) {
+        console.error(e);
+        $('task-' + i).querySelector('.task-sub').textContent = `Kelas ${p.kelas} · Gagal memuat status`;
+      }
+    }
+  }
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'nilai-hub.html'; });
+</script>
+</body>
+</html>

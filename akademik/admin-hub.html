@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Administrasi — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:16px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .feature-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:16px;margin-bottom:12px;text-decoration:none;display:flex;align-items:center;gap:13px;
+  }
+  .feature-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .feature-icon.mapel{background:var(--blue-light);color:var(--blue)}
+  .feature-icon.akun{background:var(--green-pale);color:var(--green-dark)}
+  .feature-body{flex:1;min-width:0}
+  .feature-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .feature-sub{font-size:11px;color:var(--ink-muted);margin-top:2px;line-height:1.5}
+  .feature-arrow{flex-shrink:0;color:var(--ink-muted)}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Administrasi</div>
+            <div class="app-header-sub">Admin Akademik &amp; Rapor</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Semua Mapel — Pilih Tingkatan</div>
+        <div class="card"><div id="adminMapelList"></div></div>
+
+        <div class="section-label"><span class="bar"></span>Pengelolaan Data</div>
+
+        <a class="feature-card" href="seed-mapel.html">
+          <div class="feature-icon mapel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Kelola Mapel</div>
+            <div class="feature-sub">Tambah/ubah mata pelajaran &amp; tingkatan berlakunya</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a class="feature-card" href="generator-akun.html">
+          <div class="feature-icon akun">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Generator Akun Guru</div>
+            <div class="feature-sub">Buat JSON akun guru (role, penugasan, wali kelas)</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <div id="emptyState" class="feature-card hidden" style="display:block">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getMapelList } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      document.querySelectorAll('.card, .feature-card, .section-label').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin Akademik & Rapor.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    await renderAdminMapel();
+  });
+
+  async function renderAdminMapel() {
+    try {
+      const mapelList = await getMapelList();
+      if (!mapelList.length) {
+        $('adminMapelList').innerHTML = `<div class="empty-state-small">Belum ada data mapel. Isi lewat "Kelola Mapel" di bawah.</div>`;
+        return;
+      }
+      $('adminMapelList').innerHTML = mapelList.map(m => {
+        const berlaku = Array.isArray(m.tingkatanBerlaku) && m.tingkatanBerlaku.length ? m.tingkatanBerlaku.map(String) : ['1','2','3','4','5','6'];
+        return `
+        <div class="mapel-admin-card-wrap" style="margin-bottom:8px">
+          <div style="font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:6px">${escapeHtml(m.nama)}</div>
+          <div style="display:grid;grid-template-columns:repeat(${berlaku.length},1fr);gap:5px">
+            ${berlaku.map(t => `<a href="setup-tp.html?mapel=${encodeURIComponent(m.nama)}&tingkatan=${t}" style="text-align:center;padding:7px 0;border-radius:9px;background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:800;text-decoration:none">${t}</a>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.error(e);
+      $('adminMapelList').innerHTML = `<div class="empty-state-small">Gagal memuat daftar mapel.</div>`;
+    }
+  }
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+</script>
+</body>
+</html>

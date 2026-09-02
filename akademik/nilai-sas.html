@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Input Nilai SAS — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+  .empty-scope a{color:var(--blue);font-weight:700;text-decoration:underline}
+
+  .tp-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+  .tp-card-head{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+  .tp-num-badge{width:28px;height:28px;border-radius:9px;background:var(--green-pale);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex-shrink:0}
+  .tp-head-body{flex:1;min-width:0}
+  .tp-head-nama{font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
+  .tp-head-meta{font-size:11px;color:var(--ink-muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .bobot-tag{font-size:9.5px;font-weight:800;color:var(--ink-mid);background:var(--bg-light);padding:1px 7px;border-radius:20px}
+  .tp-card-body{display:none;padding:0 14px 14px}
+  .tp-card.open .tp-card-body{display:block}
+  .tp-card.open .chevron{transform:rotate(180deg)}
+
+  .roster-block{padding:9px 0;border-top:1px solid var(--border)}
+  .roster-block:first-of-type{border-top:none}
+  .roster-line1{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .roster-nama{font-size:12.5px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .roster-ref{font-size:10px;color:var(--ink-muted);font-weight:600;flex-shrink:0}
+  .roster-line2{display:flex;align-items:center;gap:10px}
+  .roster-input{
+    width:52px;flex-shrink:0;text-align:center;padding:6px 3px;border-radius:8px;
+    border:1.5px solid var(--border);font-family:inherit;font-size:12.5px;font-weight:700;
+    color:var(--ink);outline:none;
+  }
+  .roster-input:focus{border-color:var(--green-light)}
+  .roster-akhir{
+    margin-left:auto;flex-shrink:0;font-size:12px;font-weight:800;color:var(--green-dark);
+    display:flex;align-items:center;gap:4px;
+  }
+  .roster-akhir .eq{color:var(--ink-muted);font-weight:600}
+  .roster-akhir.kosong{color:var(--ink-muted);font-weight:600;font-size:10.5px}
+
+  .btn-simpan-tp{width:100%;margin-top:12px;padding:10px;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleMapel">Nilai SAS</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — nilai tersimpan sementara di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Nilai SAS per TP dalam Cakupan</div>
+        <div id="tpList"></div>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import {
+    tingkatanDariKelas, getTPList, getSiswaByKelas, getConfigAkademik,
+    getCakupanTP, getNilaiTPUntukTP, getNilaiAsesmenUntukTP, saveNilaiAsesmenBatch,
+    hitungNilaiAkhirTP,
+  } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const mapelNama = params.get('mapel') || '';
+  const kelas     = params.get('kelas') || '';
+  const tingkatan = tingkatanDariKelas(kelas);
+  const JENIS = 'sas';
+
+  let config = null, siswaList = [], tpListCakupan = [];
+  const slmMap = {};   // tpId -> { siswaId: {slm} }        (referensi baca-saja)
+  const stsMap = {};   // tpId -> { siswaId: {nilai} }       (referensi baca-saja)
+  const sasMap = {};   // tpId -> { siswaId: {id, nilai} }   (yang diedit di sini)
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showEmptyScope(html) {
+    $('emptyScopeMsg').innerHTML = html;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    if (!mapelNama || !kelas) { showEmptyScope('Tautan tidak lengkap — mapel atau kelas tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.penugasan || []).some(p => p.mapel === mapelNama && p.kelas === kelas);
+    if (!berhak) { showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas ${kelas}.`); return; }
+
+    $('titleMapel').textContent = mapelNama;
+    $('subKelas').textContent = `Kelas ${kelas} · SAS`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+    try {
+      config = await getConfigAkademik();
+      const cakupan = await getCakupanTP({ mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, jenis: JENIS });
+      if (!cakupan || !cakupan.tpIds.length) {
+        showEmptyScope(`Cakupan TP untuk SAS belum diatur.<br><a href="nilai-sas-cakupan.html?mapel=${encodeURIComponent(mapelNama)}&kelas=${encodeURIComponent(kelas)}">Atur cakupan SAS dulu →</a>`);
+        return;
+      }
+
+      const [allTP, siswa] = await Promise.all([
+        getTPList({ mapel: mapelNama, tingkatan }),
+        getSiswaByKelas(kelas),
+      ]);
+      siswaList = siswa;
+      tpListCakupan = allTP.filter(tp => cakupan.tpIds.includes(tp.id));
+
+      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran} · ${siswaList.length} siswa · ${tpListCakupan.length} TP dalam cakupan`;
+      $('appBody').style.display = 'block';
+
+      for (const tp of tpListCakupan) {
+        [slmMap[tp.id], stsMap[tp.id], sasMap[tp.id]] = await Promise.all([
+          getNilaiTPUntukTP({ tpId: tp.id, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran }),
+          getNilaiAsesmenUntukTP({ jenis: 'sts', tpId: tp.id, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran }),
+          getNilaiAsesmenUntukTP({ jenis: JENIS, tpId: tp.id, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran }),
+        ]);
+      }
+      renderTPList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  /* ---------------------------------------------------------------------
+     SAS adalah komponen terakhir formula nilai akhir TP, jadi tiap baris
+     siswa menampilkan referensi SLM & STS (baca-saja) plus pratinjau
+     nilai akhir TP yang langsung terupdate begitu SAS diketik — dihitung
+     lewat fungsi yang sama persis dengan yang dipakai rapor nanti, supaya
+     tidak ada rumus ganda yang bisa berbeda hasil.
+     --------------------------------------------------------------------- */
+  function renderTPList() {
+    $('tpList').innerHTML = tpListCakupan.map((tp, i) => {
+      const sasNilai = sasMap[tp.id] || {};
+      const terisi = Object.values(sasNilai).filter(n => n.nilai !== null && n.nilai !== undefined).length;
+
+      const roster = siswaList.map(sw => {
+        const slm = slmMap[tp.id]?.[sw.id]?.slm ?? null;
+        const sts = stsMap[tp.id]?.[sw.id]?.nilai ?? null;
+        const sasVal = sasNilai[sw.id]?.nilai ?? '';
+        const refText = sts !== null ? `SLM ${slm ?? '—'} · STS ${sts}` : `SLM ${slm ?? '—'}`;
+        const akhir = slm !== null ? hitungNilaiAkhirTP(slm, sasVal !== '' ? sasVal : null, tp, sts) : null;
+        return `
+        <div class="roster-block">
+          <div class="roster-line1">
+            <span class="roster-nama">${escapeHtml(sw.nama)}</span>
+            <span class="roster-ref">${refText}</span>
+          </div>
+          <div class="roster-line2">
+            <input type="number" min="0" max="100" class="roster-input" id="sas-${tp.id}-${sw.id}"
+                   value="${sasVal}" placeholder="-" data-slm="${slm ?? ''}" data-sts="${sts ?? ''}"
+                   oninput="window._onSasInput('${tp.id}','${sw.id}')">
+            <span class="roster-akhir ${akhir === null ? 'kosong' : ''}" id="akhir-${tp.id}-${sw.id}">
+              ${akhir === null ? 'SLM belum ada' : `<span class="eq">=</span> ${akhir}`}
+            </span>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `
+      <div class="tp-card" id="tpc-${i}">
+        <div class="tp-card-head" onclick="toggleCard(${i})">
+          <div class="tp-num-badge">${tp.nomorTp || i + 1}</div>
+          <div class="tp-head-body">
+            <div class="tp-head-nama">${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
+            <div class="tp-head-meta">
+              <span>${terisi}/${siswaList.length} siswa</span>
+              <span class="bobot-tag">SLM ${tp.bobotSlm ?? 60}% · SAS ${tp.bobotSas ?? 40}%</span>
+            </div>
+          </div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="tp-card-body">
+          ${roster}
+          <button class="btn btn-primary-light btn-simpan-tp" onclick="simpanTP('${tp.id}')">Simpan Nilai SAS TP Ini</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.toggleCard = (i) => $('tpc-' + i)?.classList.toggle('open');
+
+  window._onSasInput = (tpId, siswaId) => {
+    const tp = tpListCakupan.find(t => t.id === tpId);
+    const el = $(`sas-${tpId}-${siswaId}`);
+    const slm = el.dataset.slm !== '' ? parseFloat(el.dataset.slm) : null;
+    const sts = el.dataset.sts !== '' ? parseFloat(el.dataset.sts) : null;
+    const sas = el.value !== '' ? el.value : null;
+    const akhir = slm !== null ? hitungNilaiAkhirTP(slm, sas, tp, sts) : null;
+
+    const akhirEl = $(`akhir-${tpId}-${siswaId}`);
+    akhirEl.className = 'roster-akhir' + (akhir === null ? ' kosong' : '');
+    akhirEl.innerHTML = akhir === null ? 'SLM belum ada' : `<span class="eq">=</span> ${akhir}`;
+  };
+
+  window.simpanTP = async (tpId) => {
+    const tp = tpListCakupan.find(t => t.id === tpId);
+    const entries = siswaList
+      .map(sw => ({ siswaId: sw.id, nilai: $(`sas-${tpId}-${sw.id}`).value }))
+      .filter(e => e.nilai !== '')
+      .map(e => ({ siswaId: e.siswaId, nilai: parseFloat(e.nilai) }));
+
+    if (!entries.length) { showToast('Belum ada nilai SAS yang diisi untuk TP ini.', true); return; }
+
+    try {
+      await saveNilaiAsesmenBatch(
+        { jenis: JENIS, tpId, mapel: mapelNama, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran },
+        entries, sasMap[tpId] || {}
+      );
+      showToast(`Nilai SAS TP "${tp.namaTp}" tersimpan untuk ${entries.length} siswa.`);
+      sasMap[tpId] = await getNilaiAsesmenUntukTP({ jenis: JENIS, tpId, mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran });
+      renderTPList();
+      const idx = tpListCakupan.findIndex(t => t.id === tpId);
+      $('tpc-' + idx)?.classList.add('open');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan nilai.', true);
+    }
+  };
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'nilai-sas-nilai-hub.html'; });
+</script>
+</body>
+</html>

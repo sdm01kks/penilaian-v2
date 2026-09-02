@@ -170,6 +170,10 @@
           </div>
           <p class="hint-text">Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.</p>
 
+          <div class="field-label">Bobot TP Ini dalam Nilai Akhir Mapel</div>
+          <input type="number" class="select-field" id="fBobotMapel" min="0" step="0.5" value="1" style="margin-bottom:6px">
+          <p class="hint-text">Angka bebas, bukan persen — dibandingkan relatif terhadap bobot TP lain di mapel yang sama. Contoh: TP dengan bobot 2 dihitung 2× lebih berat dari TP berbobot 1 saat menentukan nilai rapor. Kalau semua TP dibiarkan default (1), nilai akhir mapel = rata-rata rata semua TP seperti sebelumnya.</p>
+
           <div class="field-label">4 Level KKTP</div>
           <div id="levelFormWrap"></div>
 
@@ -314,6 +318,7 @@
           <div class="tp-head-meta">
             <span class="tipe-pill ${tp.tipe}">${tp.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan'}</span>
             <span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">SLM ${tp.bobotSlm ?? 60}% · SAS ${tp.bobotSas ?? 40}%</span>
+            <span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">Bobot mapel ${tp.bobotMapel ?? 1}×</span>
           </div>
         </div>
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
@@ -362,6 +367,7 @@
     $('fCp').value = '';
     $('fBobotSlm').value = 60;
     $('fBobotSas').value = 40;
+    $('fBobotMapel').value = 1;
     levelsForm = JSON.parse(JSON.stringify(LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe('pengetahuan');
     $('formCard').classList.remove('hidden');
@@ -378,6 +384,7 @@
     $('fCp').value    = tp.cp || '';
     $('fBobotSlm').value = tp.bobotSlm ?? 60;
     $('fBobotSas').value = tp.bobotSas ?? 40;
+    $('fBobotMapel').value = tp.bobotMapel ?? 1;
     levelsForm = JSON.parse(JSON.stringify(tp.levels || LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe(tp.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan');
     $('formCard').classList.remove('hidden');
@@ -400,6 +407,9 @@
       deskripsi: $('lvDesc-' + i).value.trim(),
     }));
 
+    const bobotMapel = parseFloat($('fBobotMapel').value);
+    if (!(bobotMapel >= 0)) { showToast('Bobot TP dalam mapel harus angka 0 atau lebih.', true); return; }
+
     const btn = $('btnSimpanForm');
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
@@ -413,6 +423,7 @@
         tipe: tipeAktif,
         bobotSlm: parseInt($('fBobotSlm').value, 10) || 60,
         bobotSas: parseInt($('fBobotSas').value, 10) || 40,
+        bobotMapel,
         levels,
       });
       showToast(editingId ? 'TP berhasil diperbarui.' : 'TP baru berhasil ditambahkan.');
@@ -439,7 +450,11 @@
     }
   };
 
-  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+  $('btnBack').addEventListener('click', () => {
+    // Admin masuk lewat grid mapel×tingkatan di beranda.html (belum
+    // direstrukturisasi) — guru masuk lewat nilai-hub.html -> setup-tp-hub.html.
+    window.location.href = session?.role === 'admin' ? 'admin-hub.html' : 'setup-tp-hub.html';
+  });
 </script>
 </body>
 </html>

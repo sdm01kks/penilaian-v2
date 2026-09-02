@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup Cakupan SAS — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+  .hint-card{background:var(--blue-light);border-radius:12px;padding:11px 13px;margin-bottom:14px}
+  .hint-card p{font-size:11px;color:var(--blue);line-height:1.6;font-weight:600}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  .tp-check-card{
+    background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
+    padding:12px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;
+    transition:border-color .15s;
+  }
+  .tp-check-card.checked{border-color:var(--green-dark);background:var(--green-pale)}
+  .tp-checkbox{
+    width:22px;height:22px;border-radius:7px;border:2px solid var(--border);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;color:#fff;transition:all .15s;
+  }
+  .tp-check-card.checked .tp-checkbox{background:var(--green-dark);border-color:var(--green-dark)}
+  .tp-check-body{flex:1;min-width:0}
+  .tp-check-nama{font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.4}
+  .tp-check-meta{font-size:10.5px;color:var(--ink-muted);margin-top:2px}
+
+  .btn-simpan-cakupan{width:100%;margin-top:14px;padding:12px;font-size:13px;position:sticky;bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleMapel">Cakupan SAS</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — cakupan tersimpan sementara di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+        <div class="hint-card"><p>Centang TP yang diujikan saat SAS. TP yang tidak dicentang tidak akan muncul di halaman Input Nilai SAS. Mengubah cakupan tidak menghapus nilai SAS yang sudah terlanjur diisi.</p></div>
+
+        <div id="tpCheckList"></div>
+        <button class="btn btn-primary-light btn-simpan-cakupan" id="btnSimpan">Simpan Cakupan SAS</button>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { tingkatanDariKelas, getTPList, getConfigAkademik, getCakupanTP, saveCakupanTP } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const mapelNama = params.get('mapel') || '';
+  const kelas     = params.get('kelas') || '';
+  const tingkatan = tingkatanDariKelas(kelas);
+  const JENIS = 'sas';
+
+  let config = null, tpList = [], cakupanExisting = null;
+  let dipilih = new Set();
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    if (!mapelNama || !kelas) { showEmptyScope('Tautan tidak lengkap — mapel atau kelas tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.penugasan || []).some(p => p.mapel === mapelNama && p.kelas === kelas);
+    if (!berhak) { showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas ${kelas}.`); return; }
+
+    $('titleMapel').textContent = mapelNama;
+    $('subKelas').textContent = `Kelas ${kelas} · Cakupan SAS`;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+    try {
+      config = await getConfigAkademik();
+      tpList = await getTPList({ mapel: mapelNama, tingkatan });
+      if (!tpList.length) {
+        showEmptyScope(`Belum ada TP untuk ${mapelNama} tingkat ${tingkatan}. Buat dulu lewat Setup TP & KKTP.`);
+        return;
+      }
+      cakupanExisting = await getCakupanTP({ mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, jenis: JENIS });
+      dipilih = new Set(cakupanExisting?.tpIds || []);
+
+      $('infoStrip').textContent = `Semester ${config.semesterAktif} · Tahun Ajaran ${config.tahunAjaran}`;
+      $('appBody').style.display = 'block';
+      renderList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  function renderList() {
+    $('tpCheckList').innerHTML = tpList.map(tp => `
+      <div class="tp-check-card ${dipilih.has(tp.id) ? 'checked' : ''}" id="chk-${tp.id}" onclick="window._toggleTp('${tp.id}')">
+        <div class="tp-checkbox">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 7"/></svg>
+        </div>
+        <div class="tp-check-body">
+          <div class="tp-check-nama">${tp.nomorTp ? tp.nomorTp + '. ' : ''}${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
+          <div class="tp-check-meta">Bobot mapel ${tp.bobotMapel ?? 1}×</div>
+        </div>
+      </div>`).join('');
+  }
+
+  window._toggleTp = (tpId) => {
+    if (dipilih.has(tpId)) dipilih.delete(tpId); else dipilih.add(tpId);
+    $('chk-' + tpId).classList.toggle('checked');
+  };
+
+  $('btnSimpan').addEventListener('click', async () => {
+    $('btnSimpan').disabled = true;
+    $('btnSimpan').textContent = 'Menyimpan…';
+    try {
+      await saveCakupanTP(
+        { mapel: mapelNama, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, jenis: JENIS, tpIds: Array.from(dipilih) },
+        cakupanExisting?.id
+      );
+      showToast(`Cakupan SAS tersimpan — ${dipilih.size} TP dipilih.`);
+      cakupanExisting = await getCakupanTP({ mapel: mapelNama, kelas, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran, jenis: JENIS });
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan cakupan.', true);
+    } finally {
+      $('btnSimpan').disabled = false;
+      $('btnSimpan').textContent = 'Simpan Cakupan SAS';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'nilai-sas-cakupan-hub.html'; });
+</script>
+</body>
+</html>

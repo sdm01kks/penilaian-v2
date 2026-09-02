@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nilai STS — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .intro-card{background:var(--gold-light);border:1px solid rgba(201,136,42,.28);border-radius:14px;padding:13px 14px;margin-bottom:16px}
+  .intro-card p{font-size:11.5px;color:#7a5416;line-height:1.6;font-weight:600}
+
+  .feature-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:16px;margin-bottom:12px;text-decoration:none;display:flex;align-items:center;gap:13px;
+  }
+  .feature-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .feature-icon.cakupan{background:var(--blue-light);color:var(--blue)}
+  .feature-icon.input{background:var(--green-pale);color:var(--green-dark)}
+  .feature-body{flex:1;min-width:0}
+  .feature-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .feature-sub{font-size:11px;color:var(--ink-muted);margin-top:2px;line-height:1.5}
+  .feature-arrow{flex-shrink:0;color:var(--ink-muted)}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Nilai STS</div>
+            <div class="app-header-sub">Sumatif Tengah Semester</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div class="intro-card">
+          <p>STS punya rapor bayangan sendiri. TP yang diikutkan STS bisa berbeda dari SLM/SAS — pilih cakupannya dulu sebelum bisa input nilai. Nilai STS dipakai di rapor resmi hanya kalau lebih tinggi dari SLM pada TP yang sama.</p>
+        </div>
+
+        <a class="feature-card" href="nilai-sts-cakupan-hub.html">
+          <div class="feature-icon cakupan">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Setup Cakupan STS</div>
+            <div class="feature-sub">Pilih TP mana saja yang diikutkan STS, per mapel &amp; kelas</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a class="feature-card" href="nilai-sts-nilai-hub.html">
+          <div class="feature-icon input">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Input Nilai STS</div>
+            <div class="feature-sub">Isi nilai STS untuk TP yang sudah masuk cakupan</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <div id="emptyState" class="feature-card hidden" style="display:block">
+          <div style="text-align:center;color:var(--ink-muted);font-size:12.5px" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { onAuthChange } from '../assets/firebase.js';
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('appBody').style.display = 'block';
+
+    if (session.role === 'admin') {
+      document.querySelectorAll('.feature-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Nilai STS diinput oleh guru mata pelajaran, bukan admin.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
+    if (!penugasan.length) {
+      document.querySelectorAll('.feature-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Belum ada penugasan mata pelajaran untuk akun ini. Hubungi admin Akademik & Rapor sekolah.';
+      $('emptyState').classList.remove('hidden');
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'nilai-hub.html'; });
+</script>
+</body>
+</html>

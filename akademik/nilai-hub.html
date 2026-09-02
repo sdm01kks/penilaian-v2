@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nilai &amp; Pembelajaran — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:16px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+
+  .feature-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:16px;margin-bottom:12px;text-decoration:none;display:flex;align-items:center;gap:13px;
+  }
+  .feature-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .feature-icon.tp{background:var(--blue-light);color:var(--blue)}
+  .feature-icon.slm{background:var(--green-pale);color:var(--green-dark)}
+  .feature-icon.sts{background:var(--gold-light);color:#8a6416}
+  .feature-icon.sas{background:var(--gold-light);color:#8a6416}
+  .feature-body{flex:1;min-width:0}
+  .feature-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .feature-sub{font-size:11px;color:var(--ink-muted);margin-top:2px;line-height:1.5}
+  .feature-arrow{flex-shrink:0;color:var(--ink-muted)}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Nilai &amp; Pembelajaran</div>
+            <div class="app-header-sub">Guru Mata Pelajaran</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+
+        <a class="feature-card" href="setup-tp-hub.html">
+          <div class="feature-icon tp">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H1v3h8zM17 4H9v3h8zM17 18H9v3h8z"/><path d="M20.5 7.5 23 5M23 10.5l-2.5-2.5"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Setup TP &amp; KKTP</div>
+            <div class="feature-sub">Susun Tujuan Pembelajaran, 4 level KKTP, bobot SLM/SAS &amp; bobot mapel</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a class="feature-card" href="nilai-slm-hub.html">
+          <div class="feature-icon slm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Nilai SLM</div>
+            <div class="feature-sub">Sumatif Lingkup Materi — input berkelanjutan per TP</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a class="feature-card" href="nilai-sts-hub.html">
+          <div class="feature-icon sts">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Nilai STS</div>
+            <div class="feature-sub">Sumatif Tengah Semester — pilih cakupan TP dulu, punya rapor bayangan sendiri</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a class="feature-card" href="nilai-sas-hub.html">
+          <div class="feature-icon sas">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+          </div>
+          <div class="feature-body">
+            <div class="feature-title">Nilai SAS</div>
+            <div class="feature-sub">Sumatif Akhir Semester — langsung membentuk nilai akhir rapor</div>
+          </div>
+          <svg class="feature-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <div id="emptyState" class="feature-card hidden" style="display:block">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { onAuthChange } from '../assets/firebase.js';
+  const $ = (id) => document.getElementById(id);
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    $('appBody').style.display = 'block';
+
+    if (session.role === 'admin') {
+      document.querySelectorAll('.feature-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Nilai & Pembelajaran untuk guru mata pelajaran. Admin dapat memeriksa Setup TP lewat menu Administrasi.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+    const penugasan = Array.isArray(session.penugasan) ? session.penugasan : [];
+    if (!penugasan.length) {
+      document.querySelectorAll('.feature-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Belum ada penugasan mata pelajaran untuk akun ini. Hubungi admin Akademik & Rapor sekolah.';
+      $('emptyState').classList.remove('hidden');
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+</script>
+</body>
+</html>

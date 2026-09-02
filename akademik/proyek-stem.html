@@ -165,6 +165,7 @@
   const kelas = params.get('kelas') || '';
   const tingkatan = tingkatanDariKelas(kelas);
 
+  let session = null;
   let config = null, mapelList = [], dplAktif = [], proyekList = [], editingId = null;
 
   function showToast(msg, isError = false) {
@@ -184,6 +185,7 @@
 
   onAuthChange(async (s) => {
     if (!s) { window.location.href = 'login.html'; return; }
+    session = s;
 
     if (!kelas) { showEmptyScope('Tautan tidak lengkap — kelas tidak diketahui.'); return; }
     const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
@@ -430,7 +432,9 @@
     }
   };
 
-  $('btnBack').addEventListener('click', () => { window.location.href = 'beranda.html'; });
+  $('btnBack').addEventListener('click', () => {
+    window.location.href = session?.role === 'admin' ? 'beranda.html' : 'proyek-stem-hub.html';
+  });
 </script>
 </body>
 </html>
