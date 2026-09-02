@@ -17,7 +17,39 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
-## 2026-08-25 — `[Tahsin-Tahfizh]` Penilaian Menulis: pemilih Surah/Ayat + rubrik skor
+## 2026-09-02 — `[Akademik]` Dekomposisi Nilai (SLM/STS/SAS) + restrukturisasi navigasi total
+
+### Ditambahkan
+- **Nilai dipecah jadi 3 fitur terpisah** (sebelumnya 1 halaman `nilai-mapel.html` menggabung SLM+SAS):
+  - **SLM** (`nilai-slm-hub.html` → `nilai-slm.html`) — input berkelanjutan per TP, pola sama seperti sebelumnya, SAS dihapus dari halaman ini.
+  - **STS** (`nilai-sts-hub.html` → cakupan/`nilai-sts-cakupan.html` + input/`nilai-sts.html`) — **baru total**. Guru wajib pilih dulu TP mana yang diikutkan STS (cakupan STS & SAS untuk mapel+kelas yang sama SENGAJA boleh beda, tidak otomatis sama) sebelum bisa input nilai. Disiapkan sebagai fondasi rapor bayangan STS (laporannya sendiri belum dibangun).
+  - **SAS** (`nilai-sas-hub.html` → cakupan/`nilai-sas-cakupan.html` + input/`nilai-sas.html`) — pola identik STS, tapi langsung membentuk nilai akhir rapor. Halaman input menampilkan referensi SLM+STS dan pratinjau nilai akhir TP yang live-update saat SAS diketik.
+  - Formula nilai akhir TP: `efektifSLM = STS kalau lebih tinggi dari SLM pada TP yang sama, kalau tidak = SLM asli` → `nilaiAkhirTP = efektifSLM×bobotSlm% + SAS×bobotSas%` (SAS tetap opsional per TP seperti sebelumnya).
+- **Bobot TP dalam nilai akhir mapel** — field baru `bobotMapel` di `tp_kktp` (via `setup-tp.html`), dipakai `hitungNilaiAkhirMapel()` sebagai rata-rata tertimbang (sebelumnya rata-rata polos). TP lama tanpa field ini dianggap bobot 1 (rata), tidak ada migrasi data.
+- **Restrukturisasi navigasi total** — `beranda.html` yang tadinya 1 halaman berat (banyak `await` per penugasan/kelas) dipecah jadi hierarki hub kartu-terpisah:
+  ```
+  beranda.html (3 kartu: Nilai & Pembelajaran / Wali Kelas / Administrasi)
+  ├─ nilai-hub.html → Setup TP & KKTP, SLM, STS, SAS
+  ├─ wali-hub.html  → Absensi & Keputusan, Kelola DPL, Kokurikuler, Ekstrakurikuler (segera), Presensi Harian (segera)
+  └─ admin-hub.html → Semua Mapel, Kelola Mapel, Generator Akun Guru
+  ```
+  Peta lengkap & alasan tiap keputusan ada di `antiregresi.md` §8.3.
+- Koleksi Firestore baru: `asesmen_cakupan`, `nilai_sts`, `nilai_sas` — skema & rules di `antiregresi.md` §8.4.
+- 20 file HTML baru di `akademik/` (daftar lengkap `antiregresi.md` §8.2, tidak diulang di sini).
+
+### Diubah
+- `assets/firestore-data-akademik.js` — `hitungNilaiAkhirTP()` tambah parameter `nilaiSts` opsional (posisi terakhir, backward compatible); `hitungNilaiAkhirMapel()` **ganti signature** (terima `[{nilai, bobot}]`, bukan array angka polos — satu-satunya pemanggil lama sudah ikut direstrukturisasi jadi tidak ada breakage); `saveTP()` tambah field `bobotMapel`; blok fungsi baru untuk `asesmen_cakupan`/`nilai_sts`/`nilai_sas`.
+- `firestore.rules` — 3 match block baru, pola identik `nilai_tp` (`bolehMapelKelas()`).
+- `beranda.html` — ditulis ulang total, landing tipis 3-kartu tanpa `await` mahal (ringkasan tiap kartu dihitung dari `session`, bukan query Firestore).
+- `setup-tp.html`, `absensi.html`, `kelola-dpl.html`, `proyek-stem.html` — tombol kembali jadi kondisional per role (guru/wali → hub barunya, admin → `beranda.html`/`admin-hub.html`).
+- `nilai-mapel.html` — jadi redirect stub ke `nilai-slm-hub.html`, pola persis `input-nilai.html` (bookmark lama tidak 404).
+
+### Catatan
+- Status: **belum dikirim/dideploy** — menunggu pemilik proyek menimpa manual & push.
+- Ekstrakurikuler, 7KAIH, Presensi Harian: baru kartu placeholder "Segera", belum ada rancangan detail penilaian.
+- Semua file baru & diubah lolos `node --check` (JS di tiap `<script type="module">`) dan audit grep lintas repo (tautan antar halaman, sisa teks salah tempel saat menyalin template STS→SAS/Kokurikuler via `sed`) sebelum diserahkan.
+
+---
 
 ### Ditambahkan
 - **Materi Salinan bercabang otomatis** di `catat-menulis.html` sesuai jenjang siswa (`siswa.jenjang`/`siswa.tamatIqro`, bukan nomor kelas):

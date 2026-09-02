@@ -268,6 +268,46 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- asesmen_cakupan/{id} -----------------------------------------------
+    // Daftar TP yang diikutkan pada STS atau SAS untuk satu mapel+kelas
+    // (field `jenis`: 'sts'|'sas'). Ini "gerbang" sebelum nilai_sts/nilai_sas
+    // boleh diisi — guru wajib memilih cakupan TP dulu di sini. Aturan akses
+    // sama persis pola nilai_tp (bolehMapelKelas), karena isinya juga
+    // terikat ke kelas+mapel spesifik.
+    match /asesmen_cakupan/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
+    // ---- nilai_sts/{id} & nilai_sas/{id} -------------------------------------
+    // Nilai STS dan SAS, MASING-MASING terpisah dari nilai_tp (yang kini
+    // khusus SLM) dan dari satu sama lain — cakupan TP-nya bisa berbeda
+    // (lihat asesmen_cakupan di atas). Satu dokumen per (siswa × TP ×
+    // semester × tahun ajaran) per jenis, pola aksesnya identik nilai_tp.
+    match /nilai_sts/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+    match /nilai_sas/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- absensi_rapor/{id} -------------------------------------------------
     // Rekap absensi semester + catatan wali + keputusan naik/tinggal kelas.
     // Satu dokumen per (siswa × semester × tahun ajaran). KHUSUS wali

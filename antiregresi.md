@@ -116,10 +116,74 @@ function menulisPosisiLabel(r) {
 
 ---
 
-## 8. `[Akademik]` — Bagian ini diisi oleh sesi yang mengerjakan modul Akademik
+## 8. `[Akademik]` Dekomposisi Nilai (SLM/STS/SAS) & Navigasi Hub
 
-*(Catatan informasional dari sesi Tahsin-Tahfizh, bukan aturan otoritatif — sesi Akademik sebaiknya melengkapi/mengoreksi bagian ini sendiri.)*
+*(Diisi oleh sesi yang mengerjakan restrukturisasi ini — 2026-09-02. Menggantikan catatan informasional sesi Tahsin-Tahfizh sebelumnya, termasuk koreksi nama role.)*
 
-- Data layer sudah dipisah ke `assets/firestore-data-akademik.js` — pertahankan pemisahan ini, jangan digabung kembali ke `firestore-data.js` milik Tahsin-Tahfizh.
-- Koleksi yang teramati sejauh ini: `mapel`, `tp_kktp`, `nilai_tp` (gabungan `nilai_slm`+`nilai_sas` versi lama), `proyek_stem`, `absensi_rapor`, `dpl`, `kokurikuler`, `config/akademik`. Daftar ini kemungkinan besar sudah berubah lagi — jangan dianggap final tanpa verifikasi ulang.
-- Role `guru_mapel` sengaja dipisah dari `guru_tahsin_tahfizh` supaya tidak otomatis dapat akses data Tahsin-Tahfizh.
+**8.1. Koreksi nama role & pemisahan data layer.** Role guru mata pelajaran di kode adalah **`guru_akademik`**, BUKAN `guru_mapel` seperti tercatat sebelumnya di bagian ini. Cek `firestore.rules` dan `generator-akun.html` kalau ragu — jangan asumsikan dari nama variabel/field lain yang mirip. Data layer Akademik tetap di `assets/firestore-data-akademik.js`, terpisah dari `firestore-data.js` milik Tahsin-Tahfizh — pertahankan pemisahan ini (lihat §2 di atas), jangan digabung kembali.
+
+**8.2. Daftar file `akademik/` per fitur** (supaya sesi berikutnya tidak perlu `ls` manual untuk tahu file mana milik fitur mana):
+- **Nilai SLM**: `nilai-slm-hub.html` (pemilih mapel+kelas), `nilai-slm.html` (input)
+- **Nilai STS**: `nilai-sts-hub.html` (2 kartu) → `nilai-sts-cakupan-hub.html` + `nilai-sts-cakupan.html` (pilih TP) / `nilai-sts-nilai-hub.html` + `nilai-sts.html` (input)
+- **Nilai SAS**: pola identik STS — `nilai-sas-hub.html`, `nilai-sas-cakupan-hub.html`, `nilai-sas-cakupan.html`, `nilai-sas-nilai-hub.html`, `nilai-sas.html`
+- **Setup TP**: `setup-tp-hub.html` (pemilih mapel+**tingkatan**, di-dedupe dari penugasan — lihat §8.7) → `setup-tp.html` (sudah ada sebelumnya, cuma ditambah field bobot)
+- **Wali Kelas**: `wali-hub.html` (5 kartu) → `absensi-hub.html`→`absensi.html`, `kelola-dpl-hub.html`→`kelola-dpl.html`, `kokurikuler-hub.html` (2 kartu: Proyek STEM & 7KAIH-segera) → `proyek-stem-hub.html`→`proyek-stem.html`
+- **Administrasi**: `admin-hub.html` (grid mapel×tingkatan + link `seed-mapel.html`/`generator-akun.html`)
+- **Landing**: `beranda.html` (3 kartu ke 3 hub di atas)
+- **Redirect stub** (bookmark lama): `nilai-mapel.html` → `nilai-slm-hub.html`
+
+**8.3. Peta navigasi lengkap & alasan setiap keputusan.**
+```
+login.html → beranda.html
+├─ nilai-hub.html   (tampil kalau session.penugasan ada isinya)
+│   ├─ setup-tp-hub.html  → setup-tp.html?mapel=&tingkatan=
+│   ├─ nilai-slm-hub.html → nilai-slm.html?mapel=&kelas=
+│   ├─ nilai-sts-hub.html → nilai-sts-cakupan-hub.html → nilai-sts-cakupan.html?mapel=&kelas=
+│   │                     → nilai-sts-nilai-hub.html   → nilai-sts.html?mapel=&kelas=
+│   └─ nilai-sas-hub.html → (pola identik nilai-sts-hub.html)
+├─ wali-hub.html     (tampil kalau session.waliKelas ada isinya)
+│   ├─ absensi-hub.html    → absensi.html?kelas=
+│   ├─ kelola-dpl-hub.html → kelola-dpl.html?kelas=
+│   └─ kokurikuler-hub.html
+│       ├─ proyek-stem-hub.html → proyek-stem.html?kelas=
+│       └─ (7KAIH — kartu "Segera", belum ada halaman)
+└─ admin-hub.html    (khusus role==='admin')
+```
+- **Kenapa selalu ada lapisan hub-pemilih**, bahkan untuk guru yang cuma punya 1 penugasan/kelas: konsistensi pola lebih penting daripada menghemat satu klik untuk kasus umum — dan tetap benar kalau suatu saat guru punya banyak penugasan/kelas.
+- **Kenapa bukan "baris status per kartu penugasan"** (pola lama `beranda.html`): pemilik sistem eksplisit minta kartu/kontainer terpisah per fitur, bukan baris di dalam satu kartu — lihat histori percakapan kalau ingin tahu alasan detailnya.
+- **Setiap halaman aksi** (`nilai-slm.html`, `nilai-sts.html`, dst.) sekarang **kembali ke hub pemilihnya**, bukan langsung ke `beranda.html` — kecuali diakses admin, yang kembali ke `beranda.html`/`admin-hub.html` (lihat §8.6).
+
+**8.4. Skema Firestore baru (per 2026-09-02).**
+- `tp_kktp` — field baru `bobotMapel` (number, default 1 kalau kosong = bobot rata). Dipakai `hitungNilaiAkhirMapel()`. **BUKAN persen, bukan wajib total 100** — angka bebas dibandingkan relatif antar TP dalam mapel yang sama.
+- `nilai_tp` — sekarang **khusus SLM**. Field `sas` lama di dokumen existing dibiarkan menggantung (TIDAK dihapus, TIDAK dibaca lagi) — kompatibilitas mundur murni pasif, tidak perlu migrasi karena belum ada data SAS produksi saat perubahan ini dibuat (dikonfirmasi ke pemilik sistem).
+- `asesmen_cakupan/{id}` *(baru)* — 1 dokumen per (mapel, kelas, semester, tahunAjaran, **jenis**: `'sts'|'sas'`), berisi `tpIds: string[]`. Cakupan STS dan SAS untuk mapel+kelas yang SAMA sengaja terpisah total, tidak ada logika "copy dari STS ke SAS" atau sebaliknya.
+- `nilai_sts/{id}` & `nilai_sas/{id}` *(baru)* — nilai murni per (tpId, siswaId, mapel, kelas, semester, tahunAjaran), field `nilai`. Fungsi baca/tulisnya di `firestore-data-akademik.js` **generik lewat parameter `jenis`** (nama koleksi ditentukan lookup `KOLEKSI_NILAI_ASESMEN[jenis]`) — kalau menambah jenis asesmen baru serupa di masa depan, ikuti pola generik ini, jangan duplikasi fungsi.
+- `firestore.rules` — ketiga koleksi baru di atas pakai rule persis pola `nilai_tp` (`bolehMapelKelas()`), sudah ditambahkan.
+
+**8.5. Formula nilai akhir (rapor resmi).**
+```
+efektifSLM(tp, siswa) = STS > SLM pada TP itu?  → pakai STS
+                                                 → pakai SLM asli
+nilaiAkhirTP  = SAS kosong pada TP itu?  → efektifSLM saja
+                                          → efektifSLM × bobotSlm% + SAS × bobotSas%
+nilaiAkhirMapel = rata-rata TERTIMBANG nilaiAkhirTP semua TP, bobot = tp.bobotMapel (default 1)
+```
+STS yang TIDAK lebih tinggi dari SLM tidak berpengaruh sama sekali ke nilai akhir — hanya tersimpan untuk rapor bayangan STS (belum dibangun). Implementasi ada di `hitungNilaiAkhirTP(nilaiSlm, nilaiSas, tp, nilaiSts)` dan `hitungNilaiAkhirMapel(entriesPerTP)` di `firestore-data-akademik.js` — **jangan hitung ulang formula ini secara manual di halaman baru manapun**, selalu impor & pakai kedua fungsi ini supaya rumus rapor tidak pernah punya 2 sumber kebenaran yang bisa berbeda hasil.
+
+**8.6. Pola back-button kondisional per role.** Halaman yang bisa diakses admin *dan* guru/wali lewat jalur berbeda (`setup-tp.html`, `absensi.html`, `kelola-dpl.html`, `proyek-stem.html`) simpan `session` sebagai variabel scope-modul (`let session = null;` di luar `onAuthChange`, diisi `session = s;` di dalamnya), lalu tombol kembali baca variabel itu:
+```js
+$('btnBack').addEventListener('click', () => {
+  window.location.href = session?.role === 'admin' ? 'admin-hub.html' : 'setup-tp-hub.html';
+});
+```
+Kalau menambah halaman baru yang diakses lebih dari satu jalur, ikuti pola ini — jangan hardcode satu tujuan kembali saja.
+
+**8.7. Setup TP di-dedupe per (mapel, tingkatan), BUKAN per (mapel, kelas).** TP & KKTP berlaku per tingkatan (kelas paralel 4A/4B pakai TP yang sama), beda dari SLM/STS/SAS yang memang per kelas. `setup-tp-hub.html` men-dedupe `session.penugasan` (yang berbentuk `{mapel, kelas}`) jadi pasangan unik `{mapel, tingkatan}` sebelum ditampilkan sebagai kartu — kalau lupa dedupe ini, guru yang mengampu mapel sama di 2 kelas paralel akan lihat kartu Setup TP dobel untuk TP yang sebenarnya sama.
+
+**8.8. Kejadian nyata — sisa teks salah tempel saat menyalin halaman via `sed`.** Membangun SAS dan Kokurikuler dengan menyalin struktur STS lewat `sed` (mengganti kata kunci "STS"→"SAS" dst.) dua kali menghasilkan bug nyata yang baru ketahuan lewat audit grep, bukan saat menulis:
+- `nilai-sas-cakupan-hub.html`: 2 baris teks UI masih menyebut "STS" walau sudah jadi halaman SAS.
+- `kokurikuler-hub.html` (disalin dari `nilai-sts-hub.html`, bukan sekadar sed kata "STS"→"Kokurikuler"): **guard akses ikut salah tersalin** — awalnya memeriksa `session.penugasan` (punya guru mapel) padahal Kokurikuler itu fitur wali kelas yang seharusnya memeriksa `session.waliKelas`. Kalau tidak ketahuan, wali kelas yang bukan guru mapel manapun akan selalu melihat halaman kosong "Belum ada penugasan", padahal harusnya bisa akses.
+- **Aturan wajib turunan**: setelah menyalin halaman dengan `sed`/copy-paste sebagai basis halaman baru, WAJIB `grep -n` nama fitur asal (case-sensitive, termasuk singkatan) ke file hasil salinan, DAN baca ulang bagian guard akses (`session.role`, `session.penugasan` vs `session.waliKelas`) secara eksplisit — sed yang mengganti teks tampilan tidak menjamin logika kondisional ikut benar secara semantik.
+
+**8.9. Prinsip beranda tipis.** `beranda.html` (dan landing hub lain di bawahnya seperti `nilai-hub.html`/`wali-hub.html`) TIDAK melakukan query Firestore per-item untuk menghitung status lengkap/belum — cukup hitung ringkasan dari `session` (`penugasan.length`, `waliKelas.length`, dsb.) yang sudah tersedia tanpa fetch tambahan. Query yang lebih detail (status "X/Y TP terisi", dsb.) baru dilakukan di hub selanjutnya yang lebih spesifik, saat kartu itu benar-benar dibuka. Kalau ada dorongan menambah status detail langsung di `beranda.html` lagi di masa depan, ingat ini yang menyebabkan versi lama lambat dimuat untuk guru dengan banyak penugasan.
+
