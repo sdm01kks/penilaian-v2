@@ -199,6 +199,13 @@ export async function saveTP(payload) {
     tipe:      payload.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan',
     bobotSlm:  payload.bobotSlm ?? 60,
     bobotSas:  payload.bobotSas ?? 40,
+    // Bobot TP ini TERHADAP NILAI AKHIR MAPEL (rapor) — beda dari bobotSlm/
+    // bobotSas di atas (itu bobot SLM vs SAS DI DALAM satu TP). Angka bebas
+    // (bukan wajib 0-100/total 100) — supaya tambah/hapus TP di tengah
+    // semester tidak memaksa guru merapikan ulang bobot TP lain. TP tanpa
+    // field ini (dibuat sebelum fitur ini ada) dianggap bobot 1 (rata
+    // dengan TP lain) saat dihitung — lihat hitungNilaiAkhirMapel().
+    bobotMapel: payload.bobotMapel ?? 1,
     levels:    payload.levels,
   };
 
@@ -259,16 +266,33 @@ export async function deleteTP(id) {
    - Nilai rapor (nilai akhir mapel) = rata-rata nilai akhir dari SEMUA TP.
    ========================================================================== */
 
-/** Nilai akhir satu TP = campuran SLM+SAS sesuai bobot TP itu, atau SLM saja kalau SAS kosong. */
-export function hitungNilaiAkhirTP(nilaiSlm, nilaiSas, tp) {
+/**
+ * Nilai akhir satu TP = campuran efektifSLM+SAS sesuai bobot TP itu, atau
+ * efektifSLM saja kalau SAS kosong.
+ *
+ * efektifSLM = SLM asli, KECUALI ada nilai STS untuk TP ini DAN nilai STS
+ * itu lebih tinggi dari SLM — dalam hal itu STS dianggap MENGGANTIKAN SLM
+ * (bukan dirata-rata/dicampur). Ini yang membuat STS "dianggap menggantikan
+ * nilai SLM" seperti disepakati: STS sendiri TIDAK dipakai kalau lebih
+ * rendah/sama dengan SLM, dan tidak pernah muncul terpisah di rapor resmi.
+ *
+ * @param {number|string|null} nilaiSlm
+ * @param {number|string|null} nilaiSas
+ * @param {object} tp - dokumen TP (butuh bobotSlm/bobotSas)
+ * @param {number|string|null} [nilaiSts] - opsional, null/undefined kalau
+ *   TP ini tidak termasuk cakupan STS atau STS belum diinput.
+ */
+export function hitungNilaiAkhirTP(nilaiSlm, nilaiSas, tp, nilaiSts = null) {
   if (nilaiSlm === '' || nilaiSlm === null || nilaiSlm === undefined) return null;
   const slm = parseFloat(nilaiSlm);
+  const sts = (nilaiSts === '' || nilaiSts === null || nilaiSts === undefined) ? null : parseFloat(nilaiSts);
+  const efektifSlm = (sts !== null && sts > slm) ? sts : slm;
   if (nilaiSas === '' || nilaiSas === null || nilaiSas === undefined) {
-    return Math.round(slm);
+    return Math.round(efektifSlm);
   }
   const bobotSlm = (tp?.bobotSlm ?? 60) / 100;
   const bobotSas = (tp?.bobotSas ?? 40) / 100;
-  return Math.round(slm * bobotSlm + parseFloat(nilaiSas) * bobotSas);
+  return Math.round(efektifSlm * bobotSlm + parseFloat(nilaiSas) * bobotSas);
 }
 
 /** Tentukan level KKTP dari NILAI AKHIR TP (hasil hitungNilaiAkhirTP), mengikuti rentang TP tsb. */
@@ -286,11 +310,25 @@ export function tentukanLevel(nilaiAkhirTP, tp) {
   return { index: last, label: labels[last], deskripsi: levels[last]?.deskripsi || '' };
 }
 
-/** Nilai akhir mapel (nilai rapor) = rata-rata nilai akhir semua TP. */
-export function hitungNilaiAkhirMapel(nilaiAkhirPerTP) {
-  const valid = nilaiAkhirPerTP.filter(n => n !== null && n !== undefined && n !== '');
+/**
+ * Nilai akhir mapel (nilai rapor) = RATA-RATA TERTIMBANG nilai akhir semua
+ * TP, sesuai bobotMapel masing-masing TP (lihat saveTP). TP dengan
+ * bobotMapel kosong/tidak diketahui dianggap bobot 1 (rata dengan TP lain)
+ * — supaya TP lama (dibuat sebelum fitur bobot ini ada) tidak tiba-tiba
+ * mengubah nilai akhir mapel begitu fitur ini dipasang.
+ *
+ * @param {Array<{nilai:number|string|null, bobot?:number}>} entriesPerTP
+ *   Tiap entri = { nilai: hasil hitungNilaiAkhirTP() untuk satu TP,
+ *   bobot: tp.bobotMapel milik TP itu }.
+ */
+export function hitungNilaiAkhirMapel(entriesPerTP) {
+  const valid = (entriesPerTP || [])
+    .map(e => ({ nilai: e?.nilai, bobot: (e?.bobot ?? 1) }))
+    .filter(e => e.nilai !== null && e.nilai !== undefined && e.nilai !== '' && e.bobot > 0);
   if (!valid.length) return null;
-  return Math.round(valid.reduce((a, b) => a + parseFloat(b), 0) / valid.length);
+  const totalBobot = valid.reduce((a, e) => a + e.bobot, 0);
+  const totalNilai = valid.reduce((a, e) => a + parseFloat(e.nilai) * e.bobot, 0);
+  return Math.round(totalNilai / totalBobot);
 }
 
 /* ==========================================================================
@@ -465,6 +503,192 @@ export async function saveNilaiTPBatch(ctx, entries, existing) {
       await fsMod.updateDoc(fsMod.doc(db, 'nilai_tp', found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
     } else {
       await fsMod.addDoc(fsMod.collection(db, 'nilai_tp'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+    }
+  }
+}
+
+/* ==========================================================================
+   Cakupan TP untuk STS & SAS — SEBELUM guru bisa input nilai STS atau SAS
+   untuk suatu mapel+kelas, guru wajib memilih dulu TP mana yang diikutkan
+   asesmen itu ("Setup Cakupan"). Cakupan STS dan cakupan SAS untuk mapel+
+   kelas yang sama SENGAJA disimpan terpisah (tpIds bisa beda total) —
+   tidak otomatis sama, sesuai arahan pemilik sistem. Satu dokumen per
+   (mapel, kelas, semester, tahunAjaran, jenis).
+   ========================================================================== */
+
+const DEMO_CAKUPAN_KEY = 'akd_demo_asesmen_cakupan';
+
+function readDemoCakupan() {
+  return JSON.parse(localStorage.getItem(DEMO_CAKUPAN_KEY) || '[]');
+}
+function writeDemoCakupan(list) {
+  localStorage.setItem(DEMO_CAKUPAN_KEY, JSON.stringify(list));
+}
+function cakupanDemoId({ mapel, kelas, semester, tahunAjaran, jenis }) {
+  return `${mapel}__${kelas}__${semester}__${tahunAjaran}__${jenis}`;
+}
+
+/**
+ * Ambil cakupan TP (daftar tpId yang diikutkan) untuk satu mapel+kelas,
+ * jenis 'sts' atau 'sas'. @returns {Promise<{id:string, tpIds:string[]}|null>}
+ */
+export async function getCakupanTP({ mapel, kelas, semester, tahunAjaran, jenis }) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    const found = readDemoCakupan().find(c =>
+      c.mapel === mapel && c.kelas === kelas && c.semester === semester &&
+      c.tahunAjaran === tahunAjaran && c.jenis === jenis);
+    return found ? { id: found.id, tpIds: found.tpIds || [] } : null;
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'asesmen_cakupan'),
+    fsMod.where('mapel', '==', mapel),
+    fsMod.where('kelas', '==', kelas),
+    fsMod.where('semester', '==', semester),
+    fsMod.where('tahunAjaran', '==', tahunAjaran),
+    fsMod.where('jenis', '==', jenis)
+  );
+  const snap = await fsMod.getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, tpIds: d.data().tpIds || [] };
+}
+
+/** Simpan (upsert) cakupan TP untuk STS/SAS satu mapel+kelas. */
+export async function saveCakupanTP(payload, existingId) {
+  const data = {
+    mapel: payload.mapel, kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran, jenis: payload.jenis,
+    tpIds: payload.tpIds || [],
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoCakupan();
+    const id = existingId || cakupanDemoId(payload);
+    const idx = list.findIndex(c => c.id === id);
+    if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    else list.push({ id, ...data });
+    writeDemoCakupan(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'asesmen_cakupan', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'asesmen_cakupan'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/* ==========================================================================
+   Nilai STS & SAS — murni per TP per siswa, TERPISAH dari nilai_tp (yang
+   sekarang khusus SLM). Kedua jenis pakai fungsi yang sama lewat parameter
+   `jenis` ('sts'|'sas') supaya tidak duplikasi logika baca/tulis — jenis
+   menentukan nama koleksi Firestore (`nilai_sts`/`nilai_sas`) dan key
+   localStorage demo. Nilai SAS di sini menggantikan peran field `sas` lama
+   di nilai_tp (field lama itu dibiarkan menggantung, tidak dihapus/dibaca
+   lagi, demi kompatibilitas mundur dokumen nilai_tp yang sudah ada).
+   ========================================================================== */
+
+const DEMO_NILAI_ASESMEN_KEY = { sts: 'akd_demo_nilai_sts', sas: 'akd_demo_nilai_sas' };
+const KOLEKSI_NILAI_ASESMEN  = { sts: 'nilai_sts',          sas: 'nilai_sas' };
+
+function readDemoNilaiAsesmen(jenis) {
+  return JSON.parse(localStorage.getItem(DEMO_NILAI_ASESMEN_KEY[jenis]) || '[]');
+}
+function writeDemoNilaiAsesmen(jenis, list) {
+  localStorage.setItem(DEMO_NILAI_ASESMEN_KEY[jenis], JSON.stringify(list));
+}
+
+/**
+ * Ambil nilai STS/SAS satu TP, lintas siswa sekelas. Bentuk return sama
+ * dengan getNilaiTPUntukTP supaya halaman input bisa pakai pola yang sama.
+ * @returns {Promise<Object<string,{id:string, nilai:number}>>} siswaId -> {id, nilai}
+ */
+export async function getNilaiAsesmenUntukTP({ jenis, tpId, mapel, kelas, semester, tahunAjaran }) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = readDemoNilaiAsesmen(jenis).filter(n => n.tpId === tpId && n.semester === semester && n.tahunAjaran === tahunAjaran);
+    const map = {};
+    list.forEach(n => { map[n.siswaId] = { id: n.id, nilai: n.nilai }; });
+    return map;
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, KOLEKSI_NILAI_ASESMEN[jenis]),
+    fsMod.where('tpId', '==', tpId),
+    fsMod.where('mapel', '==', mapel),
+    fsMod.where('kelas', '==', kelas),
+    fsMod.where('semester', '==', semester),
+    fsMod.where('tahunAjaran', '==', tahunAjaran)
+  );
+  const snap = await fsMod.getDocs(q);
+  const map = {};
+  snap.forEach(d => { map[d.data().siswaId] = { id: d.id, nilai: d.data().nilai }; });
+  return map;
+}
+
+/**
+ * Sama seperti getNilaiTPSummary tapi untuk STS/SAS — dipakai hub utk
+ * hitung status "X/Y TP terisi" tanpa query berulang per TP.
+ * @returns {Promise<Object<string, Array<{nilai:number}>>>} tpId -> daftar nilai
+ */
+export async function getNilaiAsesmenSummary({ jenis, mapel, kelas, semester, tahunAjaran }) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    list = readDemoNilaiAsesmen(jenis).filter(n => n.mapel === mapel && n.kelas === kelas && n.semester === semester && n.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, KOLEKSI_NILAI_ASESMEN[jenis]),
+      fsMod.where('mapel', '==', mapel),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => d.data());
+  }
+  const perTp = {};
+  list.forEach(n => {
+    if (!perTp[n.tpId]) perTp[n.tpId] = [];
+    perTp[n.tpId].push({ nilai: n.nilai });
+  });
+  return perTp;
+}
+
+/** Simpan nilai STS/SAS satu TP, banyak siswa sekaligus (upsert per siswa). */
+export async function saveNilaiAsesmenBatch(ctx, entries, existing) {
+  const jenis = ctx.jenis;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = readDemoNilaiAsesmen(jenis);
+    entries.forEach(({ siswaId, nilai }) => {
+      const found = existing[siswaId];
+      const data = { tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas, tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai };
+      if (found) {
+        const idx = list.findIndex(n => n.id === found.id);
+        if (idx >= 0) list[idx] = { ...list[idx], ...data };
+      } else {
+        list.push({ id: `demo-${jenis}-` + Date.now() + '-' + siswaId, ...data });
+      }
+    });
+    writeDemoNilaiAsesmen(jenis, list);
+    return;
+  }
+
+  const { db, fsMod, auth } = window.__fb;
+  for (const { siswaId, nilai } of entries) {
+    const found = existing[siswaId];
+    const data = {
+      tpId: ctx.tpId, siswaId, mapel: ctx.mapel, kelas: ctx.kelas,
+      tingkatan: String(ctx.tingkatan), semester: ctx.semester, tahunAjaran: ctx.tahunAjaran, nilai,
+    };
+    if (found) {
+      await fsMod.updateDoc(fsMod.doc(db, KOLEKSI_NILAI_ASESMEN[jenis], found.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+    } else {
+      await fsMod.addDoc(fsMod.collection(db, KOLEKSI_NILAI_ASESMEN[jenis]), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
     }
   }
 }
