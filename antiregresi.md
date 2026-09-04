@@ -118,7 +118,7 @@ function menulisPosisiLabel(r) {
 
 ## 8. `[Akademik]` Dekomposisi Nilai (SLM/STS/SAS) & Navigasi Hub
 
-*(Diisi oleh sesi yang mengerjakan restrukturisasi ini — 2026-09-02. Menggantikan catatan informasional sesi Tahsin-Tahfizh sebelumnya, termasuk koreksi nama role.)*
+*(Diisi oleh sesi yang mengerjakan restrukturisasi ini — 2026-09-04. Menggantikan catatan informasional sesi Tahsin-Tahfizh sebelumnya, termasuk koreksi nama role.)*
 
 **8.1. Koreksi nama role & pemisahan data layer.** Role guru mata pelajaran di kode adalah **`guru_akademik`**, BUKAN `guru_mapel` seperti tercatat sebelumnya di bagian ini. Cek `firestore.rules` dan `generator-akun.html` kalau ragu — jangan asumsikan dari nama variabel/field lain yang mirip. Data layer Akademik tetap di `assets/firestore-data-akademik.js`, terpisah dari `firestore-data.js` milik Tahsin-Tahfizh — pertahankan pemisahan ini (lihat §2 di atas), jangan digabung kembali.
 
@@ -153,7 +153,7 @@ login.html → beranda.html
 - **Kenapa bukan "baris status per kartu penugasan"** (pola lama `beranda.html`): pemilik sistem eksplisit minta kartu/kontainer terpisah per fitur, bukan baris di dalam satu kartu — lihat histori percakapan kalau ingin tahu alasan detailnya.
 - **Setiap halaman aksi** (`nilai-slm.html`, `nilai-sts.html`, dst.) sekarang **kembali ke hub pemilihnya**, bukan langsung ke `beranda.html` — kecuali diakses admin, yang kembali ke `beranda.html`/`admin-hub.html` (lihat §8.6).
 
-**8.4. Skema Firestore baru (per 2026-09-02).**
+**8.4. Skema Firestore baru (per 2026-09-04).**
 - `tp_kktp` — field baru `bobotMapel` (number, default 1 kalau kosong = bobot rata). Dipakai `hitungNilaiAkhirMapel()`. **BUKAN persen, bukan wajib total 100** — angka bebas dibandingkan relatif antar TP dalam mapel yang sama.
 - `nilai_tp` — sekarang **khusus SLM**. Field `sas` lama di dokumen existing dibiarkan menggantung (TIDAK dihapus, TIDAK dibaca lagi) — kompatibilitas mundur murni pasif, tidak perlu migrasi karena belum ada data SAS produksi saat perubahan ini dibuat (dikonfirmasi ke pemilik sistem).
 - `asesmen_cakupan/{id}` *(baru)* — 1 dokumen per (mapel, kelas, semester, tahunAjaran, **jenis**: `'sts'|'sas'`), berisi `tpIds: string[]`. Cakupan STS dan SAS untuk mapel+kelas yang SAMA sengaja terpisah total, tidak ada logika "copy dari STS ke SAS" atau sebaliknya.
@@ -186,4 +186,25 @@ Kalau menambah halaman baru yang diakses lebih dari satu jalur, ikuti pola ini �
 - **Aturan wajib turunan**: setelah menyalin halaman dengan `sed`/copy-paste sebagai basis halaman baru, WAJIB `grep -n` nama fitur asal (case-sensitive, termasuk singkatan) ke file hasil salinan, DAN baca ulang bagian guard akses (`session.role`, `session.penugasan` vs `session.waliKelas`) secara eksplisit — sed yang mengganti teks tampilan tidak menjamin logika kondisional ikut benar secara semantik.
 
 **8.9. Prinsip beranda tipis.** `beranda.html` (dan landing hub lain di bawahnya seperti `nilai-hub.html`/`wali-hub.html`) TIDAK melakukan query Firestore per-item untuk menghitung status lengkap/belum — cukup hitung ringkasan dari `session` (`penugasan.length`, `waliKelas.length`, dsb.) yang sudah tersedia tanpa fetch tambahan. Query yang lebih detail (status "X/Y TP terisi", dsb.) baru dilakukan di hub selanjutnya yang lebih spesifik, saat kartu itu benar-benar dibuka. Kalau ada dorongan menambah status detail langsung di `beranda.html` lagi di masa depan, ingat ini yang menyebabkan versi lama lambat dimuat untuk guru dengan banyak penugasan.
+
+**8.10. Rapor itu lintas-mapel per siswa — bukan skop guru-mapel.** `nilai-sts-hub.html` dkk skopnya per guru (cuma mapel yang diampu), tapi Rapor butuh SEMUA mapel sekaligus untuk satu siswa — yang punya pandangan itu cuma wali kelas. Karena itu **Rapor STS ditaruh di `wali-hub.html`, bukan di `nilai-sts-hub.html`**, walau secara nama fitur terasa lebih dekat ke STS. Kalau menambah "Rapor SAS" nanti, ikuti pola yang sama — masuk `wali-hub.html`, bukan `nilai-sas-hub.html`.
+
+**8.11. Mekanisme cetak: pola v1 (jendela baru + `@page`), BUKAN pola `@media print` `cetak-laporan.html`.** Ada dua pola cetak berbeda di repo ini — jangan disamaratakan:
+- **Pola lama** (`cetak-laporan.html` Tahsin-Tahfizh): toggle `display` lewat `@media print` DI HALAMAN YANG SAMA (`#reportOutput`/`.no-print` di `assets/style.css`). Tidak dapat running footer otomatis per halaman, tidak dapat nomor halaman, dan berbagi dokumen dengan CSS `phone-shell`/`app-header` yang berisiko ikut ke hasil cetak.
+- **Pola baru** (`rapor-sts-cetak.html`, diadopsi dari `rapor/preview.html` aplikasi v1): tombol Cetak membangun HTML rapor sebagai string, buka `window.open('', '_blank', ...)`, `w.document.write(fullHTML)` — dokumen BARU yang sepenuhnya independen dari app shell, dengan `<style>` sendiri termasuk:
+  ```css
+  @page{
+    size: A4; margin: 1.5cm;
+    @bottom-left{ content: "Kelas X | Nama | NISN"; ... }
+    @bottom-right{ content: "Halaman " counter(page) " dari " counter(pages); ... }
+  }
+  tr{page-break-inside:avoid}
+  thead{display:table-header-group}
+  .rpr-ttd-wrap{page-break-inside:avoid}
+  ```
+  Ini yang membuat tabel tidak terpotong sembarangan dan footer+nomor halaman muncul otomatis di SETIAP halaman fisik tanpa kita perlu tahu di muka jadi berapa halaman. **Pakai pola ini (bukan pola lama) untuk setiap halaman cetak/rapor baru** — termasuk nanti Rapor SAS dan rapor resmi akhir semester. Fungsi pembangun HTML isi rapor (`buildBodyPrint()`) sengaja dipakai dua kali (pratinjau di layar DAN sumber cetak sungguhan) supaya pratinjau tidak pernah beda dari hasil cetak asli.
+
+**8.12. Skema NISN — field baru terpisah dari NIS, sengaja pakai `updateDoc` bukan `batch.set()`.** Koleksi `siswa` (dipakai bareng Tahsin-Tahfizh) sebelumnya cuma punya `nis` (nomor lokal sekolah). Rapor formal wajib mencantumkan **NISN** (Nomor Induk Siswa Nasional, 10 digit, berbeda dari NIS) — field baru `nisn`, diisi lewat `kelola-nisn.html` (`saveNisnBatch()` di `firestore-data-akademik.js`). **PENTING**: fungsi ini pakai `batch.update()` per siswa (cuma menyentuh field `nisn`), BUKAN `batch.set()` seperti `seed-siswa.html` — `seed-siswa.html` men-*overwrite* seluruh dokumen dari array hardcode-nya, jadi TIDAK BOLEH dipakai ulang untuk mengisi NISN (berisiko menimpa field lain yang sudah berubah sejak seed awal, termasuk field yang dipakai Tahsin-Tahfizh). NISN semua siswa existing (403 siswa) **masih kosong** per 2026-09-04 — tidak ada sumber data yang bisa dipakai mengisi otomatis, harus diisi manual oleh admin per kelas.
+
+**8.13. Keterbatasan nama Wali Kelas di tanda tangan rapor.** Tidak ada struktur data "daftar nama wali kelas per kelas" yang terpisah dari akun login — nama yang tercetak di kolom tanda tangan "Wali Kelas" pada `rapor-sts-cetak.html` diambil dari `session.nama` (akun yang sedang login saat mencetak). Ini benar selama yang mencetak memang wali kelas ybs sendiri, tapi keliru kalau admin mencetak atas nama wali kelas lain — untuk kasus itu, nama perlu diedit manual di hasil cetak sebelum ditandatangani. Kalau nanti dibutuhkan pencetakan massal lintas-akun (misal admin mencetak rapor semua kelas sekaligus), pertimbangkan menambah field `namaWali`/`nbmWali` ke struktur data kelas (belum ada tempatnya sekarang) alih-alih terus mengandalkan `session.nama`.
 

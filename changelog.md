@@ -17,7 +17,31 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
-## 2026-09-02 — `[Akademik]` Dekomposisi Nilai (SLM/STS/SAS) + restrukturisasi navigasi total
+## 2026-09-04 — `[Akademik]` Rapor STS (cetak per siswa) + kolom NISN
+
+### Ditambahkan
+- **Rapor STS** — laporan cetak per siswa berbasis nilai STS murni (fondasi datanya sudah dibangun sesi sebelumnya). Alur: `wali-hub.html` → `rapor-sts-hub.html` (pilih kelas) → `rapor-sts-pilih-siswa.html` (pilih siswa) → `rapor-sts-cetak.html` (pratinjau + cetak).
+  - Nilai per mapel = rata-rata tertimbang `bobotMapel` dari nilai STS murni per TP dalam cakupan STS mapel itu (fungsi baru `getRaporSTSSiswa()`), **independen dari SLM/SAS** — beda dari nilai akhir rapor resmi.
+  - Layout mengikuti template PDF yang diberikan pemilik proyek: header identitas 2 kolom, tabel flat No/Mata Pelajaran/Nilai Akhir (tanpa Capaian Kompetensi), footer 3 kolom tanda tangan (Orang Tua/Kepala Sekolah/Wali Kelas).
+  - **Mekanisme cetak mengadopsi pola aplikasi v1** (`rapor/preview.html`), BUKAN pola `@media print` di halaman yang sama seperti `cetak-laporan.html` Tahsin-Tahfizh: tombol Cetak membuka jendela baru independen (`window.open`+`document.write`) dengan `@page{ @bottom-left/@bottom-right }` — footer "Kelas | Nama | NISN" dan "Halaman N dari M" muncul otomatis di tiap halaman fisik lewat `counter(page)`/`counter(pages)`, tanpa perlu tahu di muka tabelnya jadi berapa halaman. `tr{page-break-inside:avoid}` + `thead{display:table-header-group}` mencegah baris tabel terpotong; blok tanda tangan dibungkus `page-break-inside:avoid` terpisah.
+- **Profil Sekolah** (`admin-hub.html` → `profil-sekolah.html`) — form admin utk nama sekolah, alamat, nama+NBM kepala sekolah, kota untuk baris tanggal rapor. Disimpan sebagai field tambahan di `config/akademik` (merge, tidak menyentuh `semesterAktif`/`tahunAjaran`).
+- **Kolom NISN** — field baru di koleksi `siswa` (terpisah dari `nis` yang sudah ada), wajib karena selalu dicantumkan di rapor resmi. Diisi lewat halaman admin baru `kelola-nisn.html` (`admin-hub.html` → per kelas, `saveNisnBatch()` pakai `updateDoc` per siswa — bukan overwrite penuh seperti `seed-siswa.html`, supaya field lain di dokumen siswa aman).
+
+### Diubah
+- `assets/firestore-data-akademik.js` — fungsi baru: `getRaporSTSSiswa()`, `saveProfilSekolah()`, `saveNisnBatch()`.
+- `wali-hub.html` — kartu baru "Rapor STS".
+- `admin-hub.html` — kartu baru "Profil Sekolah" dan "Kelola NISN".
+
+### Catatan
+- Status: **belum dikirim/dideploy**.
+- **NISN kosong untuk seluruh siswa existing** (403 siswa) — tidak ada sumber data nyata yang bisa dipakai mengisi otomatis. Rapor menampilkan "—" sampai admin mengisi manual lewat `kelola-nisn.html`.
+- Rapor STS baru mendukung **satu siswa per satu kali cetak** — opsi "cetak semua siswa sekelas sekaligus" disepakati menyusul, belum dibangun sesi ini.
+- Nama Wali Kelas di tanda tangan rapor diambil dari **akun yang sedang login** saat mencetak, bukan dari sumber data terpisah — kalau admin mencetak atas nama wali kelas lain, nama itu perlu diedit manual sebelum dicetak (dicatat sebagai keterbatasan di komentar kode `rapor-sts-cetak.html`).
+- Tanggal di entri changelog sesi sebelumnya (restrukturisasi navigasi) dikoreksi dari 2026-09-02 menjadi 2026-09-04 — kesalahan pencatatan tanggal, bukan perubahan isi.
+
+---
+
+## 2026-09-04 — `[Akademik]` Dekomposisi Nilai (SLM/STS/SAS) + restrukturisasi navigasi total
 
 ### Ditambahkan
 - **Nilai dipecah jadi 3 fitur terpisah** (sebelumnya 1 halaman `nilai-mapel.html` menggabung SLM+SAS):
