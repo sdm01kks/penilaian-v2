@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelola NISN — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .hint-card{background:var(--blue-light);border-radius:12px;padding:11px 13px;margin-bottom:16px}
+  .hint-card p{font-size:11px;color:var(--blue);line-height:1.6;font-weight:600}
+
+  .kelas-chip-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+  .kelas-chip{
+    font-size:12px;font-weight:800;padding:7px 14px;border-radius:20px;cursor:pointer;
+    background:var(--surface);border:1.5px solid var(--border);color:var(--ink-mid);
+  }
+  .kelas-chip.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .siswa-row{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px;
+  }
+  .siswa-info{flex:1;min-width:0}
+  .siswa-nama{font-size:12.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .siswa-nis{font-size:10px;color:var(--ink-muted);margin-top:1px}
+  .siswa-nisn-input{
+    width:130px;flex-shrink:0;text-align:center;padding:8px 6px;border-radius:9px;
+    border:1.5px solid var(--border);font-family:inherit;font-size:12.5px;font-weight:700;
+    color:var(--ink);outline:none;letter-spacing:.3px;
+  }
+  .siswa-nisn-input:focus{border-color:var(--green-light)}
+  .siswa-nisn-input.terisi{border-color:var(--green-light);background:var(--green-pale)}
+
+  .btn-simpan{width:100%;padding:12px;font-size:13px;margin-top:6px;position:sticky;bottom:12px}
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Kelola NISN</div>
+            <div class="app-header-sub" id="headerSub">Pilih kelas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <div class="hint-card"><p>NISN (Nomor Induk Siswa Nasional, 10 digit) beda dari NIS (nomor lokal sekolah) — wajib diisi terpisah karena selalu dicantumkan di rapor resmi. Isi per kelas, field kosong tidak akan menimpa NISN yang sudah tersimpan.</p></div>
+
+        <div class="kelas-chip-row" id="kelasChipRow"></div>
+        <div id="siswaList"></div>
+        <button class="btn btn-primary-light btn-simpan hidden" id="btnSimpan">Simpan NISN Kelas Ini</button>
+
+        <div id="emptyState" class="siswa-row hidden">
+          <div class="empty-state-small" id="emptyStateMsg">Pilih kelas di atas untuk mulai.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaByKelas, saveNisnBatch } from '../assets/firestore-data-akademik.js';
+
+  // Duplikasi sengaja dari daftar kelas di generator-akun.html — data layer
+  // Akademik & Tahsin-Tahfizh sengaja dipisah (lihat antiregresi.md §2/§8.1),
+  // jadi tidak impor SEMUA_KELAS dari firestore-data.js milik Tahsin-Tahfizh.
+  const KELAS_SEKOLAH = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
+
+  const $ = (id) => document.getElementById(id);
+  let kelasAktif = null;
+  let siswaList = [];
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      $('kelasChipRow').classList.add('hidden');
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin Akademik & Rapor.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    $('kelasChipRow').innerHTML = KELAS_SEKOLAH.map(k =>
+      `<button class="kelas-chip" id="chip-${k}" onclick="window._pilihKelas('${k}')">${k}</button>`).join('');
+  });
+
+  window._pilihKelas = async (kelas) => {
+    kelasAktif = kelas;
+    document.querySelectorAll('.kelas-chip').forEach(el => el.classList.remove('active'));
+    $('chip-' + kelas).classList.add('active');
+    $('headerSub').textContent = `Kelas ${kelas}`;
+    $('emptyState').classList.add('hidden');
+    $('siswaList').innerHTML = `<div class="empty-state-small">Memuat…</div>`;
+    $('btnSimpan').classList.add('hidden');
+
+    try {
+      siswaList = await getSiswaByKelas(kelas);
+      if (!siswaList.length) {
+        $('siswaList').innerHTML = '';
+        $('emptyStateMsg').textContent = `Belum ada data siswa aktif untuk kelas ${kelas}.`;
+        $('emptyState').classList.remove('hidden');
+        return;
+      }
+      renderList();
+      $('btnSimpan').classList.remove('hidden');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data siswa.', true);
+    }
+  };
+
+  function renderList() {
+    $('siswaList').innerHTML = siswaList.map(sw => `
+      <div class="siswa-row">
+        <div class="siswa-info">
+          <div class="siswa-nama">${escapeHtml(sw.nama)}</div>
+          <div class="siswa-nis">NIS ${escapeHtml(sw.nis || '—')}</div>
+        </div>
+        <input type="text" inputmode="numeric" maxlength="10" class="siswa-nisn-input ${sw.nisn ? 'terisi' : ''}"
+               id="nisn-${sw.id}" value="${escapeHtml(sw.nisn || '')}" placeholder="10 digit NISN"
+               oninput="this.classList.toggle('terisi', this.value.trim().length > 0)">
+      </div>`).join('');
+  }
+
+  $('btnSimpan').addEventListener('click', async () => {
+    const entries = siswaList.map(sw => ({ siswaId: sw.id, nisn: $(`nisn-${sw.id}`).value }));
+    const terisi = entries.filter(e => e.nisn.trim()).length;
+    if (!terisi) { showToast('Belum ada NISN yang diisi.', true); return; }
+
+    const btn = $('btnSimpan');
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    try {
+      await saveNisnBatch(entries);
+      showToast(`NISN tersimpan untuk ${terisi} siswa di kelas ${kelasAktif}.`);
+      siswaList = await getSiswaByKelas(kelasAktif);
+      renderList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan NISN.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Simpan NISN Kelas Ini';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>

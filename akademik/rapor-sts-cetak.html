@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rapor STS — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+  .btn-cetak{width:100%;padding:12px;font-size:13px;margin-bottom:6px}
+  .cetak-hint{font-size:11px;color:var(--ink-muted);text-align:center;margin-bottom:16px;line-height:1.5}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+  /* ---- Pratinjau di layar (tampilan saja — bukan sumber cetak).
+     Sumber cetak sesungguhnya dibangun ulang murni sebagai string HTML
+     lewat buildBodyPrint() saat tombol Cetak ditekan, lalu dibuka di
+     jendela baru dengan @page tersendiri (lihat cetakPDF()) — supaya
+     tidak terpengaruh CSS phone-shell/app-header dan supaya @page running
+     footer & penomoran halaman berfungsi (fitur print-only, hanya jalan
+     kalau dokumennya "bersih", tidak dibungkus app lain). ---- */
+  .rpr-preview{
+    background:#fff;color:#1a1a1a;border-radius:14px;padding:16pt 14pt;
+    font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;line-height:1.5;
+    box-shadow:0 4px 20px rgba(0,0,0,.15);margin-bottom:16px;
+  }
+  .rpr-preview .rpr-title{text-align:center;font-size:12pt;font-weight:700;text-transform:uppercase;letter-spacing:.4pt;margin-bottom:2pt}
+  .rpr-preview .rpr-subtitle{text-align:center;font-size:10pt;font-weight:700;margin-bottom:10pt}
+  .rpr-preview .rpr-header{border-bottom:2.5pt double #000;padding-bottom:8pt;margin-bottom:10pt}
+  .rpr-preview .rpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1pt 20pt}
+  .rpr-preview .rpr-info-row{display:flex;font-size:9pt}
+  .rpr-preview .rpr-info-label{width:78pt;flex-shrink:0;font-weight:700}
+  .rpr-preview .rpr-info-sep{width:7pt;flex-shrink:0}
+  .rpr-preview .rpr-info-val{flex:1}
+  .rpr-preview table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:6pt}
+  .rpr-preview th{border:1pt solid #000;padding:4pt 6pt;background:#e8e8e8;font-weight:700;text-align:center}
+  .rpr-preview td{border:1pt solid #000;padding:4pt 6pt;vertical-align:top}
+  .rpr-preview .td-no{text-align:center;width:22pt}
+  .rpr-preview .td-nilai{text-align:center;width:48pt}
+  .rpr-preview .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;margin-top:20pt;font-size:9pt}
+  .rpr-preview .rpr-ttd-col{text-align:center}
+  .rpr-preview .rpr-ttd-space{height:36pt}
+  .rpr-preview .rpr-ttd-name{font-weight:700;border-top:1pt solid #000;padding-top:2pt}
+  .rpr-preview .rpr-ttd-nbm{font-size:8pt;color:#555;min-height:10pt}
+  .rpr-preview .rpr-ttd-tanda{text-align:right;font-size:9pt;margin-bottom:8pt}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleNama">Rapor STS</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+        <button class="btn btn-primary-light btn-cetak" id="btnCetak">Cetak / Simpan sebagai PDF</button>
+        <p class="cetak-hint">Membuka jendela baru siap-cetak ukuran A4 — izinkan pop-up kalau diminta browser.</p>
+
+        <div id="previewWrap"></div>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getConfigAkademik, getSiswaByKelas, getRaporSTSSiswa } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params  = new URLSearchParams(location.search);
+  const kelas   = params.get('kelas') || '';
+  const siswaId = params.get('siswaId') || '';
+  let session   = null;
+  let raporData = null; // { config, siswa, kelas, semLabel, daftarNilai } — dipakai preview & cetakPDF()
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+
+  /* Fase Kurikulum Merdeka dari nomor kelas — kelas 1–2 -> A, 3–4 -> B, 5–6 -> C. */
+  function faseDariKelas(kelas) {
+    const n = parseInt(String(kelas).replace(/[^0-9]/g, ''), 10);
+    if (isNaN(n)) return '?';
+    return n <= 2 ? 'A' : n <= 4 ? 'B' : 'C';
+  }
+
+  const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  function tanggalIndonesia(d) {
+    return `${d.getDate()} ${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    session = s;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+    if (!kelas || !siswaId) { showEmptyScope('Tautan tidak lengkap — kelas atau siswa tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
+    if (!berhak) { showEmptyScope(`Anda bukan wali kelas ${kelas}.`); return; }
+
+    try {
+      const [config, siswaList] = await Promise.all([
+        getConfigAkademik(),
+        getSiswaByKelas(kelas),
+      ]);
+      const siswa = siswaList.find(sw => sw.id === siswaId);
+      if (!siswa) { showEmptyScope('Data siswa tidak ditemukan di kelas ini.'); return; }
+
+      const tingkatan = String(kelas).replace(/[^0-9]/g, '');
+      const daftarNilai = await getRaporSTSSiswa({
+        siswaId, kelas, tingkatan,
+        semester: config.semesterAktif, tahunAjaran: config.tahunAjaran,
+      });
+      const semLabel = config.semesterAktif === '2' ? 'Genap' : 'Ganjil';
+      const waliNama = session?.nama || '—';
+
+      raporData = { config, siswa, kelas, fase: faseDariKelas(kelas), semLabel, daftarNilai, waliNama };
+
+      $('titleNama').textContent = siswa.nama;
+      $('subKelas').textContent = `Kelas ${kelas} · Rapor STS`;
+      $('infoStrip').textContent = `Semester ${semLabel} · Tahun Ajaran ${config.tahunAjaran}`;
+      $('appBody').style.display = 'block';
+
+      $('previewWrap').innerHTML = `<div class="rpr-preview">${buildBodyPrint(raporData)}</div>`;
+    } catch (e) {
+      console.error(e);
+      showEmptyScope('Gagal memuat data rapor. Coba muat ulang halaman.');
+    }
+  });
+
+  /**
+   * Membangun HTML isi rapor (tanpa <html>/@page) — dipakai DUA kali:
+   * (1) langsung di-innerHTML ke pratinjau di layar, dibungkus .rpr-preview
+   * untuk skala tampilan; (2) dibungkus ulang lengkap dgn @page oleh
+   * cetakPDF() untuk jendela cetak. Isinya sendiri sama persis di kedua
+   * tempat — supaya pratinjau tidak pernah "bohong" dari hasil cetak asli.
+   */
+  function buildBodyPrint(d) {
+    const rows = d.daftarNilai.map((item, i) => `
+      <tr>
+        <td class="td-no">${i + 1}</td>
+        <td>${escapeHtml(item.mapel)}</td>
+        <td class="td-nilai">${item.nilaiAkhir === null ? '—' : item.nilaiAkhir}</td>
+      </tr>`).join('');
+
+    const tanda = `${escapeHtml(d.config.kotaRapor || '—')}, ${tanggalIndonesia(new Date())}`;
+
+    return `
+<div class="rpr-title">Laporan Hasil Belajar</div>
+<div class="rpr-subtitle">Sumatif Tengah Semester ${d.semLabel}</div>
+<div class="rpr-header">
+  <div class="rpr-info-grid">
+    <div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Nama Peserta Didik</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.siswa.nama)}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">NISN</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.siswa.nisn || '—')}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Sekolah</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.config.namaSekolah || '—')}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Alamat</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.config.alamatSekolah || '—')}</span></div>
+    </div>
+    <div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Kelas</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.kelas)}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Fase</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.fase}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Semester</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.semLabel}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Tahun Pelajaran</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${escapeHtml(d.config.tahunAjaran || '—')}</span></div>
+    </div>
+  </div>
+</div>
+<table>
+  <thead><tr><th class="td-no">No.</th><th>Mata Pelajaran</th><th class="td-nilai">Nilai<br>Akhir</th></tr></thead>
+  <tbody>${rows || `<tr><td colspan="3" style="text-align:center;color:#999;font-style:italic">Belum ada mata pelajaran terdaftar untuk tingkatan ini.</td></tr>`}</tbody>
+</table>
+<div class="rpr-ttd-wrap">
+  <div class="rpr-ttd-tanda">${tanda}</div>
+  <div class="rpr-ttd">
+    <div class="rpr-ttd-col">
+      <div>Orang Tua/Wali</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">(…………………………)</div>
+    </div>
+    <div class="rpr-ttd-col">
+      <div>Kepala Sekolah,</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">${escapeHtml(d.config.namaKepsek || '—')}</div>
+      <div class="rpr-ttd-nbm">${d.config.nbmKepsek ? 'NBM. ' + escapeHtml(d.config.nbmKepsek) : ''}</div>
+    </div>
+    <div class="rpr-ttd-col">
+      <div>Wali Kelas,</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">${escapeHtml(d.waliNama)}</div>
+      <div class="rpr-ttd-nbm"></div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  /* ════════════════════════════════════════════════════════════════════
+     CETAK PDF — jendela baru, independen dari phone-shell, @page dengan
+     running footer (kelas|nama|NISN di kiri, "Halaman N dari M" di kanan)
+     muncul otomatis di SETIAP halaman fisik — browser yang menghitung,
+     bukan kita. Baris tabel & blok tanda tangan diberi page-break-inside:
+     avoid supaya tidak terpotong di tengah pergantian halaman. Pola ini
+     diambil dari rapor/preview.html aplikasi v1 (sudah terbukti rapi),
+     BUKAN pola @media print di halaman yang sama seperti cetak-laporan.html
+     Tahsin-Tahfizh (versi itu tidak dapat running footer/nomor halaman
+     karena berbagi dokumen dengan CSS app-shell).
+     ════════════════════════════════════════════════════════════════════ */
+  function cetakPDF() {
+    if (!raporData) return;
+    const d = raporData;
+    const body = buildBodyPrint(d);
+
+    const printHTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Rapor STS ${escapeHtml(d.siswa.nama)} — Kelas ${escapeHtml(d.kelas)}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+@page{
+  size: A4;
+  margin: 1.5cm;
+  @bottom-left{
+    content: "Kelas ${escapeHtml(d.kelas)} | ${escapeHtml(d.siswa.nama)} | ${escapeHtml(d.siswa.nisn || '—')}";
+    font-family: Arial, sans-serif; font-size: 9pt; color: #888;
+    border-top: 1px solid #ccc; vertical-align: top; padding-top: 2pt;
+  }
+  @bottom-right{
+    content: "Halaman " counter(page) " dari " counter(pages);
+    font-family: Arial, sans-serif; font-size: 9pt; color: #888;
+    border-top: 1px solid #ccc; vertical-align: top; padding-top: 2pt;
+  }
+}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;line-height:1.55;color:#000;background:#fff}
+.rpr-title{text-align:center;font-size:14pt;font-weight:bold;text-transform:uppercase;letter-spacing:.4pt;margin-bottom:3pt}
+.rpr-subtitle{text-align:center;font-size:11pt;font-weight:bold;margin-bottom:10pt}
+.rpr-header{border-bottom:3pt double #000;padding-bottom:9pt;margin-bottom:12pt}
+.rpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1pt 38pt}
+.rpr-info-row{display:flex;font-size:10.5pt}
+.rpr-info-label{width:105pt;flex-shrink:0;font-weight:bold}
+.rpr-info-sep{width:7pt;flex-shrink:0;margin-right:2pt}
+.rpr-info-val{flex:1}
+table{width:100%;border-collapse:collapse;font-size:10.5pt}
+th{border:1pt solid #000;padding:5pt 8pt;background:#e0e0e0;font-weight:bold;text-align:center;font-size:10pt}
+td{border:1pt solid #000;padding:5pt 8pt;vertical-align:top}
+.td-no{text-align:center;width:26pt;color:#444}
+.td-nilai{text-align:center;width:56pt}
+.rpr-ttd-wrap{margin-top:24pt;page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd-tanda{text-align:right;font-size:10.5pt;margin-bottom:10pt}
+.rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
+.rpr-ttd-col{text-align:center}
+.rpr-ttd-space{height:50pt}
+.rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
+.rpr-ttd-nbm{font-size:9.5pt;color:#444;min-height:12pt}
+/* ---- Kendali page-break: baris tabel & blok TTD tidak boleh terpotong ---- */
+tr{page-break-inside:avoid;break-inside:avoid}
+thead{display:table-header-group}
+</style>
+</head>
+<body>
+${body}
+<script>
+window.onload = function() { window.focus(); window.print(); };
+<\/script>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank', 'width=960,height=700');
+    if (!w) {
+      showToast('Pop-up diblokir — izinkan pop-up untuk situs ini lalu coba lagi.', true);
+      return;
+    }
+    w.document.write(printHTML);
+    w.document.close();
+  }
+
+  $('btnCetak').addEventListener('click', cetakPDF);
+  $('btnBack').addEventListener('click', () => { window.location.href = `rapor-sts-pilih-siswa.html?kelas=${encodeURIComponent(kelas)}`; });
+</script>
+</body>
+</html>

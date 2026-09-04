@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rapor STS — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .intro-text{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:16px}
+
+  .siswa-row{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;text-decoration:none;display:flex;align-items:center;gap:12px;
+  }
+  .siswa-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-pale);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+  .siswa-body{flex:1;min-width:0}
+  .siswa-nama{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .siswa-nis{font-size:10.5px;color:var(--ink-muted);margin-top:1px}
+  .siswa-arrow{flex-shrink:0;color:var(--ink-muted)}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Rapor STS</div>
+            <div class="app-header-sub" id="subKelas">Pilih siswa</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <p class="intro-text">Pilih siswa untuk melihat &amp; mencetak rapor bayangan STS-nya.</p>
+        <div id="siswaList"></div>
+        <div id="emptyState" class="siswa-row hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaByKelas } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const kelas = params.get('kelas') || '';
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function initials(nama) {
+    return (nama || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+  function showEmptyState(msg) {
+    $('emptyStateMsg').textContent = msg;
+    $('emptyState').classList.remove('hidden');
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (!kelas) { showEmptyState('Tautan tidak lengkap — kelas tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
+    if (!berhak) { showEmptyState(`Anda bukan wali kelas ${kelas}.`); return; }
+
+    $('subKelas').textContent = `Kelas ${kelas}`;
+
+    try {
+      const siswaList = await getSiswaByKelas(kelas);
+      if (!siswaList.length) { showEmptyState('Belum ada data siswa aktif untuk kelas ini.'); return; }
+
+      $('siswaList').innerHTML = siswaList.map(sw => `
+        <a class="siswa-row" href="rapor-sts-cetak.html?kelas=${encodeURIComponent(kelas)}&siswaId=${encodeURIComponent(sw.id)}">
+          <div class="siswa-avatar">${escapeHtml(initials(sw.nama))}</div>
+          <div class="siswa-body">
+            <div class="siswa-nama">${escapeHtml(sw.nama)}</div>
+            <div class="siswa-nis">NIS ${escapeHtml(sw.nis || '—')}</div>
+          </div>
+          <svg class="siswa-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>`).join('');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data siswa.', true);
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'rapor-sts-hub.html'; });
+</script>
+</body>
+</html>

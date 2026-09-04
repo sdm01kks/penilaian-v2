@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profil Sekolah — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:16px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .hint-card{background:var(--blue-light);border-radius:12px;padding:11px 13px;margin-bottom:16px}
+  .hint-card p{font-size:11px;color:var(--blue);line-height:1.6;font-weight:600}
+
+  .field-group{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+  .field-label{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:6px}
+  .field-hint{font-size:10.5px;color:var(--ink-muted);margin-bottom:8px;line-height:1.5}
+  .input-field, .textarea-field{
+    width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);
+    font-family:inherit;font-size:13px;color:var(--ink);outline:none;background:var(--surface);
+  }
+  .input-field:focus, .textarea-field:focus{border-color:var(--green-light)}
+  .textarea-field{resize:vertical;min-height:60px;line-height:1.5}
+  .field-row{display:flex;gap:10px}
+  .field-row > div{flex:1}
+
+  .btn-simpan{width:100%;padding:12px;font-size:13px;margin-top:4px}
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Profil Sekolah</div>
+            <div class="app-header-sub">Kop &amp; tanda tangan rapor cetak</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <div class="hint-card"><p>Data ini dipakai di kop &amp; tanda tangan setiap rapor yang dicetak (STS, dan nanti SAS) — cukup diisi sekali, berlaku untuk semua kelas &amp; semua siswa.</p></div>
+
+        <div class="field-group">
+          <div class="field-label">Nama Sekolah</div>
+          <input type="text" class="input-field" id="fNamaSekolah" placeholder="SD Muhammadiyah 01 Kukusan">
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Alamat Sekolah</div>
+          <div class="field-hint">Tampil di kop rapor, persis seperti ditulis di sini.</div>
+          <textarea class="textarea-field" id="fAlamatSekolah" placeholder="Jl. KH. Ahmad Dahlan No. 11 RT 06/05 Kel. Kukusan Kec. Beji, Kota Depok"></textarea>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Kepala Sekolah</div>
+          <div class="field-row">
+            <div>
+              <div class="field-hint">Nama</div>
+              <input type="text" class="input-field" id="fNamaKepsek" placeholder="Dwi Sanderayanti, M.Pd">
+            </div>
+            <div>
+              <div class="field-hint">NBM</div>
+              <input type="text" class="input-field" id="fNbmKepsek" placeholder="1167325">
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Kota untuk Baris Tanggal Rapor</div>
+          <div class="field-hint">Contoh hasil di rapor: "Depok, 3 Oktober 2025"</div>
+          <input type="text" class="input-field" id="fKotaRapor" placeholder="Depok">
+        </div>
+
+        <button class="btn btn-primary-light btn-simpan" id="btnSimpan">Simpan Profil Sekolah</button>
+
+        <div id="emptyState" class="field-group hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getConfigAkademik, saveProfilSekolah } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      document.querySelectorAll('.field-group, .btn-simpan').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin Akademik & Rapor.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const config = await getConfigAkademik();
+      $('fNamaSekolah').value   = config.namaSekolah   || '';
+      $('fAlamatSekolah').value = config.alamatSekolah || '';
+      $('fNamaKepsek').value    = config.namaKepsek    || '';
+      $('fNbmKepsek').value     = config.nbmKepsek     || '';
+      $('fKotaRapor').value     = config.kotaRapor     || '';
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  $('btnSimpan').addEventListener('click', async () => {
+    const btn = $('btnSimpan');
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    try {
+      await saveProfilSekolah({
+        namaSekolah:   $('fNamaSekolah').value.trim(),
+        alamatSekolah: $('fAlamatSekolah').value.trim(),
+        namaKepsek:    $('fNamaKepsek').value.trim(),
+        nbmKepsek:     $('fNbmKepsek').value.trim(),
+        kotaRapor:     $('fKotaRapor').value.trim(),
+      });
+      showToast('Profil sekolah tersimpan.');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Simpan Profil Sekolah';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>
