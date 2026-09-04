@@ -363,6 +363,35 @@ export async function getSiswaByKelas(kelas) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
 }
 
+/**
+ * Simpan NISN satu kelas sekaligus. Sengaja pakai updateDoc per siswa
+ * (bukan batch.set/overwrite penuh seperti seed-siswa.html) — HANYA
+ * menyentuh field `nisn`, field lain di dokumen siswa (nama, nis, kelas,
+ * jenjang, aktif, dst — termasuk yang dipakai modul Tahsin-Tahfizh) tidak
+ * ikut tertimpa. Entries dengan nisn kosong dilewati (tidak menghapus
+ * nisn yang sudah ada dengan string kosong secara tidak sengaja).
+ * @param {Array<{siswaId:string, nisn:string}>} entries
+ */
+export async function saveNisnBatch(entries) {
+  const valid = entries.filter(e => e.nisn && e.nisn.trim());
+  if (!valid.length) return;
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    valid.forEach(e => {
+      const s = DEMO_SISWA.find(x => x.id === e.siswaId);
+      if (s) s.nisn = e.nisn.trim();
+    });
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  const batch = fsMod.writeBatch(db);
+  valid.forEach(e => {
+    batch.update(fsMod.doc(db, 'siswa', e.siswaId), { nisn: e.nisn.trim() });
+  });
+  await batch.commit();
+}
+
 /* ==========================================================================
    Config — semester & tahun ajaran aktif, satu dokumen untuk sekolah.
    ========================================================================== */
@@ -380,6 +409,32 @@ export async function getConfigAkademik() {
   const { db, fsMod } = window.__fb;
   const snap = await fsMod.getDoc(fsMod.doc(db, 'config', 'akademik'));
   return snap.exists() ? { ...fallback, ...snap.data() } : fallback;
+}
+
+/**
+ * Simpan profil sekolah (dipakai kop & tanda tangan rapor cetak) ke
+ * config/akademik — dokumen SAMA dengan semesterAktif/tahunAjaran, cuma
+ * field-nya berbeda (merge, bukan overwrite) supaya tidak menimpa
+ * semesterAktif/tahunAjaran yang selama ini diisi manual lewat Firebase
+ * Console. Field: namaSekolah, alamatSekolah, namaKepsek, nbmKepsek,
+ * kotaRapor.
+ */
+export async function saveProfilSekolah(payload) {
+  const data = {
+    namaSekolah:   payload.namaSekolah   || '',
+    alamatSekolah: payload.alamatSekolah || '',
+    namaKepsek:    payload.namaKepsek    || '',
+    nbmKepsek:     payload.nbmKepsek     || '',
+    kotaRapor:     payload.kotaRapor     || '',
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const existing = JSON.parse(localStorage.getItem(DEMO_CONFIG_KEY) || '{}');
+    localStorage.setItem(DEMO_CONFIG_KEY, JSON.stringify({ ...existing, ...data }));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.setDoc(fsMod.doc(db, 'config', 'akademik'), data, { merge: true });
 }
 
 /* ==========================================================================
@@ -691,6 +746,48 @@ export async function saveNilaiAsesmenBatch(ctx, entries, existing) {
       await fsMod.addDoc(fsMod.collection(db, KOLEKSI_NILAI_ASESMEN[jenis]), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
     }
   }
+}
+
+/**
+ * Agregasi nilai STS lintas-mapel untuk SATU siswa — dasar "rapor
+ * bayangan" STS. Untuk tiap mapel yang berlaku di tingkatan siswa ini:
+ * ambil TP yang masuk cakupan STS mapel itu, ambil nilai STS siswa untuk
+ * TP-TP tsb, lalu hitung rata-rata TERTIMBANG bobotMapel (fungsi yang
+ * SAMA dengan hitungNilaiAkhirMapel() di rapor resmi — supaya tidak ada
+ * dua rumus rata-rata tertimbang yang bisa beda hasil).
+ *
+ * SENGAJA independen dari SLM/SAS — angka yang keluar di sini murni STS,
+ * beda dari efektifSLM yang dipakai nilai akhir rapor resmi.
+ *
+ * Mapel tanpa cakupan STS sama sekali (atau nilai belum diisi) tetap
+ * masuk hasil dengan `nilaiAkhir: null` — halaman pemanggil yang
+ * memutuskan cara menampilkannya (mis. "—" / "Belum ada nilai").
+ *
+ * @returns {Promise<Array<{mapel:string, kelompok:string, urutan:number, nilaiAkhir:number|null}>>}
+ */
+export async function getRaporSTSSiswa({ siswaId, kelas, tingkatan, semester, tahunAjaran }) {
+  const mapelList = (await getMapelList())
+    .filter(m => mapelBerlakuDiTingkatan(m, tingkatan))
+    .sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0));
+
+  return Promise.all(mapelList.map(async (m) => {
+    const [tpList, cakupan] = await Promise.all([
+      getTPList({ mapel: m.nama, tingkatan }),
+      getCakupanTP({ mapel: m.nama, kelas, semester, tahunAjaran, jenis: 'sts' }),
+    ]);
+    const tpIds = cakupan?.tpIds || [];
+    const tpCakupan = tpList.filter(tp => tpIds.includes(tp.id));
+
+    let nilaiAkhir = null;
+    if (tpCakupan.length) {
+      const entries = await Promise.all(tpCakupan.map(async (tp) => {
+        const nilaiMap = await getNilaiAsesmenUntukTP({ jenis: 'sts', tpId: tp.id, mapel: m.nama, kelas, semester, tahunAjaran });
+        return { nilai: nilaiMap[siswaId]?.nilai ?? null, bobot: tp.bobotMapel ?? 1 };
+      }));
+      nilaiAkhir = hitungNilaiAkhirMapel(entries);
+    }
+    return { mapel: m.nama, kelompok: m.kelompok || 'wajib', urutan: m.urutan ?? 0, nilaiAkhir };
+  }));
 }
 
 /* ==========================================================================
