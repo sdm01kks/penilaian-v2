@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Impor NISN — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .hint-card{background:var(--blue-light);border-radius:12px;padding:11px 13px;margin-bottom:16px}
+  .hint-card p{font-size:11px;color:var(--blue);line-height:1.6;font-weight:600}
+
+  .upload-box{
+    background:var(--surface);border:1.5px dashed var(--border);border-radius:16px;
+    padding:26px 16px;text-align:center;margin-bottom:16px;
+  }
+  .upload-box svg{width:32px;height:32px;color:var(--ink-muted);margin-bottom:8px}
+  .upload-box p{font-size:12px;color:var(--ink-muted);margin-bottom:12px;line-height:1.5}
+  .upload-box input[type=file]{display:none}
+  .btn-pilih-file{display:inline-block;padding:9px 18px;font-size:12.5px}
+  .nama-file{font-size:11px;color:var(--ink-mid);margin-top:8px;font-weight:600}
+
+  .summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+  .summary-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center}
+  .summary-num{font-size:16px;font-weight:800;color:var(--ink)}
+  .summary-num.warn{color:#a83a2b}
+  .summary-num.done{color:var(--green-dark)}
+  .summary-label{font-size:9px;color:var(--ink-muted);font-weight:700;text-transform:uppercase;margin-top:2px;line-height:1.3}
+
+  .filter-row{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+  .filter-chip{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;background:var(--surface);border:1.5px solid var(--border);color:var(--ink-mid);cursor:pointer}
+  .filter-chip.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .row-item{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;
+  }
+  .row-item.tidak-cocok{border-color:#e0a89e;background:#fdf5f3}
+  .row-item.dipad{border-color:var(--gold);background:var(--gold-light)}
+  .row-check{margin-top:2px;flex-shrink:0;width:16px;height:16px;accent-color:var(--green-dark)}
+  .row-body{flex:1;min-width:0}
+  .row-nama{font-size:12px;font-weight:700;color:var(--ink)}
+  .row-meta{font-size:10px;color:var(--ink-muted);margin-top:2px;line-height:1.5}
+  .row-nisn{font-weight:800;color:var(--ink)}
+  .row-warn{color:#a83a2b;font-weight:700}
+  .row-lama{color:#8a6416}
+
+  .btn-terapkan{width:100%;padding:12px;font-size:13px;margin-top:8px;position:sticky;bottom:12px}
+  .empty-state-small{text-align:center;padding:20px 12px;color:var(--ink-muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Impor NISN</div>
+            <div class="app-header-sub">Dari file Dapodik (.xlsx)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — pencocokan ke siswa disimulasikan di perangkat ini.</span>
+        </div>
+        <div class="hint-card"><p>Unggah file "Daftar Peserta Didik" dari Dapodik. Kolom yang dibaca: Nama, Rombel Saat Ini, NISN. Pencocokan ke data siswa berdasarkan nama+kelas — periksa hasil di bawah sebelum menyimpan, terutama baris bertanda kuning/merah.</p></div>
+
+        <div class="upload-box" id="uploadBox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+          <p>Pilih file .xlsx hasil unduhan Dapodik<br>("Daftar Peserta Didik")</p>
+          <label class="btn btn-primary-light btn-pilih-file">
+            Pilih File
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+          </label>
+          <div class="nama-file" id="namaFile"></div>
+        </div>
+
+        <div id="hasilWrap" class="hidden">
+          <div class="summary-row">
+            <div class="summary-box"><div class="summary-num" id="sumTotal">0</div><div class="summary-label">Baris di File</div></div>
+            <div class="summary-box"><div class="summary-num done" id="sumCocok">0</div><div class="summary-label">Cocok</div></div>
+            <div class="summary-box"><div class="summary-num warn" id="sumTidakCocok">0</div><div class="summary-label">Tak Ditemukan</div></div>
+            <div class="summary-box"><div class="summary-num warn" id="sumInvalid">0</div><div class="summary-label">NISN Bermasalah</div></div>
+          </div>
+
+          <div class="filter-row" id="filterRow">
+            <button class="filter-chip active" data-filter="semua">Semua</button>
+            <button class="filter-chip" data-filter="cocok">Cocok</button>
+            <button class="filter-chip" data-filter="tidak-cocok">Tak Ditemukan</button>
+            <button class="filter-chip" data-filter="bermasalah">Bermasalah</button>
+          </div>
+
+          <div id="rowList"></div>
+          <button class="btn btn-primary-light btn-terapkan" id="btnTerapkan">Terapkan NISN Terpilih ke Database</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaByKelas, saveNisnBatch } from '../assets/firestore-data-akademik.js';
+
+  const KELAS_SEKOLAH = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
+
+  const $ = (id) => document.getElementById(id);
+  let parsedRows = []; // { namaFile, kelas, nisnFinal, status, siswaId, nisnLama, checked }
+  let filterAktif = 'semua';
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function normNama(s) {
+    return String(s || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      $('uploadBox').innerHTML = `<div class="empty-state-small">Halaman ini khusus admin Akademik & Rapor.</div>`;
+      return;
+    }
+  });
+
+  $('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    $('namaFile').textContent = file.name;
+    showToast('Membaca file…');
+
+    try {
+      // Dynamic import ESM — pola sama dgn assets/firebase.js (import() CDN,
+      // tidak nambah <script> global). SheetJS dipakai HANYA di halaman ini.
+      const mod = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+      const XLSX = mod.default || mod;
+
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      // header:1 + raw:false -> ambil TEKS TERFORMAT tiap sel (bukan angka
+      // mentah) supaya kalau ada sel NISN yang kebetulan tersimpan sbg
+      // angka, hasilnya tetap string apa adanya, tidak dibulatkan/diubah
+      // notasi ilmiah dulu oleh SheetJS.
+      const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+
+      const idxHeader = grid.findIndex(row =>
+        row.some(c => String(c).trim().toUpperCase() === 'NISN') &&
+        row.some(c => String(c).trim().toUpperCase() === 'NAMA'));
+      if (idxHeader === -1) throw new Error('Kolom Nama/NISN tidak ditemukan di file ini.');
+
+      const header = grid[idxHeader].map(c => String(c).trim().toUpperCase());
+      const colNama   = header.indexOf('NAMA');
+      const colKelas  = header.indexOf('ROMBEL SAAT INI');
+      const colNisn   = header.indexOf('NISN');
+      if (colNama === -1 || colKelas === -1 || colNisn === -1) {
+        throw new Error('Format kolom tidak sesuai — pastikan file "Daftar Peserta Didik" asli dari Dapodik.');
+      }
+
+      const dataRows = grid.slice(idxHeader + 1).filter(row => row[colNama] && String(row[colNama]).trim());
+      await prosesBaris(dataRows, colNama, colKelas, colNisn);
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal membaca file: ' + err.message, true);
+    }
+  });
+
+  /**
+   * Validasi & normalisasi 1 nilai NISN mentah dari file.
+   * - Buang karakter non-digit (spasi/tanda kutip yg kadang nempel).
+   * - Kalau hasilnya < 10 digit TAPI semua digit valid -> kemungkinan besar
+   *   angka 0 di depan hilang saat file pernah dibuka/disimpan ulang lewat
+   *   Excel -> di-pad ulang ke 10 digit, DITANDAI (bukan didiamkan), supaya
+   *   admin tetap bisa verifikasi manual sebelum percaya penuh.
+   * - > 10 digit atau ada karakter bukan digit -> invalid, tidak diproses
+   *   otomatis.
+   */
+  function validasiNisn(raw) {
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    if (!digits) return { nisn: '', status: 'kosong' };
+    if (digits.length === 10) return { nisn: digits, status: 'ok' };
+    if (digits.length < 10) return { nisn: digits.padStart(10, '0'), status: 'dipad' };
+    return { nisn: digits, status: 'invalid' };
+  }
+
+  async function prosesBaris(dataRows, colNama, colKelas, colNisn) {
+    showToast(`Mencocokkan ${dataRows.length} baris ke data siswa…`);
+
+    // Cache getSiswaByKelas per kelas yg benar2 muncul di file — bukan
+    // query semua 15 kelas kalau file cuma berisi sebagian.
+    const kelasUnik = [...new Set(dataRows.map(r => String(r[colKelas] || '').trim()))];
+    const siswaPerKelas = {};
+    for (const k of kelasUnik) {
+      try { siswaPerKelas[k] = await getSiswaByKelas(k); }
+      catch (e) { console.error(e); siswaPerKelas[k] = []; }
+    }
+
+    parsedRows = dataRows.map(row => {
+      const namaFile = String(row[colNama] || '').trim();
+      const kelas = String(row[colKelas] || '').trim();
+      const { nisn, status: nisnStatus } = validasiNisn(row[colNisn]);
+
+      const kandidat = siswaPerKelas[kelas] || [];
+      const cocok = kandidat.find(s => normNama(s.nama) === normNama(namaFile));
+
+      let status;
+      if (nisnStatus === 'invalid' || nisnStatus === 'kosong') status = 'bermasalah';
+      else if (!cocok) status = 'tidak-cocok';
+      else status = 'cocok';
+
+      return {
+        namaFile, kelas, nisn, nisnStatus,
+        siswaId: cocok?.id || null,
+        nisnLama: cocok?.nisn || '',
+        status,
+        checked: status === 'cocok',
+      };
+    });
+
+    $('uploadBox').classList.add('hidden');
+    $('hasilWrap').classList.remove('hidden');
+    renderSummary();
+    renderList();
+    showToast('Selesai mencocokkan — periksa hasilnya sebelum menerapkan.');
+  }
+
+  function renderSummary() {
+    $('sumTotal').textContent = parsedRows.length;
+    $('sumCocok').textContent = parsedRows.filter(r => r.status === 'cocok').length;
+    $('sumTidakCocok').textContent = parsedRows.filter(r => r.status === 'tidak-cocok').length;
+    $('sumInvalid').textContent = parsedRows.filter(r => r.status === 'bermasalah').length;
+  }
+
+  function renderList() {
+    const filtered = parsedRows.filter(r => {
+      if (filterAktif === 'semua') return true;
+      if (filterAktif === 'cocok') return r.status === 'cocok';
+      if (filterAktif === 'tidak-cocok') return r.status === 'tidak-cocok';
+      if (filterAktif === 'bermasalah') return r.status === 'bermasalah' || r.nisnStatus === 'dipad';
+      return true;
+    });
+
+    if (!filtered.length) {
+      $('rowList').innerHTML = `<div class="empty-state-small">Tidak ada baris pada filter ini.</div>`;
+      return;
+    }
+
+    $('rowList').innerHTML = filtered.map((r) => {
+      const i = parsedRows.indexOf(r);
+      const cardClass = r.status === 'tidak-cocok' ? 'tidak-cocok' : (r.nisnStatus === 'dipad' ? 'dipad' : '');
+      let metaHtml = `Kelas ${escapeHtml(r.kelas)} · NISN <span class="row-nisn">${escapeHtml(r.nisn) || '—'}</span>`;
+      if (r.nisnStatus === 'dipad') metaHtml += ` <span class="row-warn">(dipad dari ${r.nisn.replace(/^0+/, '') || '0'} digit — cek ulang!)</span>`;
+      if (r.nisnStatus === 'invalid') metaHtml = `Kelas ${escapeHtml(r.kelas)} · <span class="row-warn">NISN tidak valid (bukan 10 digit angka)</span>`;
+      if (r.nisnStatus === 'kosong') metaHtml = `Kelas ${escapeHtml(r.kelas)} · <span class="row-warn">NISN kosong di file</span>`;
+      if (r.status === 'tidak-cocok') metaHtml += ` · <span class="row-warn">tidak ditemukan siswa dgn nama ini di kelas tsb</span>`;
+      if (r.siswaId && r.nisnLama && r.nisnLama !== r.nisn) metaHtml += ` · <span class="row-lama">akan diganti dari ${escapeHtml(r.nisnLama)}</span>`;
+
+      const disabled = r.status !== 'cocok' ? 'disabled' : '';
+      return `
+      <div class="row-item ${cardClass}">
+        <input type="checkbox" class="row-check" id="chk-${i}" ${r.checked ? 'checked' : ''} ${disabled}
+               onchange="window._toggleRow(${i}, this.checked)">
+        <div class="row-body">
+          <div class="row-nama">${escapeHtml(r.namaFile)}</div>
+          <div class="row-meta">${metaHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window._toggleRow = (i, checked) => { parsedRows[i].checked = checked; };
+
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      filterAktif = chip.dataset.filter;
+      renderList();
+    });
+  });
+
+  $('btnTerapkan').addEventListener('click', async () => {
+    const entries = parsedRows.filter(r => r.checked && r.siswaId).map(r => ({ siswaId: r.siswaId, nisn: r.nisn }));
+    if (!entries.length) { showToast('Tidak ada baris terpilih untuk diterapkan.', true); return; }
+
+    const btn = $('btnTerapkan');
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    try {
+      await saveNisnBatch(entries);
+      showToast(`NISN tersimpan untuk ${entries.length} siswa.`);
+      parsedRows.forEach(r => { if (r.checked && r.siswaId) { r.nisnLama = r.nisn; r.checked = false; } });
+      renderList();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan ke database.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Terapkan NISN Terpilih ke Database';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>
