@@ -13,7 +13,10 @@ Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, da
 1. Dekomposisi total fitur Nilai (SLM/STS/SAS terpisah) + restrukturisasi navigasi Akademik jadi hierarki hub. Peta lengkap di `antiregresi.md` §8.3.
 2. **Rapor STS** (cetak per siswa, satu siswa per cetak) — `wali-hub.html` → `rapor-sts-hub.html` → `rapor-sts-pilih-siswa.html` → `rapor-sts-cetak.html`. Mekanisme cetak diadopsi dari aplikasi v1 (jendela baru + `@page` running footer), BUKAN pola lama `cetak-laporan.html` — lihat `antiregresi.md` §8.11 kalau mau bikin halaman cetak baru lagi.
 3. **Profil Sekolah** (`admin-hub.html` → `profil-sekolah.html`) — prasyarat kop & tanda tangan rapor.
-4. **Kolom NISN** — field baru di koleksi `siswa`, diisi lewat `kelola-nisn.html`. **Kosong untuk semua 403 siswa existing**, admin perlu mengisi manual.
+4. **Kolom NISN** — field baru di koleksi `siswa`, diisi lewat `kelola-nisn.html` (manual, per kelas).
+5. **Impor NISN massal** (`admin-hub.html` → `import-nisn.html`) — unggah file Dapodik (.xlsx), dicocokkan otomatis nama+kelas, tabel review sebelum simpan. Diuji terhadap file Dapodik asli (403 siswa) — semua valid, tidak perlu koreksi. Pola SheetJS/validasi defensif NISN ada di `antiregresi.md` §8.14, dipakai lagi kalau ada impor Excel lain di masa depan.
+
+**NISN masih kosong untuk semua 403 siswa** sampai admin benar-benar menjalankan `import-nisn.html` — fitur ini menyediakan JALANNYA, belum mengisi data produksi.
 
 **Modul Tahsin-Tahfizh** tidak tersentuh sejak entri changelog 2026-08-25.
 
@@ -23,7 +26,7 @@ Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, da
 
 1. **Cetak Rapor STS massal sekelas** — sengaja ditunda, sepakat "satu siswa dulu cukup" di sesi pembuatan fitur ini. Kalau dikerjakan, pertimbangkan reuse `buildBodyPrint()`/mekanisme `@page` yang sudah ada di `rapor-sts-cetak.html` (satu dokumen berisi banyak `.laporan-page`/section per siswa, `page-break-after` di antaranya) — jangan bangun mekanisme cetak baru dari nol.
 2. **Rapor SAS** — belum dibangun, tapi fondasi & pola kerjanya sudah jelas: hampir seluruhnya bisa menyalin `rapor-sts-*` (ganti sumber data ke `nilai_sas`/efektifSLM+SAS gabungan via `hitungNilaiAkhirTP()` yang sudah ada, bukan STS murni). Taruh di `wali-hub.html` juga (§8.10), bukan `nilai-sas-hub.html`.
-3. **Isi NISN 403 siswa** — pekerjaan admin, bukan pekerjaan sesi Claude, tapi FYI kalau rapor yang dicetak sebelum ini selesai akan menampilkan "—" di kolom NISN.
+3. **Jalankan Impor NISN** — pekerjaan admin (bukan pekerjaan sesi Claude), tapi FYI: fitur `import-nisn.html` sudah siap, tinggal admin unggah file Dapodik terbaru dan tinjau hasil pencocokan sebelum menekan Terapkan. Sampai ini dijalankan, rapor yang dicetak akan menampilkan "—" di kolom NISN.
 4. **STS "rapor bayangan"**, **7KAIH**, **Ekstrakurikuler**, **Presensi Harian** — status sama seperti tercatat sebelumnya (lihat riwayat `changelog.md` 2026-09-04 entri pertama), belum ada progres baru.
 
 ---

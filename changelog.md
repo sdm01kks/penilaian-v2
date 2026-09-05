@@ -17,6 +17,24 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-04 — `[Akademik]` Impor NISN massal dari file Dapodik
+
+### Ditambahkan
+- **Impor NISN** (`admin-hub.html` → `import-nisn.html`) — admin unggah file "Daftar Peserta Didik" Dapodik (.xlsx) langsung di browser, dicocokkan otomatis ke data siswa (nama+kelas) lewat `getSiswaByKelas()`, ditampilkan sebagai tabel review (filter Semua/Cocok/Tak Ditemukan/Bermasalah, checkbox per baris) sebelum disimpan — jauh lebih cepat dari mengetik NISN satu-satu di `kelola-nisn.html`.
+  - Parsing pakai SheetJS lewat `import()` dinamis dari CDN (`cdn.jsdelivr.net/npm/xlsx`), pola sama seperti Firebase SDK di `firebase.js` — bukan `<script>` global.
+  - Validasi NISN defensif terhadap risiko "angka 0 di depan hilang saat Excel dibuka ulang": 10 digit → langsung dipakai; <10 digit tapi semua angka → **di-`padStart(10,'0')` otomatis, DITANDAI (bukan didiamkan)** supaya admin tetap verifikasi visual; bukan format 10 digit angka → ditandai bermasalah, tidak diproses otomatis.
+  - Diuji terhadap file Dapodik asli yang diberikan pemilik proyek (403 siswa, 15 kelas) — hasilnya SEMUA baris sudah tersimpan sbg teks 10 digit di sumbernya (termasuk 52 NISN yang genuinely berawalan angka 0), tidak ada satu pun yang butuh koreksi. Fungsi validasi diuji terpisah dengan skenario tiruan "0 di depan hilang" untuk memastikan mekanisme pad-nya benar sebelum ketemu kasus sungguhan.
+- `kelola-nisn.html` — tautan pintasan ke `import-nisn.html` di hint-card.
+
+### Diubah
+- `admin-hub.html` — kartu baru "Impor NISN" (diletakkan sebelum "Kelola NISN" sebagai jalur utama pengisian NISN 403 siswa).
+
+### Catatan
+- Status: **belum dikirim/dideploy**.
+- NISN tetap kosong sampai admin benar-benar menjalankan impor ini — fitur ini baru menyediakan JALANNYA, belum otomatis mengisi data produksi.
+
+---
+
 ## 2026-09-04 — `[Akademik]` Rapor STS (cetak per siswa) + kolom NISN
 
 ### Ditambahkan
