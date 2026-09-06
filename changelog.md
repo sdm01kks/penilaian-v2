@@ -17,6 +17,37 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-06 — `[Akademik]` Ekstrakurikuler (modul baru) + Rapor SAS (rapor resmi akhir semester)
+
+### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §9)
+- **Ekstrakurikuler dinilai WALI KELAS untuk siswanya sendiri** — TIDAK ada konsep "pembina lintas kelas" seperti aplikasi v1. Disederhanakan supaya tidak perlu role/assignment baru; konsisten dengan pola Kokurikuler/Absensi yang sudah ada.
+- **Skema predikat mengikuti pola v1 persis**: Layak/Cakap/Mahir/Tidak Ikut (level 1-4), deskripsi rapor otomatis dari bank deskripsi per kegiatan (bisa diedit manual per siswa) — TAPI kolom KKTP numerik (min/maks) v1 DIBUANG karena di v1 pun tidak pernah dipakai untuk menghitung level otomatis (guru selalu memilih predikat langsung, bukan dari skor).
+- **Rapor SAS dibangun PENUH** (bukan flat spt Rapor STS): capaian kompetensi naratif per mapel, Kokurikuler, Ekstrakurikuler, Ketidakhadiran, Catatan Wali, Keputusan Naik Kelas, TTD — meniru pola lengkap `rapor/preview.html` v1. Rapor STS SENGAJA tetap flat, tidak diubah.
+
+### Ditambahkan
+- **Data layer** (`assets/firestore-data-akademik.js`):
+  - `EKS_LEVEL_LABEL`, `getEkstrakurikulerList()`, `saveEkstrakurikuler()`, `deleteEkstrakurikuler()` — CRUD daftar master kegiatan (koleksi `ekstrakurikuler`, admin).
+  - `getEkstrakurikulerSiswaByKelas()`, `saveEkstrakurikulerSiswa()` — nilai predikat per siswa (koleksi `ekstrakurikuler_siswa`, wali kelas).
+  - `getEkstrakurikulerRaporSiswa()` — daftar kegiatan yang DIIKUTI (level 1-3, "Tidak Ikut" disaring) satu siswa untuk Rapor SAS.
+  - `getKokurikulerRaporSiswa()` — agregasi nilai DPL siswa lintas SEMUA proyek STEM kelasnya pada satu semester, untuk seksi Kokurikuler Rapor SAS.
+  - `getRaporSASSiswa()` — nilai akhir RESMI per mapel (formula lengkap §8.5: efektifSLM+SAS berbobot, BUKAN STS murni, iterasi SEMUA TP mapel bukan cuma yang masuk cakupan) + capaian kompetensi naratif (deskripsi KKTP dari TP ternilai tertinggi & terendah, pola v1 `buildSeksiMapel`).
+- **`kelola-ekstrakurikuler.html`** (`admin-hub.html` → ...) — CRUD kegiatan master + 4 deskripsi predikat, pola kartu-akordeon spt `setup-tp.html`.
+- **`ekstrakurikuler-hub.html`** (`wali-hub.html` → ...) — pilih kelas (kalau wali multi-kelas), status chip jumlah siswa terisi, pola identik `absensi-hub.html`.
+- **`ekstrakurikuler.html`** — input predikat per siswa (akordeon per siswa, toggle 4 tombol per kegiatan, deskripsi auto-isi dari bank kegiatan tapi bisa diedit), pola identik `kokurikuler.html`.
+- **`rapor-sas-hub.html` → `rapor-sas-pilih-siswa.html` → `rapor-sas-cetak.html`** — alur cetak sama seperti Rapor STS (jendela baru, `@page` running footer), isi JAUH lebih lengkap (lihat keputusan arsitektur di atas). Disalin dari `rapor-sts-*` lewat `sed` lalu diaudit `grep` penuh (§8.8) — tidak ada sisa referensi "STS" tertinggal di teks/tautan.
+- **Firestore rules**: `ekstrakurikuler/{id}` (baca semua yang login, tulis admin — pola `mapel/{nama}`), `ekstrakurikuler_siswa/{id}` (khusus wali kelas — pola `kokurikuler/{id}`).
+
+### Diubah
+- `wali-hub.html` — kartu "Ekstrakurikuler" dari "Segera" jadi aktif (→ `ekstrakurikuler-hub.html`); kartu baru "Rapor Semester (SAS)" (→ `rapor-sas-hub.html`).
+- `admin-hub.html` — kartu baru "Kelola Ekstrakurikuler" (→ `kelola-ekstrakurikuler.html`).
+
+### Catatan
+- Status: **belum dikirim/dideploy**. Diverifikasi `node --check` pada seluruh script module + `firestore-data-akademik.js`, plus audit brace/paren/bracket & tag `<div>`/`<script>` di semua file baru — semua seimbang (imbalance `<script>` 2 buka/1 tutup di `rapor-sas-cetak.html` adalah pola sengaja `<\/script>` ter-escape untuk jendela cetak, identik `rapor-sts-cetak.html`, BUKAN bug).
+- Repo yang diterima sesi ini (per 2026-09-04) TIDAK memuat scaffold Ekstrakurikuler/Rapor SAS apa pun — kedua fitur dibangun dari nol pada sesi ini.
+- Belum diuji manual oleh pemilik proyek (perlu data mapel/TP/proyek STEM/DPL sungguhan untuk melihat Rapor SAS terisi penuh).
+
+---
+
 ## 2026-09-04 — `[Akademik]` Impor NISN massal dari file Dapodik
 
 ### Ditambahkan

@@ -372,6 +372,33 @@ service cloud.firestore {
       allow delete: if bolehWaliKelas(resource.data.kelas);
     }
 
+    // ---- ekstrakurikuler/{id} -----------------------------------------------
+    // Daftar MASTER kegiatan Ekstrakurikuler milik sekolah (Basket, English
+    // Club, dst) — bukan data siswa, bukan per kelas. Dikelola admin lewat
+    // kelola-ekstrakurikuler.html, dibaca siapa pun yang login (wali kelas
+    // butuh daftar ini untuk menampilkan pilihan predikat) — pola identik
+    // mapel/{nama}.
+    match /ekstrakurikuler/{id} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- ekstrakurikuler_siswa/{id} ------------------------------------------
+    // Nilai predikat (level 1-4: Layak/Cakap/Mahir/Tidak Ikut) per siswa
+    // per kegiatan. KHUSUS wali kelas kelas siswa itu sendiri — TIDAK ada
+    // konsep "pembina lintas kelas" seperti aplikasi v1 (disederhanakan,
+    // lihat antiregresi.md §9), jadi pola aksesnya identik
+    // kokurikuler/absensi_rapor/proyek_stem (bolehWaliKelas).
+    match /ekstrakurikuler_siswa/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;

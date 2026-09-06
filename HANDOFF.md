@@ -1,40 +1,43 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui hari yang sama setelah sub-sesi kedua.
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 setelah sub-sesi Ekstrakurikuler + Rapor SAS.
 
 ---
 
-## Status per 2026-09-04 (setelah sub-sesi Rapor STS + NISN)
+## Status per 2026-09-06 (setelah sub-sesi Ekstrakurikuler + Rapor SAS)
 
-**Belum dikirim/dideploy.** Seluruh pekerjaan (lihat dua entri `changelog.md` tertanggal 2026-09-04) baru diserahkan sebagai arsip file ke pemilik proyek — belum ditimpa ke repo lokal, belum di-commit, belum di-push.
+**Belum dikirim/dideploy.** Seluruh pekerjaan sesi ini (lihat entri `changelog.md` 2026-09-06) baru diserahkan sebagai arsip file ke pemilik proyek — belum ditimpa ke repo lokal, belum di-commit, belum di-push.
+
+**Repo yang diterima sesi ini (per 2026-09-04) TIDAK memuat scaffold Ekstrakurikuler/Rapor SAS apa pun** — kedua fitur dibangun dari nol pada sesi ini, bukan melanjutkan pekerjaan sebelumnya.
 
 **Yang baru selesai, urutan kronologis:**
-1. Dekomposisi total fitur Nilai (SLM/STS/SAS terpisah) + restrukturisasi navigasi Akademik jadi hierarki hub. Peta lengkap di `antiregresi.md` §8.3.
-2. **Rapor STS** (cetak per siswa, satu siswa per cetak) — `wali-hub.html` → `rapor-sts-hub.html` → `rapor-sts-pilih-siswa.html` → `rapor-sts-cetak.html`. Mekanisme cetak diadopsi dari aplikasi v1 (jendela baru + `@page` running footer), BUKAN pola lama `cetak-laporan.html` — lihat `antiregresi.md` §8.11 kalau mau bikin halaman cetak baru lagi.
-3. **Profil Sekolah** (`admin-hub.html` → `profil-sekolah.html`) — prasyarat kop & tanda tangan rapor.
-4. **Kolom NISN** — field baru di koleksi `siswa`, diisi lewat `kelola-nisn.html` (manual, per kelas).
-5. **Impor NISN massal** (`admin-hub.html` → `import-nisn.html`) — unggah file Dapodik (.xlsx), dicocokkan otomatis nama+kelas, tabel review sebelum simpan. Diuji terhadap file Dapodik asli (403 siswa) — semua valid, tidak perlu koreksi. Pola SheetJS/validasi defensif NISN ada di `antiregresi.md` §8.14, dipakai lagi kalau ada impor Excel lain di masa depan.
+1. **Keputusan arsitektur disepakati dulu sebelum coding** (detail penuh di `antiregresi.md` §9): Ekstrakurikuler dinilai wali kelas (bukan pembina lintas kelas spt v1), predikat 4-level tetap (Layak/Cakap/Mahir/Tidak Ikut), Rapor SAS dibangun PENUH (capaian naratif + kokurikuler + ekstrakurikuler + absensi + catatan + keputusan) — bukan flat spt Rapor STS.
+2. **Modul Ekstrakurikuler** — data layer baru (`ekstrakurikuler`, `ekstrakurikuler_siswa`) + `kelola-ekstrakurikuler.html` (admin) + `ekstrakurikuler-hub.html` + `ekstrakurikuler.html` (wali kelas), pola UI diambil dari `setup-tp.html` dan `kokurikuler.html` yang sudah ada.
+3. **Rapor SAS** — `getRaporSASSiswa()` (nilai resmi + capaian naratif), `getKokurikulerRaporSiswa()`, `getEkstrakurikulerRaporSiswa()` di data layer; `rapor-sas-hub.html` → `rapor-sas-pilih-siswa.html` → `rapor-sas-cetak.html` (disalin dari `rapor-sts-*`, diaudit grep — 1 link lolos sed, sudah diperbaiki, lihat `antiregresi.md` §9.5).
+4. `wali-hub.html` — kartu Ekstrakurikuler aktif (dari "Segera"), kartu baru Rapor Semester (SAS). `admin-hub.html` — kartu baru Kelola Ekstrakurikuler. `firestore.rules` — 2 match block baru.
+5. Verifikasi: `node --check` pada `firestore-data-akademik.js` + semua script module di 8 file baru/diubah, audit brace/paren/bracket & tag `<div>`, audit grep sisa teks "STS" — semua bersih.
 
-**NISN masih kosong untuk semua 403 siswa** sampai admin benar-benar menjalankan `import-nisn.html` — fitur ini menyediakan JALANNYA, belum mengisi data produksi.
-
-**Modul Tahsin-Tahfizh** tidak tersentuh sejak entri changelog 2026-08-25.
+**Modul Tahsin-Tahfizh** tidak tersentuh sesi ini.
 
 ---
 
 ## Langkah lanjutan yang sudah disepakati (belum dikerjakan)
 
-1. **Cetak Rapor STS massal sekelas — DIPUTUSKAN TIDAK DIBANGUN** (bukan "menyusul", final). Alasan: footer per halaman (`@page{ @bottom-left }`) di CSS cetak browser cuma bisa satu isi statis untuk SELURUH dokumen — tidak ada mekanisme native yang stabil lintas-browser untuk mengganti isi footer otomatis per siswa dalam satu dokumen cetak gabungan. Ada teknik `@page` bernama + properti `page:` yang secara teori bisa, tapi dukungan browser belum cukup matang untuk dipertaruhkan pada dokumen resmi seperti rapor — risiko halaman tercetak tanpa identitas siswa yang benar kalau lembarnya tercecer. Pemilik proyek sudah menyetujui: kalau butuh cetak banyak siswa, tetap lewat `rapor-sts-pilih-siswa.html` satu per satu — setiap dokumen dijamin utuh 1 identitas siswa di setiap halamannya. **Jangan diusulkan ulang** kecuali ada perubahan nyata pada dukungan CSS Paged Media di browser target.
-2. **Rapor SAS** — belum dibangun, tapi fondasi & pola kerjanya sudah jelas: hampir seluruhnya bisa menyalin `rapor-sts-*` (ganti sumber data ke `nilai_sas`/efektifSLM+SAS gabungan via `hitungNilaiAkhirTP()` yang sudah ada, bukan STS murni). Taruh di `wali-hub.html` juga (§8.10), bukan `nilai-sas-hub.html`.
-3. **Jalankan Impor NISN** — pekerjaan admin (bukan pekerjaan sesi Claude), tapi FYI: fitur `import-nisn.html` sudah siap, tinggal admin unggah file Dapodik terbaru dan tinjau hasil pencocokan sebelum menekan Terapkan. Sampai ini dijalankan, rapor yang dicetak akan menampilkan "—" di kolom NISN.
-4. **STS "rapor bayangan"**, **7KAIH**, **Ekstrakurikuler**, **Presensi Harian** — status sama seperti tercatat sebelumnya (lihat riwayat `changelog.md` 2026-09-04 entri pertama), belum ada progres baru.
+1. **Uji manual oleh pemilik proyek** — Rapor SAS baru bisa dilihat terisi penuh kalau ada data sungguhan: mapel+TP+KKTP, proyek STEM+DPL, nilai SLM/STS/SAS, Ekstrakurikuler, dan Absensi&Keputusan untuk siswa yang sama. Belum diuji end-to-end dengan data nyata sesi ini (hanya diverifikasi sintaks & konsistensi kode).
+2. **Isi minimal 1 kegiatan Ekstrakurikuler** lewat `kelola-ekstrakurikuler.html` sebelum wali kelas bisa mengisi nilai — halaman `ekstrakurikuler-hub.html`/`ekstrakurikuler.html` akan menampilkan pesan kosong kalau belum ada kegiatan aktif.
+3. **Cetak Rapor SAS massal sekelas — TIDAK DIBANGUN**, alasan sama persis Rapor STS (lihat `antiregresi.md` §8.11) — satu-siswa-per-cetak, final.
+4. **Jalankan Impor NISN** — masih pekerjaan admin yang tertunda dari sesi sebelumnya (lihat riwayat `changelog.md` 2026-09-04), NISN 403 siswa masih kosong.
+5. **7KAIH, Presensi Harian** — status sama seperti tercatat sebelumnya, belum ada progres baru.
 
 ---
 
 ## Kalau melanjutkan sesi ini (checklist orientasi cepat)
 
-1. Baca `antiregresi.md` §8 dulu — khususnya §8.10 (kenapa Rapor taruh di wali-hub, bukan nilai-hub), §8.11 (pola cetak mana yang dipakai untuk apa), §8.12 (kenapa NISN pakai `updateDoc`, bukan `seed-siswa.html`).
-2. Minta **zip seluruh repo terbaru** ke pemilik proyek sebelum mengubah file bersama (`firestore.rules`, `assets/firebase.js`, `assets/style.css`, `assets/firestore-data.js`) — lihat `antiregresi.md` §2.
-3. Kalau menyalin halaman existing sebagai basis halaman baru: baca `antiregresi.md` §8.8 dulu (ada 2 bug nyata yang sempat lolos sed sebelum ketahuan lewat audit grep).
-4. Update `changelog.md` dan `antiregresi.md` di akhir sesi, sebelum menyerahkan file ke pemilik proyek — bukan sesudahnya.
+1. Baca `antiregresi.md` §9 dulu untuk Ekstrakurikuler/Rapor SAS — khususnya §9.1 (kenapa TIDAK ada pembina lintas kelas), §9.4 (cakupan resmi Rapor SAS, MENGGANTIKAN asumsi lama "cukup salin rapor-sts").
+2. §8.10/§8.11 tetap berlaku utuh (lokasi hub di `wali-hub.html`, pola cetak jendela baru + `@page`).
+3. Minta **zip seluruh repo terbaru** ke pemilik proyek sebelum mengubah file bersama (`firestore.rules`, `assets/firebase.js`, `assets/style.css`, `assets/firestore-data.js`) — lihat `antiregresi.md` §2.
+4. Kalau menyalin halaman existing sebagai basis halaman baru: baca `antiregresi.md` §8.8 DAN §9.5 (jebakan nama file yang tidak ikut ter-`sed` kalau regex-nya cuma menyasar kata tampilan, bukan nama file).
+5. Update `changelog.md` dan `antiregresi.md` di akhir sesi, sebelum menyerahkan file ke pemilik proyek — bukan sesudahnya.
+
 
