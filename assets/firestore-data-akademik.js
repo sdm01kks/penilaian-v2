@@ -790,6 +790,63 @@ export async function getRaporSTSSiswa({ siswaId, kelas, tingkatan, semester, ta
   }));
 }
 
+/**
+ * Rapor SAS (rapor resmi akhir semester) — BEDA dari getRaporSTSSiswa():
+ * (1) menghitung nilai akhir RESMI per mapel (formula lengkap §8.5:
+ *     efektifSLM = STS kalau > SLM, lalu digabung SAS pakai bobotSlm/bobotSas
+ *     TP, dirata-rata tertimbang bobotMapel) — BUKAN nilai STS murni;
+ * (2) iterasi SEMUA TP mapel (bukan cuma yang masuk cakupan STS/SAS) —
+ *     TP yang tidak diikutkan SAS otomatis pakai efektifSLM saja lewat
+ *     hitungNilaiAkhirTP(), sesuai formula, tanpa perlu cek cakupan
+ *     eksplisit di sini (nilai_sts/nilai_sas untuk TP itu memang kosong);
+ * (3) sekalian menyusun Capaian Kompetensi naratif per mapel (deskripsi
+ *     KKTP dari TP bernilai tertinggi = "sudah baik dalam...", dan TP
+ *     bernilai terendah kalau beda TP = "perlu bimbingan dalam...") —
+ *     dipakai `rapor-sas-cetak.html`. TIDAK dipakai ulang oleh Rapor STS
+ *     karena Rapor STS sengaja tetap flat (lihat HANDOFF/antiregresi §9).
+ */
+export async function getRaporSASSiswa({ siswaId, kelas, tingkatan, semester, tahunAjaran }) {
+  const mapelList = (await getMapelList())
+    .filter(m => mapelBerlakuDiTingkatan(m, tingkatan))
+    .sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0));
+
+  return Promise.all(mapelList.map(async (m) => {
+    const tpList = await getTPList({ mapel: m.nama, tingkatan });
+    if (!tpList.length) {
+      return { mapel: m.nama, kelompok: m.kelompok || 'wajib', urutan: m.urutan ?? 0, nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '' };
+    }
+
+    const perTP = await Promise.all(tpList.map(async (tp) => {
+      const [nilaiTPMap, stsMap, sasMap] = await Promise.all([
+        getNilaiTPUntukTP({ tpId: tp.id, mapel: m.nama, kelas, semester, tahunAjaran }),
+        getNilaiAsesmenUntukTP({ jenis: 'sts', tpId: tp.id, mapel: m.nama, kelas, semester, tahunAjaran }),
+        getNilaiAsesmenUntukTP({ jenis: 'sas', tpId: tp.id, mapel: m.nama, kelas, semester, tahunAjaran }),
+      ]);
+      const slm = nilaiTPMap[siswaId]?.slm ?? null;
+      const sts = stsMap[siswaId]?.nilai ?? null;
+      const sas = sasMap[siswaId]?.nilai ?? null;
+      return { tp, nilaiAkhirTP: hitungNilaiAkhirTP(slm, sas, tp, sts) };
+    }));
+
+    const nilaiAkhir = hitungNilaiAkhirMapel(perTP.map(x => ({ nilai: x.nilaiAkhirTP, bobot: x.tp.bobotMapel ?? 1 })));
+
+    // Capaian kompetensi naratif: deskripsi TP ternilai TERTINGGI ("sudah baik")
+    // dan TERENDAH ("perlu bimbingan") kalau TP-nya beda — pola persis v1.
+    const terisi = perTP.filter(x => x.nilaiAkhirTP !== null && x.nilaiAkhirTP !== undefined);
+    let capaianTerbaik = '', capaianPerluBimbingan = '';
+    if (terisi.length) {
+      const sorted = [...terisi].sort((a, b) => b.nilaiAkhirTP - a.nilaiAkhirTP);
+      const best = sorted[0], worst = sorted[sorted.length - 1];
+      capaianTerbaik = tentukanLevel(best.nilaiAkhirTP, best.tp)?.deskripsi || '';
+      capaianPerluBimbingan = worst.tp.id !== best.tp.id
+        ? (tentukanLevel(worst.nilaiAkhirTP, worst.tp)?.deskripsi || '')
+        : '';
+    }
+
+    return { mapel: m.nama, kelompok: m.kelompok || 'wajib', urutan: m.urutan ?? 0, nilaiAkhir, capaianTerbaik, capaianPerluBimbingan };
+  }));
+}
+
 /* ==========================================================================
    Absensi & Keputusan Naik Kelas — KHUSUS wali kelas. Satu dokumen per
    (siswa × semester × tahun ajaran): rekap sakit/izin/tanpa keterangan,
@@ -1079,5 +1136,210 @@ export async function deleteProyekStem(id) {
   }
   const { db, fsMod } = window.__fb;
   await fsMod.deleteDoc(fsMod.doc(db, 'proyek_stem', id));
+}
+
+/**
+ * Ringkasan Kokurikuler satu siswa untuk SATU semester — dipakai
+ * `rapor-sas-cetak.html`. Mengumpulkan nilai DPL siswa itu lintas SEMUA
+ * proyek STEM kelasnya pada semester ybs (kokurikuler tahun ini memang
+ * hanya lewat proyek STEM, lihat catatan di atas), digabung jadi satu
+ * daftar {dpl, level, deskripsi} per proyek — dipakai tampilkan tabel
+ * kokurikuler di rapor tanpa siswa perlu tampil proyek yang tidak
+ * menyentuh mereka.
+ * @returns {Promise<Array<{proyekJudul:string, dplNama:string, level:number, deskripsi:string}>>}
+ */
+export async function getKokurikulerRaporSiswa(siswaId, kelas, semester, tahunAjaran) {
+  const [proyekList, dplSemua] = await Promise.all([
+    getProyekStemByKelas(kelas, semester, tahunAjaran),
+    getDPLListByKelas(kelas),
+  ]);
+  const hasil = [];
+  for (const proyek of proyekList) {
+    const nilaiMap = await getKokurikulerByProyek(proyek.id, kelas);
+    const nilaiSiswa = nilaiMap[siswaId] || {};
+    for (const dplId of (proyek.dplId || [])) {
+      const n = nilaiSiswa[dplId];
+      if (!n || !n.level) continue;
+      const dpl = dplSemua.find(d => d.id === dplId);
+      hasil.push({
+        proyekJudul: proyek.judul,
+        dplNama: dpl ? dpl.nama : '(DPL tidak ditemukan)',
+        level: n.level,
+        deskripsi: n.deskripsi || '',
+      });
+    }
+  }
+  return hasil;
+}
+
+/* ==========================================================================
+   Ekstrakurikuler — DUA lapis data, sengaja dipisah:
+   (1) `ekstrakurikuler` — daftar MASTER kegiatan milik sekolah (Basket,
+       Pramuka non-HW, English Club, dst), dikelola ADMIN lewat
+       `kelola-ekstrakurikuler.html`. Bukan per kelas/tingkatan — satu
+       kegiatan bisa diikuti siswa dari kelas mana pun.
+   (2) `ekstrakurikuler_siswa` — nilai PREDIKAT per (siswa × kegiatan ×
+       semester × tahun ajaran), diisi WALI KELAS untuk siswa di kelasnya
+       sendiri (BUKAN pembina lintas kelas seperti aplikasi v1 — keputusan
+       disederhanakan 2026-09-06, lihat antiregresi.md §9).
+   Skema predikat mengikuti pola v1 PERSIS: level 1=Layak, 2=Cakap,
+   3=Mahir, 4=Tidak Ikut — level 0/tidak ada dokumen berarti "belum
+   diisi". BEDA dari v1: field KKTP v1 (min/maks numerik) dibuang karena
+   di v1 pun tidak pernah dipakai untuk menghitung level secara otomatis
+   (guru selalu memilih predikat langsung, bukan dari skor) — di sini
+   cukup 4 kalimat deskripsi tetap (`levelDeskripsi`), diisi otomatis ke
+   kotak deskripsi siswa saat predikat dipilih, tetap bisa diedit manual.
+   ========================================================================== */
+
+/** Label predikat Ekstrakurikuler — TETAP, urutan index 0-3 = level 1-4. */
+export const EKS_LEVEL_LABEL = ['Layak', 'Cakap', 'Mahir', 'Tidak Ikut'];
+
+const DEMO_EKSKUL_KEY = 'akd_demo_ekskul';
+const DEMO_EKSKUL_SISWA_KEY = 'akd_demo_ekskul_siswa';
+
+function readDemoEkskul() {
+  return JSON.parse(localStorage.getItem(DEMO_EKSKUL_KEY) || '[]');
+}
+function writeDemoEkskul(list) {
+  localStorage.setItem(DEMO_EKSKUL_KEY, JSON.stringify(list));
+}
+function readDemoEkskulSiswa() {
+  return JSON.parse(localStorage.getItem(DEMO_EKSKUL_SISWA_KEY) || '[]');
+}
+function writeDemoEkskulSiswa(list) {
+  localStorage.setItem(DEMO_EKSKUL_SISWA_KEY, JSON.stringify(list));
+}
+
+/** Ambil daftar master kegiatan Ekstrakurikuler, terurut. `{hanyaAktif:true}` untuk filter yang aktif saja. */
+export async function getEkstrakurikulerList({ hanyaAktif = false } = {}) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    list = readDemoEkskul();
+  } else {
+    const { db, fsMod } = window.__fb;
+    const snap = await fsMod.getDocs(fsMod.collection(db, 'ekstrakurikuler'));
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  list.sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0) || (a.nama || '').localeCompare(b.nama || ''));
+  return hanyaAktif ? list.filter(e => e.aktif) : list;
+}
+
+/** Simpan satu kegiatan Ekstrakurikuler master (upsert berdasar payload.id kalau ada). Khusus admin. */
+export async function saveEkstrakurikuler(payload) {
+  const data = {
+    nama: payload.nama,
+    keterangan: payload.keterangan || '',
+    aktif: !!payload.aktif,
+    urutan: payload.urutan ?? 0,
+    // index 0=Layak,1=Cakap,2=Mahir,3=Tidak Ikut — selaras EKS_LEVEL_LABEL
+    levelDeskripsi: payload.levelDeskripsi || ['', '', '', ''],
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoEkskul();
+    if (payload.id) {
+      const idx = list.findIndex(e => e.id === payload.id);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-eks-' + Date.now(), ...data });
+    }
+    writeDemoEkskul(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (payload.id) {
+    await fsMod.updateDoc(fsMod.doc(db, 'ekstrakurikuler', payload.id), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'ekstrakurikuler'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/** Hapus satu kegiatan Ekstrakurikuler master. Khusus admin. Nilai siswa yang sudah terlanjur diisi TIDAK ikut terhapus otomatis. */
+export async function deleteEkstrakurikuler(id) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    writeDemoEkskul(readDemoEkskul().filter(e => e.id !== id));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'ekstrakurikuler', id));
+}
+
+/**
+ * Ambil semua nilai Ekstrakurikuler satu kelas pada semester/tahun ajaran
+ * tertentu, khusus wali kelas kelas itu.
+ * @returns {Promise<Object<string,object>>} siswaId -> { ekskulId: {id, level, deskripsi} }
+ */
+export async function getEkstrakurikulerSiswaByKelas(kelas, semester, tahunAjaran) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    list = readDemoEkskulSiswa().filter(e => e.kelas === kelas && e.semester === semester && e.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'ekstrakurikuler_siswa'),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  const map = {};
+  list.forEach(e => {
+    if (!map[e.siswaId]) map[e.siswaId] = {};
+    map[e.siswaId][e.ekstrakurikulerId] = { id: e.id, level: e.level, deskripsi: e.deskripsi };
+  });
+  return map;
+}
+
+/** Simpan satu nilai Ekstrakurikuler siswa (upsert). `existingId` dari getEkstrakurikulerSiswaByKelas kalau ada. */
+export async function saveEkstrakurikulerSiswa(payload, existingId) {
+  const data = {
+    siswaId: payload.siswaId, ekstrakurikulerId: payload.ekstrakurikulerId,
+    kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    level: payload.level, deskripsi: payload.deskripsi || '',
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoEkskulSiswa();
+    if (existingId) {
+      const idx = list.findIndex(e => e.id === existingId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-eks-siswa-' + Date.now() + '-' + payload.siswaId + '-' + payload.ekstrakurikulerId, ...data });
+    }
+    writeDemoEkskulSiswa(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'ekstrakurikuler_siswa', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'ekstrakurikuler_siswa'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/**
+ * Ambil daftar Ekstrakurikuler yang DIIKUTI satu siswa (level 1-3, bukan
+ * "Tidak Ikut" & bukan kosong) untuk keperluan Rapor SAS — dipakai
+ * `getRaporSASSiswa()`.
+ * @returns {Promise<Array<{nama:string, level:number, deskripsi:string}>>}
+ */
+export async function getEkstrakurikulerRaporSiswa(siswaId, kelas, semester, tahunAjaran) {
+  const [ekskulMap, ekskulList] = await Promise.all([
+    getEkstrakurikulerSiswaByKelas(kelas, semester, tahunAjaran),
+    getEkstrakurikulerList(),
+  ]);
+  const nilaiSiswa = ekskulMap[siswaId] || {};
+  return ekskulList
+    .filter(e => {
+      const n = nilaiSiswa[e.id];
+      return n && n.level >= 1 && n.level <= 3; // 4 = Tidak Ikut, tidak tampil di rapor
+    })
+    .map(e => ({ nama: e.nama, level: nilaiSiswa[e.id].level, deskripsi: nilaiSiswa[e.id].deskripsi || '' }));
 }
 
