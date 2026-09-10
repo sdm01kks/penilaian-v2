@@ -392,6 +392,226 @@ export async function saveNisnBatch(entries) {
   await batch.commit();
 }
 
+/**
+ * [Admin] Ambil SEMUA siswa satu kelas — aktif MAUPUN nonaktif — terurut
+ * nama. Beda dari getSiswaByKelas() di atas (khusus aktif==true, dipakai
+ * alur nilai/rapor); ini untuk halaman Kelola Data Siswa supaya admin
+ * juga bisa melihat & mengaktifkan-kembali siswa yang dinonaktifkan.
+ */
+export async function getSiswaAdminByKelas(kelas) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    return DEMO_SISWA.filter(s => s.kelas === kelas).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(
+    fsMod.collection(db, 'siswa'),
+    fsMod.where('kelas', '==', kelas)
+  );
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+}
+
+/**
+ * [Admin] Update field biasa siswa: nama, kelas (pindah kelas), jenjang
+ * (Tahsin-Tahfizh), aktif (soft-delete). SENGAJA tidak menerima nis/id —
+ * ganti NIS harus lewat gantiNis() di bawah karena NIS adalah Document ID
+ * dan direferensikan di banyak koleksi lain.
+ */
+export async function updateSiswaData(id, data) {
+  const allowed = {};
+  if (data.nama !== undefined) allowed.nama = String(data.nama).trim();
+  if (data.kelas !== undefined) allowed.kelas = data.kelas;
+  if (data.jenjang !== undefined) allowed.jenjang = data.jenjang;
+  if (data.aktif !== undefined) allowed.aktif = !!data.aktif;
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const idx = DEMO_SISWA.findIndex(s => s.id === id);
+    if (idx >= 0) DEMO_SISWA[idx] = { ...DEMO_SISWA[idx], ...allowed };
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.updateDoc(fsMod.doc(db, 'siswa', id), allowed);
+}
+
+/**
+ * [Admin] Tambah siswa baru. NIS jadi Document ID — gagal (Error) kalau
+ * NIS sudah dipakai siswa lain.
+ */
+export async function createSiswa({ nis, nama, kelas, jenjang, aktif }) {
+  const id = String(nis).trim();
+  if (!id) throw new Error('NIS wajib diisi.');
+  const data = {
+    nama: String(nama).trim(), nis: id, kelas,
+    jenjang: jenjang || null, aktif: aktif !== false,
+  };
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    if (DEMO_SISWA.some(s => s.id === id)) throw new Error('NIS sudah dipakai siswa lain.');
+    DEMO_SISWA.push({ id, ...data });
+    return { id, ...data };
+  }
+  const { db, fsMod } = window.__fb;
+  const ref = fsMod.doc(db, 'siswa', id);
+  const existing = await fsMod.getDoc(ref);
+  if (existing.exists()) throw new Error('NIS sudah dipakai siswa lain.');
+  await fsMod.setDoc(ref, data);
+  return { id, ...data };
+}
+
+/**
+ * [Admin] Ganti NIS seorang siswa. NIS adalah Document ID di `siswa` DAN
+ * direferensikan sebagai field `siswaId` di 8 koleksi lain — setoran,
+ * menulis_log, nilai_tp, nilai_sts, nilai_sas, absensi_rapor, kokurikuler,
+ * ekstrakurikuler_siswa — plus array `anakIds` milik akun orang tua
+ * (users). Operasi ini TIDAK atomik secara keseluruhan (batch Firestore
+ * maksimal 500 operasi; riwayat siswa kelas 5-6 bertahun-tahun bisa lebih
+ * dari itu), tapi dirancang IDEMPOTEN: aman dijalankan ulang kalau gagal
+ * di tengah jalan, karena tiap langkah query ulang "siapa yang masih
+ * pakai NIS lama" — dokumen yang sudah pindah tidak akan diproses dua kali.
+ *
+ * setoran & menulis_log: rule Firestore `update: if false` (sengaja
+ * immutable). Satu-satunya jalan pindah siswaId adalah SALIN dokumen
+ * (createdBy ASLI dipertahankan, bukan uid admin yang menjalankan ini)
+ * lalu HAPUS yang lama — makanya create & delete di kedua koleksi itu
+ * punya jalur `|| isAdmin()` khusus (lihat komentar di firestore.rules).
+ *
+ * nilai_tp/nilai_sts/nilai_sas: rule bacanya butuh kombinasi mapel+kelas
+ * eksplisit (pola yang sama dipakai di semua query lain ke koleksi ini
+ * dalam file ini) — makanya di-loop per mapel, bukan satu query longgar.
+ *
+ * @param {{oldId:string, newId:string, kelas:string, onLog?:(msg:string)=>void}} params
+ */
+export async function gantiNis({ oldId, newId, kelas, onLog }) {
+  const log = (msg) => { if (onLog) onLog(msg); };
+  const newIdClean = String(newId).trim();
+  if (!newIdClean) throw new Error('NIS baru tidak boleh kosong.');
+  if (newIdClean === oldId) throw new Error('NIS baru sama dengan NIS lama.');
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    if (DEMO_SISWA.some(s => s.id === newIdClean)) throw new Error('NIS baru sudah dipakai siswa lain.');
+    const idx = DEMO_SISWA.findIndex(s => s.id === oldId);
+    if (idx < 0) throw new Error('Siswa dengan NIS lama tidak ditemukan.');
+    log(`Mode pratinjau: menyalin data siswa ke NIS ${newIdClean}…`);
+    const siswaLama = DEMO_SISWA[idx];
+    DEMO_SISWA.push({ ...siswaLama, id: newIdClean, nis: newIdClean });
+    DEMO_SISWA.splice(idx, 1);
+    log('Mode pratinjau: riwayat nilai/setoran lintas koleksi tidak disimulasikan di sini — hanya data siswa yang dipindah.');
+    log('Selesai (mode pratinjau).');
+    return;
+  }
+
+  const { db, fsMod } = window.__fb;
+
+  const refBaru = fsMod.doc(db, 'siswa', newIdClean);
+  const cekBaru = await fsMod.getDoc(refBaru);
+  if (cekBaru.exists()) throw new Error('NIS baru sudah dipakai siswa lain.');
+  const refLama = fsMod.doc(db, 'siswa', oldId);
+  const dataLama = await fsMod.getDoc(refLama);
+  if (!dataLama.exists()) throw new Error('Siswa dengan NIS lama tidak ditemukan.');
+
+  log(`Menyalin dokumen siswa ke NIS ${newIdClean}…`);
+  const { nis: _nisLama, ...restData } = dataLama.data();
+  await fsMod.setDoc(refBaru, { ...restData, nis: newIdClean });
+
+  // Migrasi via updateDoc — untuk koleksi yang rule update-nya sudah
+  // mengizinkan admin (nilai_tp/sts/sas, absensi_rapor, kokurikuler,
+  // ekstrakurikuler_siswa). Di-chunk per 450 operasi (limit batch: 500).
+  async function migrasiUpdate(namaKoleksi, extraWhere = []) {
+    const q = fsMod.query(
+      fsMod.collection(db, namaKoleksi),
+      fsMod.where('siswaId', '==', oldId),
+      fsMod.where('kelas', '==', kelas),
+      ...extraWhere
+    );
+    const snap = await fsMod.getDocs(q);
+    if (snap.empty) return 0;
+    let count = 0, opsInBatch = 0;
+    let batch = fsMod.writeBatch(db);
+    for (const d of snap.docs) {
+      batch.update(fsMod.doc(db, namaKoleksi, d.id), { siswaId: newIdClean });
+      opsInBatch++; count++;
+      if (opsInBatch >= 450) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+    }
+    if (opsInBatch > 0) await batch.commit();
+    return count;
+  }
+
+  // Migrasi via salin+hapus — untuk setoran/menulis_log (update diblokir
+  // total). set()+delete() digabung dalam batch yang sama supaya per
+  // dokumen tetap "sepasang" (baik dua-duanya jalan, atau dua-duanya
+  // tidak, per chunk).
+  async function migrasiCopyDelete(namaKoleksi) {
+    const q = fsMod.query(
+      fsMod.collection(db, namaKoleksi),
+      fsMod.where('siswaId', '==', oldId),
+      fsMod.where('kelas', '==', kelas)
+    );
+    const snap = await fsMod.getDocs(q);
+    if (snap.empty) return 0;
+    let count = 0, opsInBatch = 0;
+    let batch = fsMod.writeBatch(db);
+    for (const d of snap.docs) {
+      const newRef = fsMod.doc(fsMod.collection(db, namaKoleksi));
+      batch.set(newRef, { ...d.data(), siswaId: newIdClean });
+      batch.delete(fsMod.doc(db, namaKoleksi, d.id));
+      opsInBatch += 2; count++;
+      if (opsInBatch >= 440) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+    }
+    if (opsInBatch > 0) await batch.commit();
+    return count;
+  }
+
+  log('Memindahkan riwayat setoran…');
+  log(`  ${await migrasiCopyDelete('setoran')} entri setoran dipindahkan.`);
+
+  log('Memindahkan riwayat menulis…');
+  log(`  ${await migrasiCopyDelete('menulis_log')} entri menulis dipindahkan.`);
+
+  const mapelList = await getMapelList();
+
+  log('Memindahkan nilai TP/SLM…');
+  let nNilaiTp = 0;
+  for (const m of mapelList) nNilaiTp += await migrasiUpdate('nilai_tp', [fsMod.where('mapel', '==', m.nama)]);
+  log(`  ${nNilaiTp} nilai TP dipindahkan.`);
+
+  log('Memindahkan nilai STS…');
+  let nSts = 0;
+  for (const m of mapelList) nSts += await migrasiUpdate('nilai_sts', [fsMod.where('mapel', '==', m.nama)]);
+  log(`  ${nSts} nilai STS dipindahkan.`);
+
+  log('Memindahkan nilai SAS…');
+  let nSas = 0;
+  for (const m of mapelList) nSas += await migrasiUpdate('nilai_sas', [fsMod.where('mapel', '==', m.nama)]);
+  log(`  ${nSas} nilai SAS dipindahkan.`);
+
+  log('Memindahkan absensi rapor…');
+  log(`  ${await migrasiUpdate('absensi_rapor')} record absensi dipindahkan.`);
+
+  log('Memindahkan nilai kokurikuler…');
+  log(`  ${await migrasiUpdate('kokurikuler')} nilai kokurikuler dipindahkan.`);
+
+  log('Memindahkan nilai ekstrakurikuler…');
+  log(`  ${await migrasiUpdate('ekstrakurikuler_siswa')} nilai ekstrakurikuler dipindahkan.`);
+
+  log('Memeriksa tautan akun orang tua…');
+  const qUsers = fsMod.query(fsMod.collection(db, 'users'), fsMod.where('anakIds', 'array-contains', oldId));
+  const snapUsers = await fsMod.getDocs(qUsers);
+  for (const d of snapUsers.docs) {
+    const anakIds = (d.data().anakIds || []).filter(x => x !== oldId);
+    if (!anakIds.includes(newIdClean)) anakIds.push(newIdClean);
+    await fsMod.updateDoc(fsMod.doc(db, 'users', d.id), { anakIds });
+  }
+  log(`  ${snapUsers.size} akun orang tua diperbarui.`);
+
+  log('Menghapus dokumen siswa lama…');
+  await fsMod.deleteDoc(refLama);
+  log(`Selesai — NIS ${oldId} dipindahkan ke ${newIdClean}.`);
+}
+
 /* ==========================================================================
    Config — semester & tahun ajaran aktif, satu dokumen untuk sekolah.
    ========================================================================== */
