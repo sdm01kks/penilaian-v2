@@ -17,6 +17,29 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-10 — `[Bersama]` Kelola Data Siswa (admin) + fitur Ganti NIS
+
+### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §10)
+- **Halaman baru khusus di `akademik/`** (`kelola-siswa.html`, ditautkan dari `admin-hub.html`) — koleksi `siswa` dipakai bersama Tahsin-Tahfizh, tapi TIDAK ada admin hub di sisi Tahsin-Tahfizh sama sekali sehingga admin Tahsin-Tahfizh mengakses halaman ini lewat login Akademik.
+- **Hapus siswa = soft-delete (`aktif:false`) SAJA** — tidak ada hard delete di UI, supaya riwayat setoran/nilai lama tidak pernah kehilangan induknya.
+- **NIS (Document ID koleksi `siswa`) BOLEH diganti**, tapi lewat aksi terpisah "Ganti NIS" (bukan field edit biasa) karena NIS direferensikan sebagai `siswaId` di 8 koleksi lain (`setoran`, `menulis_log`, `nilai_tp`, `nilai_sts`, `nilai_sas`, `absensi_rapor`, `kokurikuler`, `ekstrakurikuler_siswa`) plus array `anakIds` milik akun orang tua (`users`) — semuanya harus ikut dipindah, atau riwayat siswa itu "putus".
+- **`firestore.rules` diubah**: `setoran/{id}` dan `menulis_log/{id}` — ditambah `|| isAdmin()` pada `create` DAN `delete` (rule `update: if false` TIDAK disentuh, tetap sengaja immutable). Diperlukan karena kedua koleksi itu tidak bisa di-`update` sama sekali, jadi satu-satunya jalan pindah `siswaId` adalah salin dokumen (createdBy asli dipertahankan) lalu hapus yang lama — dan rule delete lama cuma mengizinkan pembuat entri aslinya, bukan admin.
+
+### Ditambahkan
+- **Data layer** (`assets/firestore-data-akademik.js`):
+  - `getSiswaAdminByKelas(kelas)` — semua siswa (aktif + nonaktif) satu kelas, beda dari `getSiswaByKelas()` yang cuma aktif.
+  - `updateSiswaData(id, data)` — update nama/kelas/jenjang/aktif (bukan NIS).
+  - `createSiswa({nis, nama, kelas, jenjang, aktif})` — tambah siswa baru, gagal kalau NIS sudah dipakai.
+  - `gantiNis({oldId, newId, kelas, onLog})` — migrasi penuh: salin dokumen `siswa` ke ID baru, pindahkan `siswaId` di 8 koleksi (salin+hapus untuk `setoran`/`menulis_log` karena update diblokir; `updateDoc` langsung untuk 6 lainnya — `nilai_tp`/`nilai_sts`/`nilai_sas` di-loop per mapel karena rule bacanya butuh kombinasi mapel+kelas eksplisit), perbarui `anakIds` akun orang tua, baru hapus dokumen lama. Idempoten (aman diulang kalau gagal di tengah jalan) dan mengirim progress lewat callback `onLog` untuk ditampilkan di UI.
+- **`akademik/kelola-siswa.html`** (`admin-hub.html` → ...) — pilih kelas → daftar siswa (kartu akordeon spt `kelola-ekstrakurikuler.html`), tiap kartu bisa edit nama/kelas/jenjang/status, tombol Tambah Siswa (form-card terpisah), dan "danger zone" Ganti NIS per siswa (konfirmasi ketik-ulang NIS lama + log progres langkah demi langkah).
+- **`admin-hub.html`** — kartu baru "Kelola Data Siswa".
+
+### Catatan
+- Status: **belum dikirim/dideploy**, belum diuji end-to-end dengan Firestore sungguhan (hanya diverifikasi `node --check` + audit brace/paren/bracket/tag `<div>` + grep pemakaian fungsi baru).
+- Pemilik proyek berencana mengirim file sumber data siswa untuk fitur **impor data siswa** (belum dibangun sesi ini) — kemungkinan akan menggantikan/melengkapi `seed-siswa.html` yang saat ini masih berupa script sekali-jalan tanpa UI.
+
+---
+
 ## 2026-09-06 — `[Akademik]` Ekstrakurikuler (modul baru) + Rapor SAS (rapor resmi akhir semester)
 
 ### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §9)

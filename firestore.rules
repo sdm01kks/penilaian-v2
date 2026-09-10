@@ -166,25 +166,37 @@ service cloud.firestore {
     // Riwayat setoran harian. Guru hanya boleh baca/tambah untuk kelas
     // yang diampunya. Orang tua boleh baca setoran anaknya sendiri saja
     // (read-only, tidak pernah bisa create/delete). Hapus hanya untuk
-    // entri milik sendiri.
+    // entri milik sendiri — KECUALI admin (lihat catatan di bawah).
+    // `update: if false` TETAP sengaja diblokir total (tidak diubah) —
+    // entri riwayat setoran memang immutable. `|| isAdmin()` di create &
+    // delete HANYA untuk fitur Ganti NIS di Kelola Data Siswa: karena
+    // update diblokir, satu-satunya cara memindahkan siswaId ke NIS baru
+    // adalah salin dokumen (create, createdBy ASLI dipertahankan apa
+    // adanya, bukan uid admin) lalu hapus dokumen lama (delete, biar
+    // dibuat guru manapun). Admin tidak dapat menulis/menghapus setoran
+    // di luar alur itu lewat UI manapun.
     match /setoran/{id} {
       allow read: if bolehKelas(resource.data.kelas) || anakSaya(resource.data.siswaId);
       allow create: if isLoggedIn()
-                     && request.resource.data.createdBy == request.auth.uid
-                     && bolehKelas(request.resource.data.kelas);
-      allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
+                     && ((request.resource.data.createdBy == request.auth.uid
+                          && bolehKelas(request.resource.data.kelas))
+                         || isAdmin());
+      allow delete: if isLoggedIn() && (resource.data.createdBy == request.auth.uid || isAdmin());
       allow update: if false;
     }
 
     // ---- menulis_log/{id} ---------------------------------------------------
     // Catatan pemeriksaan berkala buku salinan Al-Qur'an. Aturan sama
-    // seperti setoran (termasuk akses baca-saja untuk orang tua).
+    // seperti setoran (termasuk akses baca-saja untuk orang tua), termasuk
+    // alasan `|| isAdmin()` di create & delete (lihat catatan panjang di
+    // setoran/{id} di atas — sama persis untuk Ganti NIS).
     match /menulis_log/{id} {
       allow read: if bolehKelas(resource.data.kelas) || anakSaya(resource.data.siswaId);
       allow create: if isLoggedIn()
-                     && request.resource.data.createdBy == request.auth.uid
-                     && bolehKelas(request.resource.data.kelas);
-      allow delete: if isLoggedIn() && resource.data.createdBy == request.auth.uid;
+                     && ((request.resource.data.createdBy == request.auth.uid
+                          && bolehKelas(request.resource.data.kelas))
+                         || isAdmin());
+      allow delete: if isLoggedIn() && (resource.data.createdBy == request.auth.uid || isAdmin());
       allow update: if false;
     }
 

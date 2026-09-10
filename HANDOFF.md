@@ -1,7 +1,22 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 setelah sub-sesi Ekstrakurikuler + Rapor SAS.
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 setelah sub-sesi Ekstrakurikuler + Rapor SAS, dan 2026-09-10 setelah sub-sesi Kelola Data Siswa + Ganti NIS.
+
+---
+
+## Status per 2026-09-10 (setelah sub-sesi Kelola Data Siswa + Ganti NIS)
+
+**Belum dikirim/dideploy.** Detail penuh di `changelog.md` entri 2026-09-10 dan `antiregresi.md` §10 (baca §10 dulu kalau melanjutkan area ini — terutama §10.1, peta lengkap 8 koleksi yang menyimpan `siswaId`).
+
+**Yang baru selesai:**
+1. `akademik/kelola-siswa.html` (baru, ditautkan dari `admin-hub.html`) — admin bisa lihat siswa per kelas (aktif+nonaktif), edit nama/kelas/jenjang, toggle aktif (soft-delete), tambah siswa baru, dan **Ganti NIS** per siswa.
+2. `gantiNis()` di `firestore-data-akademik.js` — migrasi `siswaId` di 8 koleksi (`setoran`, `menulis_log`, `nilai_tp`, `nilai_sts`, `nilai_sas`, `absensi_rapor`, `kokurikuler`, `ekstrakurikuler_siswa`) + `anakIds` akun orang tua, idempoten, progress via callback log ke UI.
+3. `firestore.rules` — `setoran`/`menulis_log` ditambah `|| isAdmin()` di `create`+`delete` saja (bukan `update`, tetap `if false`) — lihat alasan di `antiregresi.md` §10.2.
+4. Verifikasi: `node --check` pada `firestore-data-akademik.js` + script module `kelola-siswa.html`, audit brace/paren/bracket, audit balance tag `<div>`, grep pemakaian fungsi baru — semua bersih. **Belum diuji end-to-end dengan Firestore sungguhan.**
+
+**Belum dikerjakan (arah lanjutan yang sudah disinggung pemilik proyek):**
+- **Impor Data Siswa** — pemilik proyek berencana mengirim file sumber data siswa untuk sesi berikutnya. Belum ada keputusan arsitektur soal ini (format file belum diketahui, apakah upsert create+update, apakah menggantikan `seed-siswa.html`) — **tanyakan dulu format filenya sebelum membangun**, jangan berasumsi mengikuti pola `import-nisn.html` begitu saja karena kebutuhannya bisa beda (import-nisn hanya UPDATE field nisn siswa existing, tidak pernah CREATE siswa baru).
 
 ---
 
