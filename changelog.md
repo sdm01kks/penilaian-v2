@@ -17,6 +17,29 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-10 (lanjutan) — `[Akademik]` Mutasi Siswa (usulan wali kelas → approve admin)
+
+### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §11)
+- Input NIS `-` (belum diketahui) **TIDAK** dipakai literal sebagai Document ID (berisiko bentrok kalau 2 usulan sama-sama `-`) — di-generate NIS sementara unik + flag `nisSementara:true`, difinalisasi lewat fitur Ganti NIS (§10) yang sudah ada.
+- Skema `siswa` bertambah `tempatLahir`, `tanggalLahir` (string `YYYY-MM-DD`) — juga ditambahkan ke form edit `kelola-siswa.html`.
+- Jenjang Tahsin-Tahfizh (iqro/Al-Qur'an) siswa hasil mutasi masuk di-default dari kelas (1-2→iqro, lainnya→quran), bisa dikoreksi manual.
+- Mutasi Keluar: cukup pilih siswa aktif di kelasnya + alasan singkat (tidak perlu tanggal keluar/sekolah tujuan untuk v1).
+- Rule `mutasi_siswa` SENGAJA pakai kepemilikan `createdBy` (field biasa) + `isAdmin()`, BUKAN `bolehWaliKelas(resource.data.kelas)` seperti koleksi lain — supaya admin bisa list SEMUA usulan lintas kelas tanpa filter kelas (lihat antiregresi.md §11.2 untuk alasan detail, ini beda jenis masalah dari alasan rule setoran/menulis_log di §10.2).
+
+### Ditambahkan
+- **Data layer** (`assets/firestore-data-akademik.js`): `ajukanMutasiMasuk()`, `ajukanMutasiKeluar()`, `getMutasiSaya(uid)`, `getMutasiSemua()`, `setujuiMutasi(id)` (approve → panggil `createSiswa()`/`updateSiswaData()` langsung, retry otomatis kalau NIS sementara kebetulan bentrok), `tolakMutasi(id, catatan)`, `batalkanMutasi(id)`. `createSiswa()`/`updateSiswaData()` diperluas menerima `tempatLahir`/`tanggalLahir`/`nisn`/`nisSementara`.
+- **`akademik/mutasi-hub.html`** (wali kelas, ditautkan dari `wali-hub.html`) — pilih kelas kalau ampu >1.
+- **`akademik/mutasi.html`** (`?kelas=X`) — form Mutasi Masuk (nama, tempat/tanggal lahir, NISN, NIS) & Mutasi Keluar (pilih siswa aktif + alasan), plus riwayat usulan sendiri (bisa dibatalkan selama masih menunggu).
+- **`akademik/kelola-mutasi.html`** (admin, ditautkan dari `admin-hub.html`) — antrean semua usulan lintas kelas, filter status, Setujui/Tolak (dengan catatan opsional).
+- **`firestore.rules`** — collection baru `mutasi_siswa/{id}`.
+- **`akademik/kelola-siswa.html`** — tambah field tempat/tanggal lahir/NISN ke form Tambah & edit per-siswa; badge merah "NIS Sementara" di kartu siswa yang NIS-nya belum final.
+
+### Catatan
+- Status: **belum dikirim/dideploy**, belum diuji end-to-end. Diverifikasi `node --check` semua script module baru + `firestore-data-akademik.js`, audit brace/paren, audit balance tag `<div>` di 6 file HTML tersentuh, grep cross-check semua fungsi baru vs import di tiap halaman.
+- Masih menunggu file sumber data siswa dari pemilik proyek untuk fitur **Impor Data Siswa** (belum dibangun).
+
+---
+
 ## 2026-09-10 — `[Bersama]` Kelola Data Siswa (admin) + fitur Ganti NIS
 
 ### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §10)

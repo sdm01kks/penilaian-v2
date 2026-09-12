@@ -1,7 +1,17 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 setelah sub-sesi Ekstrakurikuler + Rapor SAS, dan 2026-09-10 setelah sub-sesi Kelola Data Siswa + Ganti NIS.
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), dan 2026-09-10 lanjutan (Mutasi Siswa).
+
+---
+
+## Status per 2026-09-10 lanjutan (setelah sub-sesi Mutasi Siswa)
+
+**Belum dikirim/dideploy.** Detail penuh di `changelog.md` entri "Mutasi Siswa" dan `antiregresi.md` §11.
+
+**Yang baru selesai:** fitur Mutasi — wali kelas mengusulkan siswa baru masuk atau siswa yang sudah pindah/keluar (`mutasi-hub.html` → `mutasi.html`), admin menyetujui/menolak (`kelola-mutasi.html`, ditautkan dari `admin-hub.html`). Setuju otomatis memanggil `createSiswa()`/`updateSiswaData()` yang sudah ada dari sub-sesi sebelumnya. NIS `-` (belum diketahui) di-generate jadi NIS sementara unik, ditandai `nisSementara:true`, difinalisasi lewat fitur Ganti NIS. Skema `siswa` bertambah `tempatLahir`/`tanggalLahir`, ikut ditambahkan ke form `kelola-siswa.html`.
+
+**Masih berlaku dari sebelumnya:** Impor Data Siswa belum dibangun, menunggu file dari pemilik proyek — **tanyakan format filenya dulu sebelum membangun.**
 
 ---
 

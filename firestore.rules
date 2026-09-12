@@ -411,6 +411,30 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- mutasi_siswa/{id} --------------------------------------------------
+    // Usulan wali kelas: siswa baru masuk kelasnya, atau siswa yang sudah
+    // pindah/keluar. Admin yang menyetujui/menolak — approve otomatis
+    // memanggil createSiswa()/updateSiswaData() (lihat setujuiMutasi() di
+    // firestore-data-akademik.js), bukan Cloud Function.
+    // SENGAJA TIDAK memakai bolehWaliKelas(resource.data.kelas) seperti
+    // koleksi lain (siswa/setoran/dst) — kalau begitu, query admin untuk
+    // "semua usulan lintas kelas" akan ditolak Firestore tanpa filter
+    // kelas eksplisit (lihat catatan panjang di setoran/{id} soal pola ini,
+    // dan antiregresi.md §11.2). Di sini kepemilikan wali kelas dicek lewat
+    // field `createdBy` biasa (BUKAN get()) — jadi list query aman tanpa
+    // filter tambahan untuk admin (lihat semua) maupun wali kelas (lihat
+    // punya sendiri, query where('createdBy','==',uid)).
+    match /mutasi_siswa/{id} {
+      allow read: if isAdmin() || resource.data.createdBy == request.auth.uid;
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && request.resource.data.status == 'pending'
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if isAdmin();
+      allow delete: if isAdmin()
+                     || (resource.data.createdBy == request.auth.uid && resource.data.status == 'pending');
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;
