@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mutasi Siswa — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .intro-text{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:16px}
+
+  .jenis-toggle{display:flex;gap:8px;margin-bottom:16px}
+  .jenis-toggle button{flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-mid);cursor:pointer}
+  .jenis-toggle button.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .form-card{background:var(--surface);border:1.5px solid var(--green-light);border-radius:18px;padding:16px;margin-bottom:20px}
+  .field-label{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:6px;margin-top:12px}
+  .field-label:first-child{margin-top:0}
+  .field-hint{font-size:10.5px;color:var(--ink-muted);margin:4px 0 0;line-height:1.5}
+  .field-row{display:flex;gap:10px;margin-top:12px}
+  .field-row > div{flex:1}
+  .form-btns{margin-top:16px}
+
+  .section-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:10px}
+  .usulan-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 13px;margin-bottom:9px}
+  .usulan-top{display:flex;align-items:center;gap:9px}
+  .usulan-icon{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .usulan-icon.masuk{background:var(--green-pale);color:var(--green-dark)}
+  .usulan-icon.keluar{background:#fbe4e0;color:#a83a2b}
+  .usulan-nama{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .usulan-sub{font-size:10.5px;color:var(--ink-muted);margin-top:1px}
+  .status-pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0}
+  .status-pill.pending{background:var(--gold-light);color:#8a6416}
+  .status-pill.disetujui{background:var(--green-pale);color:var(--green-dark)}
+  .status-pill.ditolak{background:#eceae6;color:var(--ink-muted)}
+  .usulan-catatan{font-size:10.5px;color:var(--ink-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5}
+  .btn-batal-usulan{margin-top:9px;width:100%;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Mutasi Siswa</div>
+            <div class="app-header-sub" id="headerSub">Kelas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <p class="intro-text">Usulan Anda akan masuk ke antrean admin. Data siswa baru diubah setelah admin menyetujui.</p>
+
+        <div class="jenis-toggle">
+          <button type="button" id="tabMasuk" class="active" onclick="pilihTab('masuk')">Mutasi Masuk</button>
+          <button type="button" id="tabKeluar" onclick="pilihTab('keluar')">Mutasi Keluar</button>
+        </div>
+
+        <div class="form-card" id="formMasuk">
+          <div class="field-label">Nama Lengkap Calon Siswa</div>
+          <input type="text" class="select-field" id="mNama" placeholder="Nama lengkap">
+
+          <div class="field-row">
+            <div>
+              <div class="field-label">Tempat Lahir</div>
+              <input type="text" class="select-field" id="mTempatLahir" placeholder="Kota/kabupaten">
+            </div>
+            <div>
+              <div class="field-label">Tanggal Lahir</div>
+              <input type="date" class="select-field" id="mTanggalLahir">
+            </div>
+          </div>
+
+          <div class="field-label">NISN</div>
+          <input type="text" class="select-field" id="mNisn" placeholder="Kalau sudah tahu">
+
+          <div class="field-label">NIS</div>
+          <input type="text" class="select-field" id="mNis" placeholder="-">
+          <div class="field-hint">Isi "-" kalau NIS resmi belum diberitahukan bagian administrasi — admin akan memberi NIS sementara dan menggantinya begitu NIS resmi tersedia.</div>
+
+          <div class="form-btns">
+            <button class="btn btn-primary-light" id="btnKirimMasuk" onclick="kirimMasuk()" style="width:100%">Kirim Usulan ke Admin</button>
+          </div>
+        </div>
+
+        <div class="form-card hidden" id="formKeluar">
+          <div class="field-label">Siswa</div>
+          <select class="select-field" id="kSiswa"></select>
+
+          <div class="field-label">Alasan</div>
+          <textarea class="field-textarea" id="kAlasan" placeholder="Contoh: pindah ke SD lain mengikuti orang tua"></textarea>
+
+          <div class="form-btns">
+            <button class="btn btn-primary-light" id="btnKirimKeluar" onclick="kirimKeluar()" style="width:100%">Kirim Usulan ke Admin</button>
+          </div>
+        </div>
+
+        <div class="section-title">Riwayat Usulan Anda</div>
+        <div id="usulanList"></div>
+        <div id="emptyState" class="usulan-card hidden">
+          <div class="empty-state-small" id="emptyStateMsg">Belum ada usulan untuk kelas ini.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaByKelas, ajukanMutasiMasuk, ajukanMutasiKeluar, getMutasiSaya, batalkanMutasi } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(window.location.search);
+  const kelas = params.get('kelas') || '';
+  let session = null;
+  let siswaAktif = [];
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    session = s;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+    $('headerSub').textContent = kelas ? `Kelas ${kelas}` : 'Kelas tidak diketahui';
+
+    const waliKelas = Array.isArray(s.waliKelas) ? s.waliKelas : [];
+    if (!kelas || (s.role !== 'admin' && !waliKelas.includes(kelas))) {
+      document.querySelectorAll('.jenis-toggle, .form-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Anda tidak mengampu kelas ini.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    try {
+      siswaAktif = await getSiswaByKelas(kelas);
+      $('kSiswa').innerHTML = siswaAktif.length
+        ? siswaAktif.map(sw => `<option value="${sw.id}">${escapeHtml(sw.nama)} (NIS ${escapeHtml(sw.nis || sw.id)})</option>`).join('')
+        : `<option value="">Belum ada siswa aktif di kelas ini</option>`;
+      await muatRiwayat();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal memuat data.', true);
+    }
+  });
+
+  window.pilihTab = (jenis) => {
+    $('tabMasuk').classList.toggle('active', jenis === 'masuk');
+    $('tabKeluar').classList.toggle('active', jenis === 'keluar');
+    $('formMasuk').classList.toggle('hidden', jenis !== 'masuk');
+    $('formKeluar').classList.toggle('hidden', jenis !== 'keluar');
+  };
+
+  window.kirimMasuk = async () => {
+    const nama = $('mNama').value.trim();
+    if (!nama) { showToast('Nama calon siswa wajib diisi.', true); return; }
+
+    const btn = $('btnKirimMasuk');
+    btn.disabled = true; btn.textContent = 'Mengirim…';
+    try {
+      await ajukanMutasiMasuk({
+        kelas, createdBy: session.uid, createdByNama: session.nama,
+        calonNama: nama,
+        calonTempatLahir: $('mTempatLahir').value.trim(),
+        calonTanggalLahir: $('mTanggalLahir').value || null,
+        calonNisn: $('mNisn').value.trim(),
+        calonNis: $('mNis').value.trim(),
+      });
+      showToast('Usulan mutasi masuk terkirim ke admin.');
+      ['mNama','mTempatLahir','mTanggalLahir','mNisn','mNis'].forEach(id => $(id).value = '');
+      await muatRiwayat();
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Gagal mengirim usulan.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Kirim Usulan ke Admin';
+    }
+  };
+
+  window.kirimKeluar = async () => {
+    const siswaId = $('kSiswa').value;
+    const alasan = $('kAlasan').value.trim();
+    if (!siswaId) { showToast('Pilih siswa terlebih dahulu.', true); return; }
+    if (!alasan) { showToast('Alasan wajib diisi.', true); return; }
+    const siswa = siswaAktif.find(sw => sw.id === siswaId);
+
+    const btn = $('btnKirimKeluar');
+    btn.disabled = true; btn.textContent = 'Mengirim…';
+    try {
+      await ajukanMutasiKeluar({
+        kelas, createdBy: session.uid, createdByNama: session.nama,
+        siswaId, siswaNama: siswa?.nama || siswaId, alasan,
+      });
+      showToast('Usulan mutasi keluar terkirim ke admin.');
+      $('kAlasan').value = '';
+      await muatRiwayat();
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Gagal mengirim usulan.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Kirim Usulan ke Admin';
+    }
+  };
+
+  async function muatRiwayat() {
+    const semua = await getMutasiSaya(session.uid);
+    const punyaKelasIni = semua.filter(m => m.kelas === kelas);
+    if (!punyaKelasIni.length) {
+      $('usulanList').innerHTML = '';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+    $('emptyState').classList.add('hidden');
+    $('usulanList').innerHTML = punyaKelasIni.map(renderUsulan).join('');
+  }
+
+  function renderUsulan(m) {
+    const isMasuk = m.jenis === 'masuk';
+    const nama = isMasuk ? m.calonNama : m.siswaNama;
+    const sub = isMasuk
+      ? `Mutasi masuk${m.calonNis ? ' · NIS ' + escapeHtml(m.calonNis) : ' · NIS belum diketahui'}`
+      : `Mutasi keluar · ${escapeHtml(m.alasan || '')}`;
+    const statusLabel = m.status === 'pending' ? 'Menunggu' : (m.status === 'disetujui' ? 'Disetujui' : 'Ditolak');
+    return `
+    <div class="usulan-card">
+      <div class="usulan-top">
+        <div class="usulan-icon ${isMasuk ? 'masuk' : 'keluar'}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isMasuk ? '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>' : '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/>'}</svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="usulan-nama">${escapeHtml(nama)}</div>
+          <div class="usulan-sub">${sub}</div>
+        </div>
+        <span class="status-pill ${m.status}">${statusLabel}</span>
+      </div>
+      ${m.status === 'ditolak' && m.catatanAdmin ? `<div class="usulan-catatan">Catatan admin: ${escapeHtml(m.catatanAdmin)}</div>` : ''}
+      ${m.status === 'pending' ? `<button class="btn-batal-usulan" onclick="batalkan('${m.id}')">Batalkan Usulan</button>` : ''}
+    </div>`;
+  }
+
+  window.batalkan = async (id) => {
+    if (!confirm('Batalkan usulan ini?')) return;
+    try {
+      await batalkanMutasi(id);
+      showToast('Usulan dibatalkan.');
+      await muatRiwayat();
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal membatalkan usulan.', true);
+    }
+  };
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'mutasi-hub.html'; });
+</script>
+</body>
+</html>

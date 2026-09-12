@@ -117,6 +117,20 @@
 
           <div class="field-row">
             <div>
+              <div class="field-label">Tempat Lahir</div>
+              <input type="text" class="select-field" id="fTempatLahir" placeholder="Kota/kabupaten">
+            </div>
+            <div>
+              <div class="field-label">Tanggal Lahir</div>
+              <input type="date" class="select-field" id="fTanggalLahir">
+            </div>
+          </div>
+
+          <div class="field-label">NISN</div>
+          <input type="text" class="select-field" id="fNisn" placeholder="Kalau sudah tahu">
+
+          <div class="field-row">
+            <div>
               <div class="field-label">Kelas</div>
               <select class="select-field" id="fKelas"></select>
             </div>
@@ -246,6 +260,7 @@
           <div class="siswa-head-nama">${escapeHtml(s.nama)}</div>
           <div class="siswa-head-meta">
             <span class="nis-txt">NIS ${escapeHtml(s.nis || s.id)}</span>
+            ${s.nisSementara ? `<span class="jenjang-pill" style="background:var(--red-light);color:var(--red)">NIS Sementara</span>` : ''}
             <span class="status-pill ${s.aktif === false ? 'off' : 'on'}">${s.aktif === false ? 'Nonaktif' : 'Aktif'}</span>
             ${jenjangLabel ? `<span class="jenjang-pill">${jenjangLabel}</span>` : ''}
           </div>
@@ -255,6 +270,20 @@
       <div class="siswa-card-body">
         <div class="field-label">Nama Lengkap</div>
         <input type="text" class="select-field" id="eNama-${i}" value="${escapeHtml(s.nama)}">
+
+        <div class="field-row">
+          <div>
+            <div class="field-label">Tempat Lahir</div>
+            <input type="text" class="select-field" id="eTempatLahir-${i}" value="${escapeHtml(s.tempatLahir || '')}" placeholder="Kota/kabupaten">
+          </div>
+          <div>
+            <div class="field-label">Tanggal Lahir</div>
+            <input type="date" class="select-field" id="eTanggalLahir-${i}" value="${escapeHtml(s.tanggalLahir || '')}">
+          </div>
+        </div>
+
+        <div class="field-label">NISN</div>
+        <input type="text" class="select-field" id="eNisn-${i}" value="${escapeHtml(s.nisn || '')}" placeholder="Kalau sudah tahu">
 
         <div class="field-row">
           <div>
@@ -326,11 +355,17 @@
     const kelasBaru = $('eKelas-' + i).value;
     const jenjangBaru = s._jenjangEdit !== undefined ? s._jenjangEdit : s.jenjang;
     const aktifBaru = s._aktifEdit !== undefined ? s._aktifEdit : (s.aktif !== false);
+    const tempatLahirBaru = $('eTempatLahir-' + i).value.trim();
+    const tanggalLahirBaru = $('eTanggalLahir-' + i).value || null;
+    const nisnBaru = $('eNisn-' + i).value.trim();
 
     const btn = $('btnSimpan-' + i);
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
-      await updateSiswaData(s.id, { nama, kelas: kelasBaru, jenjang: jenjangBaru, aktif: aktifBaru });
+      await updateSiswaData(s.id, {
+        nama, kelas: kelasBaru, jenjang: jenjangBaru, aktif: aktifBaru,
+        tempatLahir: tempatLahirBaru, tanggalLahir: tanggalLahirBaru, nisn: nisnBaru,
+      });
       showToast('Perubahan siswa tersimpan.');
       if (kelasBaru !== kelasAktif) {
         // Siswa dipindah ke kelas lain — keluar dari daftar kelas ini.
@@ -401,6 +436,9 @@
   window.bukaFormTambah = () => {
     $('fNis').value = '';
     $('fNama').value = '';
+    $('fTempatLahir').value = '';
+    $('fTanggalLahir').value = '';
+    $('fNisn').value = '';
     if (kelasAktif) $('fKelas').value = kelasAktif;
     pilihJenjangForm('iqro');
     pilihAktifForm(true);
@@ -419,7 +457,12 @@
     const btn = $('btnSimpanTambah');
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
-      await createSiswa({ nis, nama, kelas, jenjang: jenjangForm, aktif: aktifForm });
+      await createSiswa({
+        nis, nama, kelas, jenjang: jenjangForm, aktif: aktifForm,
+        tempatLahir: $('fTempatLahir').value.trim(),
+        tanggalLahir: $('fTanggalLahir').value || null,
+        nisn: $('fNisn').value.trim(),
+      });
       showToast('Siswa baru berhasil ditambahkan.');
       $('formCard').classList.add('hidden');
       if (kelas === kelasAktif) {
