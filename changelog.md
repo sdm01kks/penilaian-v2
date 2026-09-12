@@ -17,6 +17,30 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-12 — `[Akademik]` Kelengkapan Rapor: Cover, Identitas Peserta Didik, Keterangan Pindah Sekolah
+
+### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §12)
+- Digabung jadi SATU alur "Kelengkapan Rapor" (bukan 3 fitur terpisah) — satu hub→pilih-kelas→pilih-siswa, satu halaman akhir berisi form biodata + 3 tombol cetak, karena ketiganya sama-sama per-siswa dengan akses admin+wali kelas yang identik.
+- Biodata 17-poin disimpan di koleksi BARU `identitas_siswa/{siswaId}`, bukan field tambahan di `siswa` — supaya wali kelas bisa ikut mengisi tanpa melonggarkan rule `siswa` yang admin-only (NIS/nama/kelas/aktif tetap admin-only, tidak berubah).
+- Pas foto: kotak kosong di cetak (ditempel manual), tanpa upload digital — menghindari penambahan Firebase Storage.
+- Keterangan Pindah Sekolah ditarik dari riwayat `mutasi_siswa` yang sudah disetujui (§11), bukan sistem pencatatan baru — field tambahan (`tanggalMasuk`/`semesterMasuk`/`tahunAjaranMasuk`/`siswaIdHasil`/`tanggalKeluar`/`calonSekolahAsal`) diisi otomatis saat admin menyetujui usulan, tidak menambah beban input wali kelas saat mengajukan.
+
+### Ditambahkan
+- **Data layer** (`assets/firestore-data-akademik.js`): `getIdentitasSiswa(siswaId)`, `saveIdentitasSiswa(siswaId, payload)`. `saveProfilSekolah()`/`getConfigAkademik()` diperluas dengan field statis sekolah (`npsn`, `nss`, `teleponSekolah`, `kelurahan`, `kecamatan`, `kotaSekolah`, `provinsi`, `website`, `email`). `ajukanMutasiMasuk()` diperluas dengan `calonSekolahAsal`. `setujuiMutasi()` diperluas merekam `tanggalMasuk`/`semesterMasuk`/`tahunAjaranMasuk`/`siswaIdHasil` (masuk) atau `tanggalKeluar` (keluar).
+- **`akademik/kelengkapan-rapor-hub.html`** (admin lihat semua kelas, wali kelas lihat kelas sendiri).
+- **`akademik/kelengkapan-rapor-pilih-siswa.html`** (`?kelas=X`).
+- **`akademik/kelengkapan-rapor.html`** (`?kelas=X&siswaId=Y`) — form biodata 17 poin + 3 tombol cetak (Cover Rapor, Identitas Peserta Didik, Keterangan Pindah Sekolah), masing-masing membangun HTML cetak sendiri & membuka jendela baru A4 (pola sama dengan `rapor-sts-cetak.html`, tanpa running footer karena selalu 1 halaman). Logo pakai `assets/logo.png` lewat URL absolut (`new URL(...)`) supaya valid di jendela cetak `about:blank`.
+- **`firestore.rules`** — koleksi baru `identitas_siswa/{id}` (admin ATAU wali kelas kelas terkait, lewat `get()` ke `siswa/{id}` — aman karena akses selalu single-document, lihat antiregresi.md §12.2).
+- **`akademik/profil-sekolah.html`** — field NPSN/NSS/alamat lengkap/kontak sekolah.
+- **`akademik/mutasi.html`** — field "Sekolah Asal" di form Mutasi Masuk.
+- **`akademik/wali-hub.html`, `akademik/admin-hub.html`** — kartu navigasi baru "Kelengkapan Rapor".
+
+### Catatan
+- **Keterbatasan diketahui** (lihat antiregresi.md §12.5): wali kelas hanya bisa mencetak riwayat mutasi yang MEREKA SENDIRI ajukan (konsekuensi dari desain rule `mutasi_siswa` di §11.2 yang createdBy-based). Admin selalu bisa lihat semua — kalau wali kelas baru perlu mencetak riwayat dari wali kelas sebelumnya, alihkan ke admin untuk sementara.
+- Status: **belum dikirim/dideploy**, belum diuji end-to-end. Diverifikasi `node --check` semua script module baru, audit brace/paren di `firestore-data-akademik.js` & `firestore.rules`, audit balance tag `<div>` di semua HTML tersentuh, grep cross-check semua fungsi baru vs import.
+
+---
+
 ## 2026-09-10 (lanjutan) — `[Akademik]` Mutasi Siswa (usulan wali kelas → approve admin)
 
 ### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §11)

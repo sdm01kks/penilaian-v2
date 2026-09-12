@@ -435,6 +435,20 @@ service cloud.firestore {
                      || (resource.data.createdBy == request.auth.uid && resource.data.status == 'pending');
     }
 
+    // ---- identitas_siswa/{id} -----------------------------------------------
+    // Biodata lengkap untuk cetak Identitas Peserta Didik ("Kelengkapan
+    // Rapor") — Document ID = siswaId (sama dengan NIS). Admin ATAU wali
+    // kelas dari kelas siswa itu SEKARANG boleh baca+tulis (beda dari
+    // siswa/{id} yang admin-only — lihat alasan pemisahan koleksi di
+    // antiregresi.md §12.1). `get()` ke siswa/{id} di sini AMAN karena
+    // akses ke koleksi ini SELALU lewat ID spesifik yang sudah diketahui
+    // (getDoc/setDoc), TIDAK PERNAH lewat query list — jadi tidak kena
+    // batasan filter query yang dibahas di §2/§8.1/§11.2.
+    match /identitas_siswa/{id} {
+      allow read, write: if isAdmin()
+                           || bolehWaliKelas(get(/databases/$(database)/documents/siswa/$(id)).data.kelas);
+    }
+
     // ---- Semua koleksi lain: default tertutup --------------------------
     match /{document=**} {
       allow read, write: if false;

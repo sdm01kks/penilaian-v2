@@ -1,7 +1,19 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), dan 2026-09-10 lanjutan (Mutasi Siswa).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), dan 2026-09-12 (Kelengkapan Rapor).
+
+---
+
+## Status per 2026-09-12 (setelah sub-sesi Kelengkapan Rapor)
+
+**Belum dikirim/dideploy.** Detail penuh di `changelog.md` entri "Kelengkapan Rapor" dan `antiregresi.md` §12.
+
+**Yang baru selesai:** fitur "Kelengkapan Rapor" — satu alur (`kelengkapan-rapor-hub.html` → `kelengkapan-rapor-pilih-siswa.html` → `kelengkapan-rapor.html`) untuk admin+wali kelas mengisi biodata 17-poin siswa (koleksi baru `identitas_siswa`) dan mencetak 3 dokumen pelengkap rapor: **Cover Rapor**, **Identitas Peserta Didik**, **Keterangan Pindah Sekolah** (yang terakhir ditarik dari riwayat Mutasi yang sudah disetujui — §11 diperluas dengan field tanggal/semester/tahun ajaran otomatis). Profil Sekolah bertambah NPSN/NSS/kontak untuk kop dokumen ini.
+
+**Keterbatasan diketahui (§12.5):** wali kelas cuma bisa cetak riwayat mutasi yang mereka SENDIRI ajukan (bukan riwayat dari wali kelas sebelumnya) — konsekuensi desain rule `mutasi_siswa`. Admin selalu bisa lihat semua. Belum ada solusi rule yang terbukti aman untuk kasus ini tanpa uji langsung ke Firestore.
+
+**Masih berlaku dari sebelumnya:** Impor Data Siswa belum dibangun, menunggu file dari pemilik proyek — **tanyakan format filenya dulu sebelum membangun.**
 
 ---
 
