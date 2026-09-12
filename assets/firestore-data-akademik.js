@@ -424,6 +424,14 @@ export async function updateSiswaData(id, data) {
   if (data.kelas !== undefined) allowed.kelas = data.kelas;
   if (data.jenjang !== undefined) allowed.jenjang = data.jenjang;
   if (data.aktif !== undefined) allowed.aktif = !!data.aktif;
+  if (data.tempatLahir !== undefined) allowed.tempatLahir = String(data.tempatLahir).trim();
+  if (data.tanggalLahir !== undefined) allowed.tanggalLahir = data.tanggalLahir;
+  if (data.nisn !== undefined) allowed.nisn = String(data.nisn).trim();
+  // nisSementara TIDAK bisa di-set true dari sini (cuma via createSiswa saat
+  // mutasi masuk dengan NIS belum diketahui) — tapi BOLEH dihapus/di-false-kan
+  // begitu admin memperbaiki NIS lewat gantiNis() (lihat gantiNis(), yang
+  // otomatis membersihkan flag ini saat NIS sudah diganti ke yang final).
+  if (data.nisSementara === false) allowed.nisSementara = false;
 
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));
@@ -437,14 +445,20 @@ export async function updateSiswaData(id, data) {
 
 /**
  * [Admin] Tambah siswa baru. NIS jadi Document ID — gagal (Error) kalau
- * NIS sudah dipakai siswa lain.
+ * NIS sudah dipakai siswa lain. `nisSementara:true` menandai NIS ini
+ * hasil auto-generate (lihat ajukanMutasiMasuk()/setujuiMutasiMasuk() di
+ * bawah) — bukan NIS resmi, admin perlu finalisasi lewat gantiNis().
  */
-export async function createSiswa({ nis, nama, kelas, jenjang, aktif }) {
+export async function createSiswa({ nis, nama, kelas, jenjang, aktif, tempatLahir, tanggalLahir, nisn, nisSementara }) {
   const id = String(nis).trim();
   if (!id) throw new Error('NIS wajib diisi.');
   const data = {
     nama: String(nama).trim(), nis: id, kelas,
     jenjang: jenjang || null, aktif: aktif !== false,
+    tempatLahir: tempatLahir ? String(tempatLahir).trim() : '',
+    tanggalLahir: tanggalLahir || null,
+    nisn: nisn ? String(nisn).trim() : '',
+    nisSementara: !!nisSementara,
   };
 
   if (DEMO_MODE) {
@@ -497,7 +511,7 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
     if (idx < 0) throw new Error('Siswa dengan NIS lama tidak ditemukan.');
     log(`Mode pratinjau: menyalin data siswa ke NIS ${newIdClean}…`);
     const siswaLama = DEMO_SISWA[idx];
-    DEMO_SISWA.push({ ...siswaLama, id: newIdClean, nis: newIdClean });
+    DEMO_SISWA.push({ ...siswaLama, id: newIdClean, nis: newIdClean, nisSementara: false });
     DEMO_SISWA.splice(idx, 1);
     log('Mode pratinjau: riwayat nilai/setoran lintas koleksi tidak disimulasikan di sini — hanya data siswa yang dipindah.');
     log('Selesai (mode pratinjau).');
@@ -515,7 +529,7 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
 
   log(`Menyalin dokumen siswa ke NIS ${newIdClean}…`);
   const { nis: _nisLama, ...restData } = dataLama.data();
-  await fsMod.setDoc(refBaru, { ...restData, nis: newIdClean });
+  await fsMod.setDoc(refBaru, { ...restData, nis: newIdClean, nisSementara: false });
 
   // Migrasi via updateDoc — untuk koleksi yang rule update-nya sudah
   // mengizinkan admin (nilai_tp/sts/sas, absensi_rapor, kokurikuler,
@@ -610,6 +624,198 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
   log('Menghapus dokumen siswa lama…');
   await fsMod.deleteDoc(refLama);
   log(`Selesai — NIS ${oldId} dipindahkan ke ${newIdClean}.`);
+}
+
+/* ==========================================================================
+   Mutasi Siswa — wali kelas MENGUSULKAN siswa baru masuk atau siswa yang
+   sudah pindah keluar; ADMIN yang menyetujui/menolak. Disetujui →
+   otomatis panggil createSiswa()/updateSiswaData() di atas (bukan
+   Cloud Function — situs ini statis, semua logika di client, sama seperti
+   alur approve akun orang tua di Tahsin-Tahfizh).
+
+   Desain rules SENGAJA menghindari get()-berbasis-kelas di sini (beda
+   dari siswa/setoran/dst) supaya admin bisa query SEMUA usulan lintas
+   kelas tanpa filter kelas — lihat antiregresi.md §11.2 untuk alasan
+   lengkap kenapa itu perlu utk query admin yang global begini.
+   ========================================================================== */
+
+const DEMO_MUTASI_KEY = 'akd_demo_mutasi';
+
+function readDemoMutasi() {
+  return JSON.parse(localStorage.getItem(DEMO_MUTASI_KEY) || '[]');
+}
+function writeDemoMutasi(list) {
+  localStorage.setItem(DEMO_MUTASI_KEY, JSON.stringify(list));
+}
+
+/** NIS sementara unik dipakai kalau wali kelas belum tahu NIS resmi siswa baru (isi '-'). */
+function buatNisSementara() {
+  return 'sementara-' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+}
+
+/** [Wali kelas] Ajukan siswa baru masuk kelasnya. */
+export async function ajukanMutasiMasuk({ kelas, createdBy, createdByNama, calonNama, calonTempatLahir, calonTanggalLahir, calonNisn, calonNis }) {
+  const data = {
+    jenis: 'masuk', status: 'pending', kelas,
+    createdBy, createdByNama: createdByNama || null,
+    calonNama: String(calonNama).trim(),
+    calonTempatLahir: calonTempatLahir ? String(calonTempatLahir).trim() : '',
+    calonTanggalLahir: calonTanggalLahir || null,
+    calonNisn: calonNisn ? String(calonNisn).trim() : '',
+    calonNis: (calonNis && calonNis.trim() && calonNis.trim() !== '-') ? calonNis.trim() : '',
+  };
+  if (!data.calonNama) throw new Error('Nama calon siswa wajib diisi.');
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoMutasi();
+    list.push({ id: 'demo-mut-' + Date.now(), ...data, createdAt: new Date().toISOString() });
+    writeDemoMutasi(list);
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.addDoc(fsMod.collection(db, 'mutasi_siswa'), { ...data, createdAt: fsMod.serverTimestamp() });
+}
+
+/** [Wali kelas] Ajukan siswa (yang sudah ada di data) pindah/keluar. */
+export async function ajukanMutasiKeluar({ kelas, createdBy, createdByNama, siswaId, siswaNama, alasan }) {
+  const data = {
+    jenis: 'keluar', status: 'pending', kelas,
+    createdBy, createdByNama: createdByNama || null,
+    siswaId, siswaNama: siswaNama || siswaId,
+    alasan: alasan ? String(alasan).trim() : '',
+  };
+  if (!data.siswaId) throw new Error('Pilih siswa yang akan diusulkan keluar.');
+  if (!data.alasan) throw new Error('Alasan wajib diisi.');
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoMutasi();
+    list.push({ id: 'demo-mut-' + Date.now(), ...data, createdAt: new Date().toISOString() });
+    writeDemoMutasi(list);
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.addDoc(fsMod.collection(db, 'mutasi_siswa'), { ...data, createdAt: fsMod.serverTimestamp() });
+}
+
+/** [Wali kelas] Usulan milik sendiri (semua status), terbaru dulu. */
+export async function getMutasiSaya(uid) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    return readDemoMutasi().filter(m => m.createdBy === uid).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+  const { db, fsMod } = window.__fb;
+  const q = fsMod.query(fsMod.collection(db, 'mutasi_siswa'), fsMod.where('createdBy', '==', uid));
+  const snap = await fsMod.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+}
+
+/** [Admin] SEMUA usulan lintas kelas (semua status), terbaru dulu. */
+export async function getMutasiSemua() {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    return [...readDemoMutasi()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDocs(fsMod.collection(db, 'mutasi_siswa'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+}
+
+/**
+ * [Admin] Setujui satu usulan. `masuk` → createSiswa() (NIS sementara
+ * auto-generate kalau calonNis kosong, dicoba ulang beberapa kali kalau
+ * kebetulan sudah dipakai). `keluar` → updateSiswaData(aktif:false).
+ */
+export async function setujuiMutasi(mutasiId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    const list = readDemoMutasi();
+    const m = list.find(x => x.id === mutasiId);
+    if (!m) throw new Error('Usulan tidak ditemukan.');
+    if (m.jenis === 'masuk') {
+      const nis = m.calonNis || buatNisSementara();
+      await createSiswa({
+        nis, nama: m.calonNama, kelas: m.kelas,
+        jenjang: /^[12]/.test(m.kelas) ? 'iqro' : 'quran',
+        aktif: true, tempatLahir: m.calonTempatLahir, tanggalLahir: m.calonTanggalLahir,
+        nisn: m.calonNisn, nisSementara: !m.calonNis,
+      });
+    } else {
+      await updateSiswaData(m.siswaId, { aktif: false });
+    }
+    m.status = 'disetujui';
+    m.reviewedAt = new Date().toISOString();
+    writeDemoMutasi(list);
+    return;
+  }
+
+  const { db, fsMod } = window.__fb;
+  const ref = fsMod.doc(db, 'mutasi_siswa', mutasiId);
+  const snap = await fsMod.getDoc(ref);
+  if (!snap.exists()) throw new Error('Usulan tidak ditemukan.');
+  const m = snap.data();
+  if (m.status !== 'pending') throw new Error('Usulan ini sudah diproses sebelumnya.');
+
+  if (m.jenis === 'masuk') {
+    let attempt = 0, lastErr = null;
+    while (attempt < 5) {
+      const nis = m.calonNis || buatNisSementara();
+      try {
+        await createSiswa({
+          nis, nama: m.calonNama, kelas: m.kelas,
+          jenjang: /^[12]/.test(m.kelas) ? 'iqro' : 'quran',
+          aktif: true, tempatLahir: m.calonTempatLahir, tanggalLahir: m.calonTanggalLahir,
+          nisn: m.calonNisn, nisSementara: !m.calonNis,
+        });
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (m.calonNis) throw e; // NIS manual bentrok — jangan diam-diam ganti, biar admin tahu.
+        attempt++;
+      }
+    }
+    if (lastErr) throw lastErr;
+  } else {
+    await updateSiswaData(m.siswaId, { aktif: false });
+  }
+
+  await fsMod.updateDoc(ref, {
+    status: 'disetujui',
+    reviewedBy: window.__fb.auth.currentUser?.uid || null,
+    reviewedAt: fsMod.serverTimestamp(),
+  });
+}
+
+/** [Admin] Tolak satu usulan, dengan catatan opsional. */
+export async function tolakMutasi(mutasiId, catatan) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoMutasi();
+    const m = list.find(x => x.id === mutasiId);
+    if (m) { m.status = 'ditolak'; m.catatanAdmin = catatan || ''; m.reviewedAt = new Date().toISOString(); }
+    writeDemoMutasi(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  await fsMod.updateDoc(fsMod.doc(db, 'mutasi_siswa', mutasiId), {
+    status: 'ditolak', catatanAdmin: catatan || '',
+    reviewedBy: auth.currentUser?.uid || null, reviewedAt: fsMod.serverTimestamp(),
+  });
+}
+
+/** [Wali kelas] Batalkan usulan sendiri selama masih pending. */
+export async function batalkanMutasi(mutasiId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    writeDemoMutasi(readDemoMutasi().filter(m => m.id !== mutasiId));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.deleteDoc(fsMod.doc(db, 'mutasi_siswa', mutasiId));
 }
 
 /* ==========================================================================
