@@ -57,7 +57,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
           <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
         </div>
-        <div class="hint-card"><p>Data ini dipakai di kop &amp; tanda tangan setiap rapor yang dicetak (STS, dan nanti SAS) — cukup diisi sekali, berlaku untuk semua kelas &amp; semua siswa.</p></div>
+        <div class="hint-card"><p>Data ini dipakai di kop &amp; tanda tangan setiap rapor yang dicetak (STS, SAS) serta Cover Rapor &amp; Identitas Peserta Didik — cukup diisi sekali, berlaku untuk semua kelas &amp; semua siswa.</p></div>
 
         <div class="field-group">
           <div class="field-label">Nama Sekolah</div>
@@ -65,9 +65,64 @@
         </div>
 
         <div class="field-group">
+          <div class="field-label">NPSN &amp; NSS</div>
+          <div class="field-hint">Tampil di kop Cover Rapor &amp; Identitas Peserta Didik.</div>
+          <div class="field-row">
+            <div>
+              <div class="field-hint">NPSN</div>
+              <input type="text" class="input-field" id="fNpsn" placeholder="20228835">
+            </div>
+            <div>
+              <div class="field-hint">NSS</div>
+              <input type="text" class="input-field" id="fNss" placeholder="101020528026">
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
           <div class="field-label">Alamat Sekolah</div>
           <div class="field-hint">Tampil di kop rapor, persis seperti ditulis di sini.</div>
           <textarea class="textarea-field" id="fAlamatSekolah" placeholder="Jl. KH. Ahmad Dahlan No. 11 RT 06/05 Kel. Kukusan Kec. Beji, Kota Depok"></textarea>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Kelurahan, Kecamatan, Kota/Kabupaten, Provinsi</div>
+          <div class="field-row">
+            <div>
+              <div class="field-hint">Kelurahan/Desa</div>
+              <input type="text" class="input-field" id="fKelurahan" placeholder="Kukusan">
+            </div>
+            <div>
+              <div class="field-hint">Kecamatan</div>
+              <input type="text" class="input-field" id="fKecamatan" placeholder="Beji">
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:10px">
+            <div>
+              <div class="field-hint">Kota/Kabupaten</div>
+              <input type="text" class="input-field" id="fKotaSekolah" placeholder="Depok">
+            </div>
+            <div>
+              <div class="field-hint">Provinsi</div>
+              <input type="text" class="input-field" id="fProvinsi" placeholder="Jawa Barat">
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Kontak Sekolah</div>
+          <div class="field-row">
+            <div>
+              <div class="field-hint">Telepon</div>
+              <input type="text" class="input-field" id="fTeleponSekolah" placeholder="(021) 7862947">
+            </div>
+            <div>
+              <div class="field-hint">Website</div>
+              <input type="text" class="input-field" id="fWebsite" placeholder="https://...">
+            </div>
+          </div>
+          <div class="field-hint" style="margin-top:10px">E-mail</div>
+          <input type="text" class="input-field" id="fEmail" placeholder="sekolah@gmail.com">
         </div>
 
         <div class="field-group">
@@ -133,11 +188,20 @@
 
     try {
       const config = await getConfigAkademik();
-      $('fNamaSekolah').value   = config.namaSekolah   || '';
-      $('fAlamatSekolah').value = config.alamatSekolah || '';
-      $('fNamaKepsek').value    = config.namaKepsek    || '';
-      $('fNbmKepsek').value     = config.nbmKepsek     || '';
-      $('fKotaRapor').value     = config.kotaRapor     || '';
+      $('fNamaSekolah').value    = config.namaSekolah    || '';
+      $('fNpsn').value           = config.npsn           || '';
+      $('fNss').value            = config.nss            || '';
+      $('fAlamatSekolah').value  = config.alamatSekolah  || '';
+      $('fKelurahan').value      = config.kelurahan      || '';
+      $('fKecamatan').value      = config.kecamatan      || '';
+      $('fKotaSekolah').value    = config.kotaSekolah    || '';
+      $('fProvinsi').value       = config.provinsi       || '';
+      $('fTeleponSekolah').value = config.teleponSekolah || '';
+      $('fWebsite').value        = config.website        || '';
+      $('fEmail').value          = config.email          || '';
+      $('fNamaKepsek').value     = config.namaKepsek     || '';
+      $('fNbmKepsek').value      = config.nbmKepsek      || '';
+      $('fKotaRapor').value      = config.kotaRapor      || '';
     } catch (e) {
       console.error(e);
       showToast('Gagal memuat data.', true);
@@ -149,11 +213,20 @@
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
       await saveProfilSekolah({
-        namaSekolah:   $('fNamaSekolah').value.trim(),
-        alamatSekolah: $('fAlamatSekolah').value.trim(),
-        namaKepsek:    $('fNamaKepsek').value.trim(),
-        nbmKepsek:     $('fNbmKepsek').value.trim(),
-        kotaRapor:     $('fKotaRapor').value.trim(),
+        namaSekolah:    $('fNamaSekolah').value.trim(),
+        npsn:           $('fNpsn').value.trim(),
+        nss:            $('fNss').value.trim(),
+        alamatSekolah:  $('fAlamatSekolah').value.trim(),
+        kelurahan:      $('fKelurahan').value.trim(),
+        kecamatan:      $('fKecamatan').value.trim(),
+        kotaSekolah:    $('fKotaSekolah').value.trim(),
+        provinsi:       $('fProvinsi').value.trim(),
+        teleponSekolah: $('fTeleponSekolah').value.trim(),
+        website:        $('fWebsite').value.trim(),
+        email:          $('fEmail').value.trim(),
+        namaKepsek:     $('fNamaKepsek').value.trim(),
+        nbmKepsek:      $('fNbmKepsek').value.trim(),
+        kotaRapor:      $('fKotaRapor').value.trim(),
       });
       showToast('Profil sekolah tersimpan.');
     } catch (e) {

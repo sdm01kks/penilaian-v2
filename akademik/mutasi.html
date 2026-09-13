@@ -95,6 +95,9 @@
           <div class="field-label">NISN</div>
           <input type="text" class="select-field" id="mNisn" placeholder="Kalau sudah tahu">
 
+          <div class="field-label">Sekolah Asal</div>
+          <input type="text" class="select-field" id="mSekolahAsal" placeholder="Kosongkan kalau baru pertama sekolah (bukan pindahan)">
+
           <div class="field-label">NIS</div>
           <input type="text" class="select-field" id="mNis" placeholder="-">
           <div class="field-hint">Isi "-" kalau NIS resmi belum diberitahukan bagian administrasi — admin akan memberi NIS sementara dan menggantinya begitu NIS resmi tersedia.</div>
@@ -201,9 +204,10 @@
         calonTanggalLahir: $('mTanggalLahir').value || null,
         calonNisn: $('mNisn').value.trim(),
         calonNis: $('mNis').value.trim(),
+        calonSekolahAsal: $('mSekolahAsal').value.trim(),
       });
       showToast('Usulan mutasi masuk terkirim ke admin.');
-      ['mNama','mTempatLahir','mTanggalLahir','mNisn','mNis'].forEach(id => $(id).value = '');
+      ['mNama','mTempatLahir','mTanggalLahir','mNisn','mSekolahAsal','mNis'].forEach(id => $(id).value = '');
       await muatRiwayat();
     } catch (e) {
       console.error(e);

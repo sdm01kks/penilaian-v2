@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelengkapan Rapor — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .info-strip{font-size:11.5px;color:var(--ink-muted);font-weight:600;margin-bottom:14px}
+
+  .cetak-row{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .cetak-btn{
+    display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:13px;
+    border:1.5px solid var(--green-light);background:var(--green-pale);color:var(--green-dark);
+    font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;text-align:left;
+  }
+  .cetak-btn svg{flex-shrink:0}
+
+  .section-title{font-size:12.5px;font-weight:800;color:var(--green-dark);margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border)}
+  .section-title:first-of-type{margin-top:0;padding-top:0;border-top:none}
+  .field-label{font-size:11.5px;font-weight:800;color:var(--ink);margin-bottom:6px;margin-top:12px}
+  .field-label:first-child{margin-top:0}
+  .field-row{display:flex;gap:10px;margin-top:12px}
+  .field-row > div{flex:1}
+  .toggle-2{display:flex;gap:8px}
+  .toggle-2 button{flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-mid);cursor:pointer}
+  .toggle-2 button.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .btn-simpan-identitas{width:100%;padding:12px;font-size:13px;margin-top:18px}
+
+  .empty-scope{padding:60px 24px;text-align:center}
+  .empty-scope svg{width:40px;height:40px;color:var(--ink-muted);margin-bottom:12px}
+  .empty-scope p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title" id="titleNama">Kelengkapan Rapor</div>
+            <div class="app-header-sub" id="subKelas">Memuat…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <div class="info-strip" id="infoStrip"></div>
+
+        <div class="cetak-row">
+          <button class="cetak-btn" id="btnCetakCover">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            Cetak Cover Rapor
+          </button>
+          <button class="cetak-btn" id="btnCetakIdentitas">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Cetak Identitas Peserta Didik
+          </button>
+          <button class="cetak-btn" id="btnCetakPindah">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.7V12a4 4 0 0 1 4-4h14"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.3V12a4 4 0 0 1-4 4H3"/></svg>
+            Cetak Keterangan Pindah Sekolah
+          </button>
+        </div>
+
+        <div class="section-title">Data Diri</div>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Jenis Kelamin</div>
+            <div class="toggle-2">
+              <button type="button" id="fJkL" onclick="pilihJk('Laki-laki')">Laki-laki</button>
+              <button type="button" id="fJkP" onclick="pilihJk('Perempuan')">Perempuan</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Agama</div>
+            <input type="text" class="select-field" id="fAgama" placeholder="Islam">
+          </div>
+          <div>
+            <div class="field-label">Status dalam Keluarga</div>
+            <input type="text" class="select-field" id="fStatus" placeholder="Anak Kandung">
+          </div>
+        </div>
+        <div class="field-label">Anak ke</div>
+        <input type="text" class="select-field" id="fAnakKe" placeholder="Contoh: 1 dari 2 bersaudara">
+
+        <div class="section-title">Alamat &amp; Sekolah Asal</div>
+        <div class="field-label">Alamat Peserta Didik</div>
+        <textarea class="field-textarea" id="fAlamatSiswa" placeholder="Alamat lengkap tempat tinggal siswa"></textarea>
+        <div class="field-label">Nomor Telepon Rumah</div>
+        <input type="text" class="select-field" id="fTeleponRumah">
+        <div class="field-label">Sekolah Asal</div>
+        <input type="text" class="select-field" id="fSekolahAsal" placeholder="Kosongkan kalau baru pertama sekolah">
+        <div class="field-row">
+          <div>
+            <div class="field-label">Diterima di Kelas</div>
+            <input type="text" class="select-field" id="fDiterimaKelas" placeholder="1A">
+          </div>
+          <div>
+            <div class="field-label">Pada Tanggal</div>
+            <input type="date" class="select-field" id="fDiterimaTanggal">
+          </div>
+        </div>
+
+        <div class="section-title">Orang Tua</div>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Nama Ayah</div>
+            <input type="text" class="select-field" id="fNamaAyah">
+          </div>
+          <div>
+            <div class="field-label">Nama Ibu</div>
+            <input type="text" class="select-field" id="fNamaIbu">
+          </div>
+        </div>
+        <div class="field-label">Alamat Orang Tua</div>
+        <textarea class="field-textarea" id="fAlamatOrtu" placeholder="Kosongkan kalau sama dengan alamat siswa"></textarea>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Pekerjaan Ayah</div>
+            <input type="text" class="select-field" id="fPekerjaanAyah">
+          </div>
+          <div>
+            <div class="field-label">Pekerjaan Ibu</div>
+            <input type="text" class="select-field" id="fPekerjaanIbu">
+          </div>
+        </div>
+
+        <div class="section-title">Wali (kalau ada, di luar orang tua)</div>
+        <div class="field-label">Nama Wali</div>
+        <input type="text" class="select-field" id="fNamaWali" placeholder="Kosongkan kalau tidak ada">
+        <div class="field-label">Alamat Wali</div>
+        <textarea class="field-textarea" id="fAlamatWali"></textarea>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Telepon Wali</div>
+            <input type="text" class="select-field" id="fTeleponWali">
+          </div>
+          <div>
+            <div class="field-label">Pekerjaan Wali</div>
+            <input type="text" class="select-field" id="fPekerjaanWali">
+          </div>
+        </div>
+
+        <button class="btn btn-primary-light btn-simpan-identitas" id="btnSimpan">Simpan Biodata</button>
+      </div>
+
+      <div id="emptyScope" class="empty-scope hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <p id="emptyScopeMsg">Memuat…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { getSiswaByKelas, getConfigAkademik, getIdentitasSiswa, saveIdentitasSiswa, getMutasiSaya, getMutasiSemua } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params  = new URLSearchParams(location.search);
+  const kelas   = params.get('kelas') || '';
+  const siswaId = params.get('siswaId') || '';
+  let session = null, siswa = null, config = null, jkTerpilih = '';
+  let riwayatKeluar = [], riwayatMasuk = [];
+  const logoUrl = new URL('../assets/logo.png', location.href).href;
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function showEmptyScope(msg) {
+    $('emptyScopeMsg').textContent = msg;
+    $('emptyScope').classList.remove('hidden');
+  }
+  const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  function tanggalIndonesia(iso) {
+    if (!iso) return '…………………';
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d)) return '…………………';
+    return `${d.getDate()} ${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  function tanggalHariIni() {
+    const d = new Date();
+    return `${d.getDate()} ${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  function isi(val) { return val ? escapeHtml(val) : ''; }
+
+  window.pilihJk = (val) => {
+    jkTerpilih = val;
+    $('fJkL').classList.toggle('active', val === 'Laki-laki');
+    $('fJkP').classList.toggle('active', val === 'Perempuan');
+  };
+
+  onAuthChange(async (s) => {
+    if (!s) { window.location.href = 'login.html'; return; }
+    session = s;
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+    if (!kelas || !siswaId) { showEmptyScope('Tautan tidak lengkap — kelas atau siswa tidak diketahui.'); return; }
+    const berhak = s.role === 'admin' || (s.waliKelas || []).includes(kelas);
+    if (!berhak) { showEmptyScope(`Anda bukan wali kelas ${kelas}.`); return; }
+
+    try {
+      const [siswaList, cfg, identitas, mutasiList] = await Promise.all([
+        getSiswaByKelas(kelas),
+        getConfigAkademik(),
+        getIdentitasSiswa(siswaId),
+        s.role === 'admin' ? getMutasiSemua() : getMutasiSaya(s.uid),
+      ]);
+      siswa = siswaList.find(sw => sw.id === siswaId);
+      if (!siswa) { showEmptyScope('Data siswa tidak ditemukan di kelas ini.'); return; }
+      config = cfg;
+      riwayatKeluar = mutasiList.filter(m => m.jenis === 'keluar' && m.siswaId === siswaId && m.status === 'disetujui');
+      riwayatMasuk  = mutasiList.filter(m => m.jenis === 'masuk'  && m.siswaIdHasil === siswaId && m.status === 'disetujui');
+
+      $('titleNama').textContent = siswa.nama;
+      $('subKelas').textContent = `Kelas ${kelas} · Kelengkapan Rapor`;
+      $('infoStrip').textContent = `NIS ${siswa.nis || siswa.id} · NISN ${siswa.nisn || '—'}`;
+      $('appBody').style.display = 'block';
+
+      pilihJk(identitas.jenisKelamin || '');
+      $('fAgama').value = identitas.agama || 'Islam';
+      $('fStatus').value = identitas.statusDalamKeluarga || '';
+      $('fAnakKe').value = identitas.anakKe || '';
+      $('fAlamatSiswa').value = identitas.alamatSiswa || '';
+      $('fTeleponRumah').value = identitas.teleponRumah || '';
+      $('fSekolahAsal').value = identitas.sekolahAsal || '';
+      $('fDiterimaKelas').value = identitas.diterimaDiKelas || '';
+      $('fDiterimaTanggal').value = identitas.diterimaTanggal || '';
+      $('fNamaAyah').value = identitas.namaAyah || '';
+      $('fNamaIbu').value = identitas.namaIbu || '';
+      $('fAlamatOrtu').value = identitas.alamatOrangTua || '';
+      $('fPekerjaanAyah').value = identitas.pekerjaanAyah || '';
+      $('fPekerjaanIbu').value = identitas.pekerjaanIbu || '';
+      $('fNamaWali').value = identitas.namaWali || '';
+      $('fAlamatWali').value = identitas.alamatWali || '';
+      $('fTeleponWali').value = identitas.teleponWali || '';
+      $('fPekerjaanWali').value = identitas.pekerjaanWali || '';
+    } catch (e) {
+      console.error(e);
+      showEmptyScope('Gagal memuat data. Coba muat ulang halaman.');
+    }
+  });
+
+  $('btnSimpan').addEventListener('click', async () => {
+    const btn = $('btnSimpan');
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    try {
+      await saveIdentitasSiswa(siswaId, {
+        jenisKelamin: jkTerpilih,
+        agama: $('fAgama').value,
+        statusDalamKeluarga: $('fStatus').value,
+        anakKe: $('fAnakKe').value,
+        alamatSiswa: $('fAlamatSiswa').value,
+        teleponRumah: $('fTeleponRumah').value,
+        sekolahAsal: $('fSekolahAsal').value,
+        diterimaDiKelas: $('fDiterimaKelas').value,
+        diterimaTanggal: $('fDiterimaTanggal').value,
+        namaAyah: $('fNamaAyah').value,
+        namaIbu: $('fNamaIbu').value,
+        alamatOrangTua: $('fAlamatOrtu').value,
+        pekerjaanAyah: $('fPekerjaanAyah').value,
+        pekerjaanIbu: $('fPekerjaanIbu').value,
+        namaWali: $('fNamaWali').value,
+        alamatWali: $('fAlamatWali').value,
+        teleponWali: $('fTeleponWali').value,
+        pekerjaanWali: $('fPekerjaanWali').value,
+      });
+      showToast('Biodata tersimpan.');
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan biodata.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Simpan Biodata';
+    }
+  });
+
+  /* ════════════════════════════════════════════════════════════════════
+     CETAK — jendela baru per dokumen, pola sama dengan rapor-sts-cetak.html
+     (lihat komentar panjang di sana): @page A4, dibangun sebagai string
+     HTML lepas dari phone-shell. Ketiga dokumen di sini TIDAK memakai
+     running footer nomor halaman (masing-masing selalu 1 halaman).
+     ════════════════════════════════════════════════════════════════════ */
+  function bukaJendelaCetak(judul, isiHtml, cssTambahan) {
+    const printHTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(judul)}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+@page{ size: A4; margin: 2cm; }
+body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;line-height:1.6;color:#000;background:#fff}
+${cssTambahan}
+</style>
+</head>
+<body>
+${isiHtml}
+<script>window.onload=function(){window.focus();window.print();};<\/script>
+</body>
+</html>`;
+    const w = window.open('', '_blank', 'width=960,height=700');
+    if (!w) { showToast('Pop-up diblokir — izinkan pop-up untuk situs ini lalu coba lagi.', true); return; }
+    w.document.write(printHTML);
+    w.document.close();
+  }
+
+  /* ---- 1. Cover Rapor --------------------------------------------------- */
+  $('btnCetakCover').addEventListener('click', () => {
+    const css = `
+.cv-wrap{text-align:center;padding-top:10pt}
+.cv-title{font-size:20pt;font-weight:bold;letter-spacing:.5pt}
+.cv-sub{font-size:16pt;font-weight:bold;margin-top:2pt}
+.cv-nss{font-size:10.5pt;color:#333;margin-top:4pt}
+.cv-logo{width:150pt;margin:30pt auto}
+.cv-box-label{font-size:11pt;margin-top:34pt}
+.cv-box{border:1.3pt solid #000;padding:12pt;margin:6pt auto 0;width:320pt;min-height:20pt;font-size:12pt;font-weight:bold}`;
+    const html = `
+<div class="cv-wrap">
+  <div class="cv-title">RAPOR</div>
+  <div class="cv-sub">${isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN'}</div>
+  <div class="cv-nss">${config.nss ? 'NSS : ' + isi(config.nss) + '  |  ' : ''}${config.npsn ? 'NPSN: ' + isi(config.npsn) : ''}</div>
+  <img class="cv-logo" src="${logoUrl}">
+  <div class="cv-box-label">Nama Peserta Didik</div>
+  <div class="cv-box">${isi(siswa.nama)}</div>
+  <div class="cv-box-label">NIS / NISN</div>
+  <div class="cv-box">${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || '—'}</div>
+</div>`;
+    bukaJendelaCetak(`Cover Rapor - ${siswa.nama}`, html, css);
+  });
+
+  /* ---- 2. Identitas Peserta Didik ---------------------------------------- */
+  $('btnCetakIdentitas').addEventListener('click', async () => {
+    const idn = {
+      jenisKelamin: $('fJkL').classList.contains('active') ? 'Laki-laki' : ($('fJkP').classList.contains('active') ? 'Perempuan' : ''),
+      agama: $('fAgama').value, statusDalamKeluarga: $('fStatus').value, anakKe: $('fAnakKe').value,
+      alamatSiswa: $('fAlamatSiswa').value, teleponRumah: $('fTeleponRumah').value, sekolahAsal: $('fSekolahAsal').value,
+      diterimaDiKelas: $('fDiterimaKelas').value, diterimaTanggal: $('fDiterimaTanggal').value,
+      namaAyah: $('fNamaAyah').value, namaIbu: $('fNamaIbu').value, alamatOrangTua: $('fAlamatOrtu').value,
+      pekerjaanAyah: $('fPekerjaanAyah').value, pekerjaanIbu: $('fPekerjaanIbu').value,
+      namaWali: $('fNamaWali').value, alamatWali: $('fAlamatWali').value,
+      teleponWali: $('fTeleponWali').value, pekerjaanWali: $('fPekerjaanWali').value,
+    };
+    const alamatSekolahLengkap = [config.alamatSekolah, config.kelurahan && ('Kel. ' + config.kelurahan), config.kecamatan && ('Kec. ' + config.kecamatan), config.kotaSekolah && ('Kota/Kab. ' + config.kotaSekolah), config.provinsi]
+      .filter(Boolean).join(', ');
+    const css = `
+.id-head{text-align:center;border-bottom:2pt solid #000;padding-bottom:8pt;margin-bottom:14pt}
+.id-head img{width:44pt;float:left}
+.id-head-text{font-size:9pt;line-height:1.4}
+.id-head-text b{font-size:12pt}
+.id-title{text-align:center;font-size:13pt;font-weight:bold;margin:14pt 0 16pt;text-transform:uppercase}
+.id-row{display:flex;font-size:10.5pt;margin-bottom:6pt}
+.id-num{width:16pt;flex-shrink:0}
+.id-label{width:150pt;flex-shrink:0}
+.id-sep{width:10pt;flex-shrink:0}
+.id-val{flex:1;border-bottom:.7pt dotted #999;min-height:13pt}
+.id-photo{float:right;width:85pt;height:110pt;border:1pt solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt;color:#888;text-align:center;margin-left:14pt}
+.id-ttd{margin-top:26pt;text-align:right;font-size:10.5pt}
+.id-ttd-space{height:46pt}
+.id-ttd-name{font-weight:bold;text-decoration:underline}`;
+    const baris = (no, label, val) => `<div class="id-row"><span class="id-num">${no}.</span><span class="id-label">${label}</span><span class="id-sep">:</span><span class="id-val">${isi(val)}</span></div>`;
+    const html = `
+<div class="id-head">
+  <img src="${logoUrl}">
+  <div class="id-head-text">
+    <b>${isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN'}</b><br>
+    NPSN: ${isi(config.npsn) || '—'} ${config.nss ? '| NSS: ' + isi(config.nss) : ''}<br>
+    ${isi(alamatSekolahLengkap) || '—'}<br>
+    ${config.teleponSekolah ? 'Telp. ' + isi(config.teleponSekolah) + '  ' : ''}${config.email ? 'Email: ' + isi(config.email) : ''}
+  </div>
+</div>
+<div class="id-title">Keterangan Tentang Diri Peserta Didik</div>
+<div class="id-photo">Pas Foto<br>3 x 4 cm</div>
+${baris(1, 'Nama Peserta Didik (Lengkap)', siswa.nama)}
+${baris(2, 'Nomor Induk / NISN', (siswa.nis || siswa.id) + ' / ' + (siswa.nisn || '—'))}
+${baris(3, 'Tempat, Tanggal Lahir', (siswa.tempatLahir || '—') + ', ' + (siswa.tanggalLahir ? tanggalIndonesia(siswa.tanggalLahir) : '—'))}
+${baris(4, 'Jenis Kelamin', idn.jenisKelamin)}
+${baris(5, 'Agama', idn.agama)}
+${baris(6, 'Status dalam Keluarga', idn.statusDalamKeluarga)}
+${baris(7, 'Anak ke', idn.anakKe)}
+${baris(8, 'Alamat Peserta Didik', idn.alamatSiswa)}
+${baris(9, 'Nomor Telepon Rumah', idn.teleponRumah)}
+${baris(10, 'Sekolah Asal', idn.sekolahAsal)}
+${baris(11, 'Diterima di Sekolah ini, Kelas', idn.diterimaDiKelas)}
+${baris('', 'Pada Tanggal', idn.diterimaTanggal ? tanggalIndonesia(idn.diterimaTanggal) : '')}
+${baris(12, 'Nama Orang Tua — Ayah', idn.namaAyah)}
+${baris('', 'Nama Orang Tua — Ibu', idn.namaIbu)}
+${baris(13, 'Alamat Orang Tua', idn.alamatOrangTua)}
+${baris(14, 'Pekerjaan Orang Tua — Ayah', idn.pekerjaanAyah)}
+${baris('', 'Pekerjaan Orang Tua — Ibu', idn.pekerjaanIbu)}
+${baris(15, 'Nama Wali Siswa', idn.namaWali)}
+${baris(16, 'Alamat Wali Peserta Didik', idn.alamatWali)}
+${baris('', 'Nomor Telepon Wali', idn.teleponWali)}
+${baris(17, 'Pekerjaan Wali Peserta Didik', idn.pekerjaanWali)}
+<div class="id-ttd">
+  ${isi(config.kotaRapor) || '…………'}, ${tanggalHariIni()}<br>Kepala Sekolah,
+  <div class="id-ttd-space"></div>
+  <div class="id-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>
+  ${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}
+</div>`;
+    bukaJendelaCetak(`Identitas Peserta Didik - ${siswa.nama}`, html, css);
+  });
+
+  /* ---- 3. Keterangan Pindah Sekolah -------------------------------------- */
+  $('btnCetakPindah').addEventListener('click', () => {
+    const css = `
+.kp-title{text-align:center;font-size:13pt;font-weight:bold;margin-bottom:4pt;text-transform:uppercase}
+.kp-nama{text-align:center;font-size:11pt;margin-bottom:16pt}
+.kp-section{font-size:11.5pt;font-weight:bold;background:#e8e8e8;padding:5pt 8pt;margin:14pt 0 8pt;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:8pt}
+th{border:1pt solid #000;padding:5pt;background:#f0f0f0;font-weight:bold}
+td{border:1pt solid #000;padding:5pt;vertical-align:top}
+.kp-empty{font-style:italic;color:#777;font-size:10pt;padding:6pt 2pt}
+.kp-ttd{display:grid;grid-template-columns:1fr 1fr;gap:10pt;margin-top:10pt;margin-bottom:20pt;font-size:10pt;text-align:center}
+.kp-ttd-space{height:40pt}
+.kp-ttd-name{border-top:1pt solid #000;padding-top:2pt;font-weight:bold}`;
+
+    const tabelKeluar = riwayatKeluar.length ? `
+<table>
+  <thead><tr><th style="width:24pt">No.</th><th style="width:90pt">Tanggal</th><th>Sebab-sebab Keluar</th><th style="width:70pt">Kelas Ditinggalkan</th></tr></thead>
+  <tbody>${riwayatKeluar.map((m, i) => `<tr><td style="text-align:center">${i + 1}.</td><td>${isi(m.tanggalKeluar ? tanggalIndonesia(m.tanggalKeluar) : '—')}</td><td>${isi(m.alasan)}</td><td style="text-align:center">${isi(m.kelas)}</td></tr>`).join('')}</tbody>
+</table>
+<div class="kp-ttd">
+  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatKeluar[riwayatKeluar.length - 1].tanggalKeluar)}<br>Orang Tua/Wali<div class="kp-ttd-space"></div><div class="kp-ttd-name">(…………………………)</div></div>
+  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatKeluar[riwayatKeluar.length - 1].tanggalKeluar)}<br>Kepala Sekolah,<div class="kp-ttd-space"></div><div class="kp-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}</div>
+</div>` : `<div class="kp-empty">Belum ada riwayat keluar/pindah dari sekolah ini.</div>`;
+
+    const tabelMasuk = riwayatMasuk.length ? `
+<table>
+  <thead><tr><th style="width:24pt">No.</th><th>Nama Sekolah Asal</th><th style="width:90pt">Tanggal Masuk</th><th style="width:50pt">Kelas</th><th style="width:60pt">Semester</th><th style="width:80pt">Tahun Pelajaran</th></tr></thead>
+  <tbody>${riwayatMasuk.map((m, i) => `<tr><td style="text-align:center">${i + 1}.</td><td>${isi(m.calonSekolahAsal) || '<span style="color:#888">(Pertama sekolah)</span>'}</td><td>${isi(m.tanggalMasuk ? tanggalIndonesia(m.tanggalMasuk) : '—')}</td><td style="text-align:center">${isi(m.kelas)}</td><td style="text-align:center">${m.semesterMasuk === '2' ? 'Genap' : 'Ganjil'}</td><td style="text-align:center">${isi(m.tahunAjaranMasuk)}</td></tr>`).join('')}</tbody>
+</table>
+<div class="kp-ttd">
+  <div></div>
+  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatMasuk[riwayatMasuk.length - 1].tanggalMasuk)}<br>Kepala Sekolah,<div class="kp-ttd-space"></div><div class="kp-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}</div>
+</div>` : `<div class="kp-empty">Belum ada riwayat masuk yang tercatat lewat fitur Mutasi.</div>`;
+
+    const html = `
+<div class="kp-title">Keterangan Pindah Sekolah</div>
+<div class="kp-nama">Nama Peserta Didik: <b>${isi(siswa.nama)}</b> &nbsp;|&nbsp; NIS/NISN: ${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || '—'}</div>
+<div class="kp-section">Masuk</div>
+${tabelMasuk}
+<div class="kp-section">Keluar</div>
+${tabelKeluar}`;
+    bukaJendelaCetak(`Keterangan Pindah Sekolah - ${siswa.nama}`, html, css);
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = `kelengkapan-rapor-pilih-siswa.html?kelas=${encodeURIComponent(kelas)}`; });
+</script>
+</body>
+</html>
