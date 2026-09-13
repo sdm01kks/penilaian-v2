@@ -342,28 +342,37 @@ ${isiHtml}
   /* ---- 1. Cover Rapor --------------------------------------------------- */
   $('btnCetakCover').addEventListener('click', () => {
     const css = `
-.cv-wrap{text-align:center;padding-top:10pt}
-.cv-title{font-size:20pt;font-weight:bold;letter-spacing:.5pt}
-.cv-sub{font-size:16pt;font-weight:bold;margin-top:2pt}
-.cv-nss{font-size:10.5pt;color:#333;margin-top:4pt}
-.cv-logo{width:150pt;margin:30pt auto}
-.cv-box-label{font-size:11pt;margin-top:34pt}
-.cv-box{border:1.3pt solid #000;padding:12pt;margin:6pt auto 0;width:320pt;min-height:20pt;font-size:12pt;font-weight:bold}`;
+.cv-wrap{text-align:center;padding-top:40pt}
+.cv-title{font-size:22pt;font-weight:bold}
+.cv-sub{font-size:22pt;font-weight:bold;margin-top:2pt}
+.cv-nss{font-size:11pt;margin-top:6pt}
+.cv-logo{width:170pt;margin:40pt auto}
+.cv-box-label{font-size:11pt;margin-top:36pt}
+.cv-box{border:1pt solid #000;padding:8pt 10pt;margin:6pt auto 0;width:340pt;min-height:16pt;font-size:11pt;text-align:left}`;
     const html = `
 <div class="cv-wrap">
   <div class="cv-title">RAPOR</div>
-  <div class="cv-sub">${isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN'}</div>
+  <div class="cv-sub">${(isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN').toUpperCase()}</div>
   <div class="cv-nss">${config.nss ? 'NSS : ' + isi(config.nss) + '  |  ' : ''}${config.npsn ? 'NPSN: ' + isi(config.npsn) : ''}</div>
   <img class="cv-logo" src="${logoUrl}">
   <div class="cv-box-label">Nama Peserta Didik</div>
   <div class="cv-box">${isi(siswa.nama)}</div>
-  <div class="cv-box-label">NIS / NISN</div>
-  <div class="cv-box">${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || '—'}</div>
+  <div class="cv-box-label">NIS / NISN:</div>
+  <div class="cv-box">${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || ''}</div>
 </div>`;
     bukaJendelaCetak(`Cover Rapor - ${siswa.nama}`, html, css);
   });
 
-  /* ---- 2. Identitas Peserta Didik ---------------------------------------- */
+  /* ---- 2. Identitas Peserta Didik ----------------------------------------
+     TIGA halaman, PERSIS mengikuti identitas_rapor.pdf yang diberikan:
+     hal.1 = biodata peserta didik (TANPA kop sekolah — hal ini beda dari
+     rapor STS/SAS yang memang pakai kop di setiap halaman), hal.2 = data
+     sekolah (kop "RAPOR SEKOLAH DASAR (SD)"), hal.3 = Petunjuk Penggunaan
+     (teks statis, SAMA untuk semua siswa, disalin verbatim dari dokumen
+     asli TERMASUK penomoran 10→12 yang loncat dan kalimat No.9 yang
+     terpotong — itu memang begitu di dokumen sumbernya, sengaja tidak
+     "diperbaiki" supaya cetakan identik dengan format yang diberikan.
+     ---------------------------------------------------------------------- */
   $('btnCetakIdentitas').addEventListener('click', async () => {
     const idn = {
       jenisKelamin: $('fJkL').classList.contains('active') ? 'Laki-laki' : ($('fJkP').classList.contains('active') ? 'Perempuan' : ''),
@@ -375,108 +384,216 @@ ${isiHtml}
       namaWali: $('fNamaWali').value, alamatWali: $('fAlamatWali').value,
       teleponWali: $('fTeleponWali').value, pekerjaanWali: $('fPekerjaanWali').value,
     };
-    const alamatSekolahLengkap = [config.alamatSekolah, config.kelurahan && ('Kel. ' + config.kelurahan), config.kecamatan && ('Kec. ' + config.kecamatan), config.kotaSekolah && ('Kota/Kab. ' + config.kotaSekolah), config.provinsi]
-      .filter(Boolean).join(', ');
     const css = `
-.id-head{text-align:center;border-bottom:2pt solid #000;padding-bottom:8pt;margin-bottom:14pt}
-.id-head img{width:44pt;float:left}
-.id-head-text{font-size:9pt;line-height:1.4}
-.id-head-text b{font-size:12pt}
-.id-title{text-align:center;font-size:13pt;font-weight:bold;margin:14pt 0 16pt;text-transform:uppercase}
-.id-row{display:flex;font-size:10.5pt;margin-bottom:6pt}
-.id-num{width:16pt;flex-shrink:0}
-.id-label{width:150pt;flex-shrink:0}
-.id-sep{width:10pt;flex-shrink:0}
-.id-val{flex:1;border-bottom:.7pt dotted #999;min-height:13pt}
-.id-photo{float:right;width:85pt;height:110pt;border:1pt solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt;color:#888;text-align:center;margin-left:14pt}
-.id-ttd{margin-top:26pt;text-align:right;font-size:10.5pt}
-.id-ttd-space{height:46pt}
-.id-ttd-name{font-weight:bold;text-decoration:underline}`;
-    const baris = (no, label, val) => `<div class="id-row"><span class="id-num">${no}.</span><span class="id-label">${label}</span><span class="id-sep">:</span><span class="id-val">${isi(val)}</span></div>`;
-    const html = `
-<div class="id-head">
-  <img src="${logoUrl}">
-  <div class="id-head-text">
-    <b>${isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN'}</b><br>
-    NPSN: ${isi(config.npsn) || '—'} ${config.nss ? '| NSS: ' + isi(config.nss) : ''}<br>
-    ${isi(alamatSekolahLengkap) || '—'}<br>
-    ${config.teleponSekolah ? 'Telp. ' + isi(config.teleponSekolah) + '  ' : ''}${config.email ? 'Email: ' + isi(config.email) : ''}
+.id-page{page-break-after:always}
+.id-page:last-child{page-break-after:auto}
+.id-banner{background:#999;color:#fff;font-weight:bold;text-align:center;padding:8pt;font-size:12.5pt;text-transform:uppercase;margin-bottom:18pt}
+.id-banner div{line-height:1.5}
+.id-row{display:flex;font-size:10.5pt;margin-bottom:7pt}
+.id-num{width:20pt;flex-shrink:0}
+.id-label{width:190pt;flex-shrink:0}
+.id-colon{width:10pt;flex-shrink:0}
+.id-val{flex:1;border-bottom:.7pt dotted #999;min-height:13pt;padding-bottom:1pt}
+.id-sub .id-label{width:170pt}
+.id-photo{width:88pt;height:113pt;border:1pt solid #000;display:flex;align-items:center;justify-content:center;font-size:8.5pt;color:#555;text-align:center;flex-shrink:0}
+.id-bottom{display:flex;align-items:flex-start;gap:40pt;margin-top:28pt}
+.id-ttd{font-size:10.5pt;line-height:1.7}
+.id-ttd-space{height:42pt}
+.id-ttd-name{font-weight:normal;text-decoration:underline}
+.ds-row{display:flex;font-size:10.5pt;margin-bottom:8pt}
+.ds-label{width:130pt;flex-shrink:0}
+.ds-colon{width:10pt;flex-shrink:0}
+.ds-val{flex:1}
+.ds-val a{color:#1a4fa0;text-decoration:underline}
+.pt-p{font-size:10.5pt;margin-bottom:10pt;text-align:justify}
+.pt-item{display:flex;font-size:10.5pt;margin-bottom:7pt;text-align:justify}
+.pt-num{width:22pt;flex-shrink:0}
+.pt-txt{flex:1}`;
+
+    const baris = (no, label, val) => `<div class="id-row"><span class="id-num">${no ? no + '.' : ''}</span><span class="id-label">${label}</span><span class="id-colon">:</span><span class="id-val">${isi(val)}</span></div>`;
+    const barisHeader = (no, label) => `<div class="id-row"><span class="id-num">${no}.</span><span class="id-label" style="font-weight:normal">${label}</span></div>`;
+    const barisSub = (label, val) => `<div class="id-row id-sub"><span class="id-num"></span><span class="id-label">${label}</span><span class="id-colon">:</span><span class="id-val">${isi(val)}</span></div>`;
+
+    const halaman1 = `
+<div class="id-page">
+  <div class="id-banner">Keterangan Tentang Diri Peserta Didik</div>
+  ${baris(1, 'Nama Peserta Didik (Lengkap)', siswa.nama)}
+  ${baris(2, 'Nomor Induk / NISN', (siswa.nis || siswa.id) + (siswa.nisn ? ' / ' + siswa.nisn : ''))}
+  ${baris(3, 'Tempat, Tanggal Lahir', (siswa.tempatLahir || '') + (siswa.tanggalLahir ? ', ' + tanggalIndonesia(siswa.tanggalLahir) : ''))}
+  ${baris(4, 'Jenis Kelamin', idn.jenisKelamin)}
+  ${baris(5, 'Agama', idn.agama || 'Islam')}
+  ${baris(6, 'Status dalam Keluarga', idn.statusDalamKeluarga)}
+  ${baris(7, 'Anak ke', idn.anakKe)}
+  ${baris(8, 'Alamat Peserta Didik', idn.alamatSiswa)}
+  ${baris(9, 'Nomor Telepon Rumah', idn.teleponRumah)}
+  ${baris(10, 'Sekolah Asal', idn.sekolahAsal)}
+  ${barisHeader(11, 'Diterima di sekolah ini')}
+  ${barisSub('Di kelas', idn.diterimaDiKelas)}
+  ${barisSub('Pada tanggal', idn.diterimaTanggal ? tanggalIndonesia(idn.diterimaTanggal) : '')}
+  ${barisHeader(12, 'Nama Orangtua')}
+  ${barisSub('a. Ayah', idn.namaAyah)}
+  ${barisSub('b. Ibu', idn.namaIbu)}
+  ${baris(13, 'Alamat Orang Tua', idn.alamatOrangTua)}
+  ${barisHeader(14, 'Pekerjaan Orangtua')}
+  ${barisSub('a. Ayah', idn.pekerjaanAyah)}
+  ${barisSub('b. Ibu', idn.pekerjaanIbu)}
+  ${baris(15, 'Nama Wali Siswa', idn.namaWali)}
+  ${baris(16, 'Alamat Wali Peserta Didik', idn.alamatWali)}
+  ${barisSub('Nomor Telepon Rumah', idn.teleponWali)}
+  ${baris(17, 'Pekerjaan Wali Peserta Didik', idn.pekerjaanWali)}
+  <div class="id-bottom">
+    <div class="id-photo">Pas Foto<br>3 x 4 cm</div>
+    <div class="id-ttd">
+      ${isi(config.kotaRapor) || 'Kota Depok'}, …<br>Kepala Sekolah,
+      <div class="id-ttd-space"></div>
+      <div class="id-ttd-name">${isi(config.namaKepsek) || 'Mudzakkir Walad, S.Pd'}</div>
+      NBM. ${isi(config.nbmKepsek) || '1167327'}
+    </div>
   </div>
-</div>
-<div class="id-title">Keterangan Tentang Diri Peserta Didik</div>
-<div class="id-photo">Pas Foto<br>3 x 4 cm</div>
-${baris(1, 'Nama Peserta Didik (Lengkap)', siswa.nama)}
-${baris(2, 'Nomor Induk / NISN', (siswa.nis || siswa.id) + ' / ' + (siswa.nisn || '—'))}
-${baris(3, 'Tempat, Tanggal Lahir', (siswa.tempatLahir || '—') + ', ' + (siswa.tanggalLahir ? tanggalIndonesia(siswa.tanggalLahir) : '—'))}
-${baris(4, 'Jenis Kelamin', idn.jenisKelamin)}
-${baris(5, 'Agama', idn.agama)}
-${baris(6, 'Status dalam Keluarga', idn.statusDalamKeluarga)}
-${baris(7, 'Anak ke', idn.anakKe)}
-${baris(8, 'Alamat Peserta Didik', idn.alamatSiswa)}
-${baris(9, 'Nomor Telepon Rumah', idn.teleponRumah)}
-${baris(10, 'Sekolah Asal', idn.sekolahAsal)}
-${baris(11, 'Diterima di Sekolah ini, Kelas', idn.diterimaDiKelas)}
-${baris('', 'Pada Tanggal', idn.diterimaTanggal ? tanggalIndonesia(idn.diterimaTanggal) : '')}
-${baris(12, 'Nama Orang Tua — Ayah', idn.namaAyah)}
-${baris('', 'Nama Orang Tua — Ibu', idn.namaIbu)}
-${baris(13, 'Alamat Orang Tua', idn.alamatOrangTua)}
-${baris(14, 'Pekerjaan Orang Tua — Ayah', idn.pekerjaanAyah)}
-${baris('', 'Pekerjaan Orang Tua — Ibu', idn.pekerjaanIbu)}
-${baris(15, 'Nama Wali Siswa', idn.namaWali)}
-${baris(16, 'Alamat Wali Peserta Didik', idn.alamatWali)}
-${baris('', 'Nomor Telepon Wali', idn.teleponWali)}
-${baris(17, 'Pekerjaan Wali Peserta Didik', idn.pekerjaanWali)}
-<div class="id-ttd">
-  ${isi(config.kotaRapor) || '…………'}, ${tanggalHariIni()}<br>Kepala Sekolah,
-  <div class="id-ttd-space"></div>
-  <div class="id-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>
-  ${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}
 </div>`;
-    bukaJendelaCetak(`Identitas Peserta Didik - ${siswa.nama}`, html, css);
+
+    const alamatSekolahBaris = isi(config.alamatSekolah) || 'Jl. KH. Ahmad Dahlan II No. 11 RT 006/005 Kel. Kukusan Kec. Beji, Kota Depok';
+    const dsBaris = (label, val, isLink) => `<div class="ds-row"><span class="ds-label">${label}</span><span class="ds-colon">:</span><span class="ds-val">${isLink && val ? `<a href="${isi(val)}">${isi(val)}</a>` : isi(val)}</span></div>`;
+    const halaman2 = `
+<div class="id-page">
+  <div class="id-banner"><div>RAPOR</div><div>SEKOLAH DASAR</div><div>( SD )</div></div>
+  ${dsBaris('Nama Sekolah', config.namaSekolah || 'SD Muhammadiyah 01 Kukusan')}
+  ${dsBaris('NPSN', config.npsn)}
+  ${dsBaris('Alamat Sekolah', alamatSekolahBaris)}
+  ${dsBaris('No. Telpon', config.teleponSekolah)}
+  ${dsBaris('Kode Pos', config.kodePos)}
+  ${dsBaris('Kelurahan/Desa', config.kelurahan)}
+  ${dsBaris('Kecamatan', config.kecamatan)}
+  ${dsBaris('Kota / Kabupaten', config.kotaSekolah)}
+  ${dsBaris('Provinsi', config.provinsi)}
+  ${dsBaris('Website', config.website, true)}
+  ${dsBaris('E-mail', config.email, true)}
+</div>`;
+
+    const petunjukItems = [
+      'Diisi dengan data resmi satuan pendidikan: nama sekolah, NPSN, alamat lengkap, kecamatan, kabupaten/kota, provinsi, dan kontak sekolah sesuai kondisi aktual.',
+      'Diisi lengkap meliputi: nama peserta didik, NISN, NIS, tempat dan tanggal lahir, jenis kelamin, agama, alamat, nama orang tua/wali, serta informasi lain yang dianggap perlu oleh satuan pendidikan.',
+      'Rapor dilengkapi dengan pas foto peserta didik ukuran (3 x 4) cm berwarna.',
+      'Deskripsi Perkembangan Karakter/Profil Lulusan: Diisi dengan deskripsi perkembangan karakter (misalnya sikap spiritual, sosial, serta dimensi-dimensi karakter yang diadopsi sekolah, seperti Profil Pelajar Pancasila atau 8 Dimensi Profil Lulusan.',
+      'Capaian belajar setiap mata pelajaran ditulis berdasarkan hasil analisis berbagai asesmen terhadap Tujuan Pembelajaran (TP) yang diajarkan pada semester tersebut.',
+      'Laporan Kegiatan Projek Penguatan Karakter: Diisi dengan informasi tentang projek penguatan karakter yang diikuti peserta didik (misalnya Projek Penguatan Profil Pelajar Pancasila atau program penguatan profil lulusan lain yang digunakan di sekolah).',
+      'Saran-Saran/ Catatan Guru: Berisi apresiasi, umpan balik perbaikan, dan harapan ke depan yang ditulis secara singkat, jelas, dan tetap positif.',
+      'Ketidakhadiran ditulis dengan data akumulasi ketidakhadiran peserta didik karena sakit, izin, atau tanpa keterangan selama satu semester.',
+      'Tanggapan orangtua/wali adalah tanggapan atas pencapaian hasil belajar peserta',
+      'Keterangan pindah keluar sekolah diisi dengan alasan kepindahan. Sedangkan pindah masuk diisi dengan sekolah asal.',
+      null, // No. 11 memang tidak ada di dokumen sumber — loncat 10 ke 12, disalin apa adanya.
+      'Satuan pendidikan menetapkan Kriteria Ketercapaian Tujuan Pembelajaran (KKTP) berisi ringkasan kriteria capaian (misalnya batas nilai dan deskripsi singkat untuk setiap predikat), sesuai dokumen KKTP sekolah.',
+      'Nilai diisi dengan nilai pencapaian kompetensi belajar peserta didik.',
+      'Predikat untuk aspek sikap diisi dengan Sangat Baik, Baik, Cukup, atau Kurang.',
+      'Diisi dengan uraian singkat dan jelas mengenai capaian kompetensi peserta didik pada setiap mata pelajaran sesuai CP dan TP yang dipelajari pada semester tersebut.',
+    ];
+    const halaman3 = `
+<div class="id-page">
+  <div class="id-banner">Petunjuk Penggunaan</div>
+  <div class="pt-p">Rapor merupakan ringkasan informasi capaian belajar dan perkembangan karakter peserta didik dalam kurun waktu tertentu. Dalam Kurikulum Merdeka, rapor memuat capaian peserta didik terhadap Capaian Pembelajaran (CP) melalui berbagai Tujuan Pembelajaran (TP), hasil asesmen formatif dan sumatif, serta capaian dalam projek penguatan karakter (misalnya Projek Penguatan Profil Pelajar Pancasila atau program sejenis yang ditetapkan satuan pendidikan).</div>
+  <div class="pt-p">Rapor digunakan selama peserta didik mengikuti seluruh program pembelajaran di satuan pendidikan tersebut. Berikut petunjuk pengisian rapor dalam konteks Kurikulum Merdeka:</div>
+  ${petunjukItems.map((txt, i) => txt ? `<div class="pt-item"><span class="pt-num">${i + 1}.</span><span class="pt-txt">${txt}</span></div>` : '').join('')}
+</div>`;
+
+    bukaJendelaCetak(`Identitas Peserta Didik - ${siswa.nama}`, halaman1 + halaman2 + halaman3, css);
   });
 
-  /* ---- 3. Keterangan Pindah Sekolah -------------------------------------- */
+  /* ---- 3. Keterangan Pindah Sekolah ---------------------------------------
+     DUA halaman terpisah, PERSIS mengikuti mutasi_rapor.pdf: hal.1 = KELUAR
+     (tabel 4 kolom), hal.2 = MASUK (tabel No./isian/TTD). Form ASLI selalu
+     punya 3 slot kosong per halaman (dulu diisi tangan) — di sini diisi
+     dengan riwayat NYATA dari mutasi_siswa yang sudah disetujui (§11/§12),
+     sisa slot yang belum terpakai tetap ditampilkan kosong (titik-titik)
+     PERSIS seperti form aslinya, bukan dihilangkan.
+     ---------------------------------------------------------------------- */
   $('btnCetakPindah').addEventListener('click', () => {
     const css = `
-.kp-title{text-align:center;font-size:13pt;font-weight:bold;margin-bottom:4pt;text-transform:uppercase}
-.kp-nama{text-align:center;font-size:11pt;margin-bottom:16pt}
-.kp-section{font-size:11.5pt;font-weight:bold;background:#e8e8e8;padding:5pt 8pt;margin:14pt 0 8pt;text-transform:uppercase}
-table{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:8pt}
-th{border:1pt solid #000;padding:5pt;background:#f0f0f0;font-weight:bold}
-td{border:1pt solid #000;padding:5pt;vertical-align:top}
-.kp-empty{font-style:italic;color:#777;font-size:10pt;padding:6pt 2pt}
-.kp-ttd{display:grid;grid-template-columns:1fr 1fr;gap:10pt;margin-top:10pt;margin-bottom:20pt;font-size:10pt;text-align:center}
-.kp-ttd-space{height:40pt}
-.kp-ttd-name{border-top:1pt solid #000;padding-top:2pt;font-weight:bold}`;
+.kp-page{page-break-after:always}
+.kp-page:last-child{page-break-after:auto}
+.kp-title{text-align:center;font-size:13pt;font-weight:bold;margin-bottom:12pt;text-transform:uppercase}
+.kp-nama{font-size:11pt;margin-bottom:14pt;display:flex;align-items:flex-end}
+.kp-nama .lbl{white-space:nowrap;margin-right:6pt}
+.kp-nama b{margin-right:6pt}
+.kp-nama .dot{flex:1;border-bottom:.7pt dotted #000;margin-bottom:2pt}
+table{width:100%;border-collapse:collapse;font-size:9.5pt}
+th{border:1pt solid #000;padding:6pt;font-weight:normal;text-align:center;vertical-align:middle}
+td{border:1pt solid #000;padding:6pt;vertical-align:top;height:110pt}
+.kp-section-hdr{background:#ccc;font-weight:bold;text-align:center;padding:5pt;border:1pt solid #000}
+.kp-ttd-cell{font-size:9pt;line-height:2.1}
+.kp-dot{display:inline-block;border-bottom:.7pt dotted #000;width:130pt}
+.kp-no-cell{width:22pt;text-align:center;vertical-align:top;padding-top:8pt}
+.kp-info-row{display:flex;font-size:9.5pt;margin-bottom:4pt}
+.kp-info-label{width:110pt;flex-shrink:0}
+.kp-info-colon{width:8pt;flex-shrink:0}
+.kp-info-val{flex:1;border-bottom:.7pt dotted #000;min-height:11pt}`;
 
-    const tabelKeluar = riwayatKeluar.length ? `
-<table>
-  <thead><tr><th style="width:24pt">No.</th><th style="width:90pt">Tanggal</th><th>Sebab-sebab Keluar</th><th style="width:70pt">Kelas Ditinggalkan</th></tr></thead>
-  <tbody>${riwayatKeluar.map((m, i) => `<tr><td style="text-align:center">${i + 1}.</td><td>${isi(m.tanggalKeluar ? tanggalIndonesia(m.tanggalKeluar) : '—')}</td><td>${isi(m.alasan)}</td><td style="text-align:center">${isi(m.kelas)}</td></tr>`).join('')}</tbody>
-</table>
-<div class="kp-ttd">
-  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatKeluar[riwayatKeluar.length - 1].tanggalKeluar)}<br>Orang Tua/Wali<div class="kp-ttd-space"></div><div class="kp-ttd-name">(…………………………)</div></div>
-  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatKeluar[riwayatKeluar.length - 1].tanggalKeluar)}<br>Kepala Sekolah,<div class="kp-ttd-space"></div><div class="kp-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}</div>
-</div>` : `<div class="kp-empty">Belum ada riwayat keluar/pindah dari sekolah ini.</div>`;
+    const namaBaris = `<div class="kp-nama"><span class="lbl">Nama Peserta Didik:</span><b>${isi(siswa.nama)}</b><span class="dot"></span></div>`;
+    const titleBlok = `<div class="kp-title">Keterangan Pindah Sekolah</div>`;
 
-    const tabelMasuk = riwayatMasuk.length ? `
-<table>
-  <thead><tr><th style="width:24pt">No.</th><th>Nama Sekolah Asal</th><th style="width:90pt">Tanggal Masuk</th><th style="width:50pt">Kelas</th><th style="width:60pt">Semester</th><th style="width:80pt">Tahun Pelajaran</th></tr></thead>
-  <tbody>${riwayatMasuk.map((m, i) => `<tr><td style="text-align:center">${i + 1}.</td><td>${isi(m.calonSekolahAsal) || '<span style="color:#888">(Pertama sekolah)</span>'}</td><td>${isi(m.tanggalMasuk ? tanggalIndonesia(m.tanggalMasuk) : '—')}</td><td style="text-align:center">${isi(m.kelas)}</td><td style="text-align:center">${m.semesterMasuk === '2' ? 'Genap' : 'Ganjil'}</td><td style="text-align:center">${isi(m.tahunAjaranMasuk)}</td></tr>`).join('')}</tbody>
-</table>
-<div class="kp-ttd">
-  <div></div>
-  <div>${isi(config.kotaRapor) || '…………'}, ${tanggalIndonesia(riwayatMasuk[riwayatMasuk.length - 1].tanggalMasuk)}<br>Kepala Sekolah,<div class="kp-ttd-space"></div><div class="kp-ttd-name">${isi(config.namaKepsek) || '…………………………'}</div>${config.nbmKepsek ? 'NBM. ' + isi(config.nbmKepsek) : ''}</div>
-</div>` : `<div class="kp-empty">Belum ada riwayat masuk yang tercatat lewat fitur Mutasi.</div>`;
+    // ---- Halaman 1: KELUAR (4 kolom, 3 slot) ----
+    const slotKeluar = [0, 1, 2].map(i => riwayatKeluar[i] || null);
+    const barisKeluar = slotKeluar.map(m => `
+      <tr>
+        <td>${m ? isi(tanggalIndonesia(m.tanggalKeluar)) : ''}</td>
+        <td>${m ? isi(m.kelas) : ''}</td>
+        <td>${m ? isi(m.alasan) : ''}</td>
+        <td class="kp-ttd-cell">
+          <span class="kp-dot"></span><br>Kepala Sekolah<br><br>
+          <span class="kp-dot"></span><br>NIP.<br><br>
+          Orang Tua / Wali<br><br>
+          <span class="kp-dot"></span>
+        </td>
+      </tr>`).join('');
+    const halamanKeluar = `
+<div class="kp-page">
+  ${titleBlok}
+  ${namaBaris}
+  <table>
+    <tr><th colspan="4" style="background:#ccc">KELUAR</th></tr>
+    <tr>
+      <th style="width:70pt">Tanggal</th>
+      <th style="width:90pt">Kelas yang<br>ditinggalkan</th>
+      <th>Sebab-sebab Keluar atau<br>Atas Permintaan (Tertulis)</th>
+      <th style="width:150pt">Tanda Tangan Kepala Sekolah<br>dan Stempel Sekolah Serta<br>Tanda Tangan Orang Tua/Wali</th>
+    </tr>
+    ${barisKeluar}
+  </table>
+</div>`;
 
-    const html = `
-<div class="kp-title">Keterangan Pindah Sekolah</div>
-<div class="kp-nama">Nama Peserta Didik: <b>${isi(siswa.nama)}</b> &nbsp;|&nbsp; NIS/NISN: ${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || '—'}</div>
-<div class="kp-section">Masuk</div>
-${tabelMasuk}
-<div class="kp-section">Keluar</div>
-${tabelKeluar}`;
-    bukaJendelaCetak(`Keterangan Pindah Sekolah - ${siswa.nama}`, html, css);
+    // ---- Halaman 2: MASUK (No. / isian / TTD, 3 slot) ----
+    const slotMasuk = [0, 1, 2].map(i => riwayatMasuk[i] || null);
+    const infoRow = (label, val) => `<div class="kp-info-row"><span class="kp-info-label">${label}</span><span class="kp-info-colon">:</span><span class="kp-info-val">${isi(val)}</span></div>`;
+    const barisMasuk = slotMasuk.map(m => `
+      <tr>
+        <td class="kp-no-cell">1.<br>2.<br>3.<br>4.</td>
+        <td>
+          ${infoRow('Nama Siswa', m ? siswa.nama : '')}
+          ${infoRow('NIS / NISN', m ? (siswa.nis || siswa.id) + (siswa.nisn ? ' / ' + siswa.nisn : '') : '')}
+          ${infoRow('Nama Sekolah Asal', m ? (m.calonSekolahAsal || '(Pertama sekolah)') : '')}
+          ${infoRow('Masuk di Sekolah ini', '')}
+          <div style="padding-left:14pt">
+            ${infoRow('a. Tanggal', m ? tanggalIndonesia(m.tanggalMasuk) : '')}
+            ${infoRow('b. Di Kelas', m ? m.kelas : '')}
+            ${infoRow('c. Semester', m ? (m.semesterMasuk === '2' ? 'Genap' : 'Ganjil') : '')}
+            ${infoRow('d. Tahun Pelajaran', m ? m.tahunAjaranMasuk : '')}
+          </div>
+        </td>
+        <td class="kp-ttd-cell" style="width:150pt">
+          <span class="kp-dot"></span><br>Kepala Sekolah<br><br>
+          <span class="kp-dot"></span><br>NIP.
+        </td>
+      </tr>`).join('');
+    const halamanMasuk = `
+<div class="kp-page">
+  ${titleBlok}
+  ${namaBaris}
+  <table>
+    <tr><th style="width:24pt;background:#ccc">No.</th><th colspan="2" style="background:#ccc">MASUK</th></tr>
+    ${barisMasuk}
+  </table>
+</div>`;
+
+    bukaJendelaCetak(`Keterangan Pindah Sekolah - ${siswa.nama}`, halamanKeluar + halamanMasuk, css);
   });
 
   $('btnBack').addEventListener('click', () => { window.location.href = `kelengkapan-rapor-pilih-siswa.html?kelas=${encodeURIComponent(kelas)}`; });

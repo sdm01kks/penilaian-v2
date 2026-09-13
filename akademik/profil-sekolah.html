@@ -107,6 +107,13 @@
               <input type="text" class="input-field" id="fProvinsi" placeholder="Jawa Barat">
             </div>
           </div>
+          <div class="field-row" style="margin-top:10px">
+            <div>
+              <div class="field-hint">Kode Pos</div>
+              <input type="text" class="input-field" id="fKodePos" placeholder="16425">
+            </div>
+            <div></div>
+          </div>
         </div>
 
         <div class="field-group">
@@ -196,6 +203,7 @@
       $('fKecamatan').value      = config.kecamatan      || '';
       $('fKotaSekolah').value    = config.kotaSekolah    || '';
       $('fProvinsi').value       = config.provinsi       || '';
+      $('fKodePos').value        = config.kodePos        || '';
       $('fTeleponSekolah').value = config.teleponSekolah || '';
       $('fWebsite').value        = config.website        || '';
       $('fEmail').value          = config.email          || '';
@@ -221,6 +229,7 @@
         kecamatan:      $('fKecamatan').value.trim(),
         kotaSekolah:    $('fKotaSekolah').value.trim(),
         provinsi:       $('fProvinsi').value.trim(),
+        kodePos:        $('fKodePos').value.trim(),
         teleponSekolah: $('fTeleponSekolah').value.trim(),
         website:        $('fWebsite').value.trim(),
         email:          $('fEmail').value.trim(),
