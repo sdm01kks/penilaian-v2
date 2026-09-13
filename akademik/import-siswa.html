@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Impor Data Siswa — Akademik &amp; Rapor | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .intro-text{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:14px}
+
+  .step-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+  .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--green-dark);color:#fff;font-size:11px;font-weight:800;margin-right:7px}
+  .step-title{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;margin-bottom:10px}
+  .step-sub{font-size:11.5px;color:var(--ink-muted);line-height:1.6;margin-bottom:12px}
+
+  .btn-unduh{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;
+    border-radius:12px;border:1.5px solid var(--green-dark);background:var(--green-pale);
+    color:var(--green-dark);font-family:inherit;font-size:12.5px;font-weight:800;text-decoration:none;
+  }
+  .upload-box{
+    border:1.5px dashed var(--border);border-radius:12px;padding:20px 14px;text-align:center;cursor:pointer;
+  }
+  .upload-box input{display:none}
+  .upload-box svg{color:var(--ink-muted);margin-bottom:6px}
+  .upload-box p{font-size:12px;color:var(--ink-muted)}
+  .nama-file{font-size:11.5px;font-weight:700;color:var(--green-dark);margin-top:8px}
+
+  .summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .summary-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center}
+  .summary-num{font-size:18px;font-weight:800;color:var(--ink)}
+  .summary-num.baru{color:var(--green-dark)}
+  .summary-num.update{color:var(--blue)}
+  .summary-num.error{color:var(--red)}
+  .summary-label{font-size:10px;color:var(--ink-muted);margin-top:2px;font-weight:700}
+
+  .filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+  .filter-chip{font-size:11px;font-weight:800;padding:6px 12px;border-radius:20px;cursor:pointer;background:var(--surface);border:1.5px solid var(--border);color:var(--ink-mid)}
+  .filter-chip.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  .review-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:7px}
+  .review-top{display:flex;align-items:center;gap:8px}
+  .review-baris{font-size:9.5px;color:var(--ink-muted);font-weight:700;width:28px;flex-shrink:0}
+  .review-body{flex:1;min-width:0}
+  .review-nama{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .review-sub{font-size:10px;color:var(--ink-muted);margin-top:1px}
+  .status-pill{font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:20px;flex-shrink:0}
+  .status-pill.baru{background:var(--green-pale);color:var(--green-dark)}
+  .status-pill.update{background:var(--blue-light);color:var(--blue)}
+  .status-pill.error{background:var(--red-light);color:var(--red)}
+  .review-error{font-size:10.5px;color:var(--red);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+
+  .pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 16px}
+  .pager button{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink-mid);cursor:pointer}
+  .pager button:disabled{opacity:.4;cursor:default}
+  .pager span{font-size:11.5px;color:var(--ink-muted);font-weight:700}
+
+  .log-box{background:#111;color:#c9f7d8;font-family:'SF Mono',Consolas,monospace;font-size:10.5px;line-height:1.7;border-radius:11px;padding:10px 12px;margin-top:12px;max-height:220px;overflow-y:auto;display:none;white-space:pre-wrap}
+  .log-box.show{display:block}
+
+  .empty-state-small{text-align:center;padding:20px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Impor Data Siswa</div>
+            <div class="app-header-sub">Massal, lewat template Excel</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+        <p class="intro-text">Bisa dipakai untuk mengisi ratusan siswa sekaligus (diuji sampai 400 baris) — sistem meninjau setiap baris dulu (baru/update/error) sebelum benar-benar disimpan.</p>
+
+        <div class="step-card">
+          <div class="step-title"><span class="step-num">1</span>Unduh Template</div>
+          <div class="step-sub">Isi di Excel/Google Sheets, satu baris per siswa. Baca sheet "Petunjuk" di dalamnya sebelum mengisi.</div>
+          <a class="btn-unduh" href="../assets/template-impor-siswa.xlsx" download>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>
+            Unduh Template Impor Data Siswa
+          </a>
+        </div>
+
+        <div class="step-card">
+          <div class="step-title"><span class="step-num">2</span>Unggah File Terisi</div>
+          <label class="upload-box" id="uploadBox">
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <p>Tap untuk pilih file .xlsx</p>
+            <div class="nama-file" id="namaFile"></div>
+          </label>
+        </div>
+
+        <div id="hasilArea" class="hidden">
+          <div class="step-card">
+            <div class="step-title"><span class="step-num">3</span>Tinjau &amp; Simpan</div>
+            <div class="summary-row">
+              <div class="summary-cell"><div class="summary-num baru" id="cntBaru">0</div><div class="summary-label">SISWA BARU</div></div>
+              <div class="summary-cell"><div class="summary-num update" id="cntUpdate">0</div><div class="summary-label">DIPERBARUI</div></div>
+              <div class="summary-cell"><div class="summary-num error" id="cntError">0</div><div class="summary-label">ERROR</div></div>
+            </div>
+            <button class="btn btn-primary-light" id="btnProses" style="width:100%">Proses Impor</button>
+            <div class="log-box" id="logBox"></div>
+          </div>
+
+          <div class="filter-row">
+            <button class="filter-chip active" id="fl-semua" onclick="filterReview('semua')">Semua</button>
+            <button class="filter-chip" id="fl-baru" onclick="filterReview('baru')">Baru</button>
+            <button class="filter-chip" id="fl-update" onclick="filterReview('update')">Update</button>
+            <button class="filter-chip" id="fl-error" onclick="filterReview('error')">Error</button>
+          </div>
+          <div id="reviewList"></div>
+          <div class="pager">
+            <button id="btnPrev" onclick="gantiHalaman(-1)">‹ Sebelumnya</button>
+            <span id="pagerInfo"></span>
+            <button id="btnNext" onclick="gantiHalaman(1)">Selanjutnya ›</button>
+          </div>
+        </div>
+
+        <div id="emptyState" class="step-card hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { praLihatImporSiswa, jalankanImporSiswa } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  const PER_HALAMAN = 50;
+  let hasilTinjau = [];
+  let filterAktif = 'semua';
+  let halamanAktif = 1;
+  let sudahDiproses = false;
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      document.querySelectorAll('.step-card').forEach(el => el.classList.add('hidden'));
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin Akademik & Rapor.';
+      $('emptyState').classList.remove('hidden');
+    }
+  });
+
+  const KOLOM_TEMPLATE = [
+    'NIS','Nama Lengkap','Kelas','Jenjang Tahsin-Tahfizh','NISN','Tempat Lahir','Tanggal Lahir',
+    'Status Aktif','Jenis Kelamin','Agama','Status dalam Keluarga','Anak ke','Alamat Peserta Didik',
+    'Nomor Telepon Rumah','Sekolah Asal','Diterima di Kelas','Diterima Tanggal','Nama Ayah','Nama Ibu',
+    'Alamat Orang Tua','Pekerjaan Ayah','Pekerjaan Ibu','Nama Wali','Alamat Wali','Telepon Wali','Pekerjaan Wali',
+  ];
+
+  $('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    $('namaFile').textContent = file.name;
+    sudahDiproses = false;
+    showToast('Membaca file…');
+
+    try {
+      // Dynamic import ESM — pola sama dgn import-nisn.html.
+      const mod = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+      const XLSX = mod.default || mod;
+
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+      const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes('data')) || wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+
+      // range:2 -> baris ke-3 (index 2) dipakai sbg header, sesuai template.
+      const raw = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '', range: 2, cellDates: true });
+      if (!raw.length) throw new Error('Tidak ada baris data ditemukan. Pastikan memakai template yang disediakan.');
+
+      // Bersihkan " *" di nama kolom wajib (header template pakai tanda *).
+      // Baris dianggap "benar-benar kosong" (dibuang diam-diam, bukan error)
+      // HANYA kalau SEMUA kolom kosong — kalau ada isian tapi Nama Lengkap
+      // kosong, itu tetap masuk sbg baris (nanti ditandai error oleh
+      // praLihatImporSiswa, bukan hilang diam-diam).
+      const rows = raw.map((row, i) => {
+        const bersih = { _baris: i + 4 };
+        for (const [k, v] of Object.entries(row)) bersih[k.replace(/\s*\*$/, '').trim()] = v;
+        return bersih;
+      }).filter(r => Object.keys(r).some(k => k !== '_baris' && (r[k] || '').toString().trim()));
+
+      const kolomHilang = KOLOM_TEMPLATE.filter(k => !(k in rows[0]));
+      if (kolomHilang.length > 3) {
+        throw new Error('Format kolom tidak sesuai template. Unduh ulang template terbaru dan salin data ke sana.');
+      }
+
+      showToast(`Memeriksa ${rows.length} baris…`);
+      hasilTinjau = await praLihatImporSiswa(rows);
+      halamanAktif = 1;
+      filterAktif = 'semua';
+      document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+      $('fl-semua').classList.add('active');
+      tampilkanRingkasan();
+      $('hasilArea').classList.remove('hidden');
+      $('emptyState').classList.add('hidden');
+      $('logBox').classList.remove('show');
+      $('logBox').textContent = '';
+      $('btnProses').disabled = false;
+      $('btnProses').textContent = 'Proses Impor';
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal membaca file: ' + err.message, true);
+    }
+  });
+
+  function tampilkanRingkasan() {
+    const nBaru = hasilTinjau.filter(x => x.status === 'baru').length;
+    const nUpdate = hasilTinjau.filter(x => x.status === 'update').length;
+    const nError = hasilTinjau.filter(x => x.status === 'error').length;
+    $('cntBaru').textContent = nBaru;
+    $('cntUpdate').textContent = nUpdate;
+    $('cntError').textContent = nError;
+    renderReview();
+  }
+
+  window.filterReview = (f) => {
+    filterAktif = f; halamanAktif = 1;
+    ['semua','baru','update','error'].forEach(s => $('fl-' + s).classList.toggle('active', s === f));
+    renderReview();
+  };
+  window.gantiHalaman = (delta) => { halamanAktif += delta; renderReview(); };
+
+  function renderReview() {
+    const list = filterAktif === 'semua' ? hasilTinjau : hasilTinjau.filter(x => x.status === filterAktif);
+    const totalHalaman = Math.max(1, Math.ceil(list.length / PER_HALAMAN));
+    halamanAktif = Math.min(Math.max(1, halamanAktif), totalHalaman);
+    const mulai = (halamanAktif - 1) * PER_HALAMAN;
+    const potongan = list.slice(mulai, mulai + PER_HALAMAN);
+
+    if (!potongan.length) {
+      $('reviewList').innerHTML = `<div class="empty-state-small">Tidak ada baris pada filter ini.</div>`;
+    } else {
+      $('reviewList').innerHTML = potongan.map(renderBarisReview).join('');
+    }
+    $('pagerInfo').textContent = `Hal. ${halamanAktif}/${totalHalaman} (${list.length} baris)`;
+    $('btnPrev').disabled = halamanAktif <= 1;
+    $('btnNext').disabled = halamanAktif >= totalHalaman;
+  }
+
+  function renderBarisReview(x) {
+    const nisLabel = x.nisKosong ? 'NIS sementara (otomatis)' : `NIS ${escapeHtml(x.nisMentah)}`;
+    const statusLabel = x.status === 'baru' ? 'Baru' : (x.status === 'update' ? 'Update' : 'Error');
+    return `
+    <div class="review-row">
+      <div class="review-top">
+        <span class="review-baris">#${x._baris}</span>
+        <div class="review-body">
+          <div class="review-nama">${escapeHtml(x.nama || '(nama kosong)')}</div>
+          <div class="review-sub">${escapeHtml(x.kelas || '—')} · ${nisLabel}</div>
+        </div>
+        <span class="status-pill ${x.status}">${statusLabel}</span>
+      </div>
+      ${x.errors.length ? `<div class="review-error">${x.errors.map(escapeHtml).join(' · ')}</div>` : ''}
+    </div>`;
+  }
+
+  $('btnProses').addEventListener('click', async () => {
+    const nValid = hasilTinjau.filter(x => x.status !== 'error').length;
+    const nError = hasilTinjau.length - nValid;
+    if (!nValid) { showToast('Tidak ada baris valid untuk disimpan.', true); return; }
+    if (sudahDiproses) { showToast('File ini sudah diproses. Unggah ulang kalau perlu impor lagi.', true); return; }
+
+    const pesan = nError
+      ? `${nValid} baris akan disimpan, ${nError} baris dilewati karena error. Lanjutkan?`
+      : `${nValid} baris akan disimpan. Lanjutkan?`;
+    if (!confirm(pesan)) return;
+
+    const btn = $('btnProses');
+    btn.disabled = true; btn.textContent = 'Memproses…';
+    const logBox = $('logBox');
+    logBox.classList.add('show');
+    logBox.textContent = '';
+
+    try {
+      const { berhasil, dilewati } = await jalankanImporSiswa(hasilTinjau, (msg) => {
+        logBox.textContent += msg + '\n';
+        logBox.scrollTop = logBox.scrollHeight;
+      });
+      sudahDiproses = true;
+      showToast(`${berhasil} siswa tersimpan${dilewati ? `, ${dilewati} dilewati` : ''}.`);
+      btn.textContent = 'Selesai — unggah file baru untuk impor lagi';
+    } catch (err) {
+      console.error(err);
+      logBox.textContent += 'GAGAL: ' + (err.message || err) + '\n';
+      showToast('Gagal memproses impor: ' + (err.message || 'terjadi kesalahan.'), true);
+      btn.disabled = false; btn.textContent = 'Proses Impor';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>
