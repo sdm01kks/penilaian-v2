@@ -1,7 +1,21 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), dan 2026-09-12 revisi (format cetak dibangun ulang).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), dan 2026-09-13 (Impor Data Siswa massal).
+
+---
+
+## Status per 2026-09-13 (Impor Data Siswa massal)
+
+**Belum dikirim/dideploy, belum diuji ke Firestore sungguhan.** Detail penuh di `changelog.md` entri "Impor Data Siswa massal" dan `antiregresi.md` §13.
+
+**Yang baru selesai:** `akademik/import-siswa.html` (ditautkan dari `admin-hub.html`) — impor massal siswa BARU dan UPDATE siswa lama lewat template Excel (`assets/template-impor-siswa.xlsx`, 26 kolom: 8 field inti + 17 biodata rapor), dengan tabel tinjau (baru/update/error) sebelum benar-benar disimpan. Diverifikasi dengan file uji 400 baris (logika parsing+validasi, BUKAN ke Firestore sungguhan — tidak ada akses jaringan Firebase dari lingkungan kerja).
+
+**Penting kalau melanjutkan area ini:** `saveIdentitasSiswa()` berubah semantik — sekarang HANYA menulis field yang ADA di objek payload (field yang tidak disertakan tidak disentuh). Kalau menambah pemanggil baru ke fungsi ini, ingat bedanya dengan cara lama (selalu kirim semua field termasuk `''`) — lihat antiregresi.md §13.3.
+
+**Rekomendasi ke pemilik proyek**: uji dengan file kecil (5-10 baris) dulu sebelum memakai file 400 baris sungguhan, karena fase tulis-ke-Firestore belum pernah dieksekusi nyata di sesi ini.
+
+**Masih berlaku dari sebelumnya:** tidak ada lagi item terbuka dari sesi Kelengkapan Rapor/Mutasi selain yang sudah dicatat di atas.
 
 ---
 

@@ -17,6 +17,28 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-13 — `[Akademik]` Impor Data Siswa massal (template Excel, sampai ~400 baris)
+
+### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §13)
+- Template mencakup field inti `siswa` (8) + biodata `identitas_siswa` (17) sekaligus — 26 kolom total, atas permintaan eksplisit pemilik proyek (bukan default awal yang diusulkan, yang tadinya cuma 8 kolom inti).
+- Perilaku **upsert** berdasar NIS, **tanpa auto-nonaktifkan**: siswa lama yang tidak muncul di file baru dibiarkan apa adanya.
+- UPDATE hanya menyentuh kolom yang benar-benar diisi di file (kolom kosong tidak menimpa data lama) — CREATE dapat default (jenjang dari kelas, aktif=true) untuk kolom kosong.
+- NIS kosong/`-` → NIS sementara unik (pola sama dengan Mutasi Masuk).
+
+### Ditambahkan
+- **`assets/template-impor-siswa.xlsx`** (baru) — dibangun dengan openpyxl: sheet "Data Siswa" (header + 2 baris contoh + dropdown validasi Kelas/Jenjang/Status Aktif/Jenis Kelamin, 400 baris siap isi) + sheet "Petunjuk" (penjelasan tiap kolom).
+- **Data layer** (`assets/firestore-data-akademik.js`): `praLihatImporSiswa(rowsMentah)` — validasi lokal (nama/kelas wajib, kelas valid, NIS dobel dalam file) + cek eksistensi ke Firestore per-NIS (get by ID, konkuren chunk 30 — BUKAN query list, lihat antiregresi.md §13.2), mengembalikan baris berstatus `baru`/`update`/`error`. `jalankanImporSiswa(baris, onLog)` — simpan baris valid dalam batch ter-chunk (~400 operasi/chunk), NIS sementara unik dicoba ulang sampai 8x kalau bentrok, progress via `onLog`.
+- **`saveIdentitasSiswa()` diperbarui**: sekarang HANYA menulis field yang ada di objek payload (field yang tidak disertakan = tidak disentuh) — diperlukan supaya impor massal tidak menimpa biodata yang sudah diisi wali kelas untuk kolom yang admin sengaja tidak isi di file impor (lihat antiregresi.md §13.3). Pemanggil lama (`kelengkapan-rapor.html`, selalu kirim semua field) tidak terpengaruh.
+- **`akademik/import-siswa.html`** (baru, ditautkan dari `admin-hub.html`) — unduh template → unggah file terisi (parsing SheetJS `xlsx@0.18.5`, pola sama dengan `import-nisn.html`) → tabel tinjau berpaginasi (50 baris/halaman, filter Baru/Update/Error) dengan ringkasan jumlah → "Proses Impor" dengan log progres, baris error otomatis dilewati (bukan menggagalkan seluruh impor).
+
+### Verifikasi
+- File `.xlsx` uji 400 baris (campuran normal/NIS-kosong/dobel-NIS/nama-kosong/kelas-invalid) dibuat & diparse dengan library `xlsx@0.18.5` yang sama seperti di browser (lewat Node) — hasil deteksi error tepat (19 baris error terdeteksi dengan benar: 9 dobel NIS, 5 nama kosong, 5 kelas tidak valid), performa validasi <5ms untuk 400 baris.
+- Template diverifikasi terbuka & dapat dikonversi LibreOffice tanpa error.
+- `node --check` pada `firestore-data-akademik.js` + script module `import-siswa.html`, audit brace/paren, audit balance tag `<div>`, grep cross-check fungsi baru vs import.
+- **Belum diuji end-to-end ke Firestore sungguhan** (tidak ada akses jaringan ke Firebase dari lingkungan kerja) — fase cek-eksistensi & tulis-batch mengikuti pola yang sudah terbukti di `gantiNis()`/`setujuiMutasi()`, tapi belum dieksekusi nyata. **Sarankan uji dengan file kecil (5-10 baris) dulu sebelum memakai file 400 baris sungguhan.**
+
+---
+
 ## 2026-09-12 (revisi) — `[Akademik]` Kelengkapan Rapor: cetak dibangun ulang PERSIS mengikuti format asli
 
 ### Kenapa direvisi
