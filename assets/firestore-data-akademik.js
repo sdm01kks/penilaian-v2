@@ -848,6 +848,267 @@ export async function batalkanMutasi(mutasiId) {
 }
 
 /* ==========================================================================
+   Impor Data Siswa (massal) — upload template .xlsx berisi field inti siswa
+   + biodata Identitas Peserta Didik sekaligus, ditinjau dulu (baru/update/
+   error per baris) sebelum benar-benar disimpan. Dirancang untuk ~400 baris
+   dalam satu kali proses (lihat antiregresi.md §13):
+   - Cek eksistensi per NIS lewat getDoc satu-satu (BUKAN query list) — ini
+     sengaja, karena get() by ID tidak kena batasan filter list query
+     (§2/§8.1/§11.2/§12.2), dijalankan konkuren berkelompok (chunk kecil)
+     supaya tidak terlalu banyak request bersamaan.
+   - Penulisan pakai writeBatch, di-chunk ~200 baris (~400 operasi, siswa +
+     identitas per baris) supaya aman di bawah limit 500 operasi/batch.
+   - UPDATE (siswa sudah ada) HANYA menimpa kolom yang benar-benar diisi di
+     file — kolom kosong TIDAK menghapus data lama (lihat perbedaan dengan
+     CREATE di jalankanImporSiswa()).
+   ========================================================================== */
+
+const KELAS_SEKOLAH_IMPOR = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
+
+function normalisasiJenjangImpor(val, kelas) {
+  const v = (val || '').toString().trim().toLowerCase();
+  if (v.startsWith('iqro')) return 'iqro';
+  if (v.startsWith('quran') || v.startsWith("qur'an") || v.startsWith('al-quran') || v.startsWith('al quran')) return 'quran';
+  if (v) return null; // diisi tapi tidak dikenali — biarkan null, ditandai bukan error fatal
+  return /^[12]/.test(kelas) ? 'iqro' : 'quran'; // default utk siswa BARU kalau kosong
+}
+function normalisasiAktifImpor(val) {
+  const v = (val || '').toString().trim().toLowerCase();
+  if (!v) return null; // tidak diisi = tidak diketahui (jangan sentuh utk update)
+  return !(v.startsWith('non') || v === 'tidak aktif' || v === 'false' || v === '0');
+}
+function normalisasiJkImpor(val) {
+  const v = (val || '').toString().trim().toLowerCase();
+  if (v.startsWith('l')) return 'Laki-laki';
+  if (v.startsWith('p')) return 'Perempuan';
+  return '';
+}
+/** Terima Date object (dari SheetJS cellDates), serial Excel, atau string 'YYYY-MM-DD'/'DD/MM/YYYY'. */
+function normalisasiTanggalImpor(val) {
+  if (!val) return '';
+  if (val instanceof Date && !isNaN(val)) {
+    return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
+  }
+  const s = val.toString().trim();
+  if (!s) return '';
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return s; // dibiarkan apa adanya kalau format tak dikenali — bukan alasan gagal impor
+}
+
+/**
+ * Validasi lokal + cek eksistensi ke Firestore untuk setiap baris hasil
+ * parse template. TIDAK menulis apa pun — murni untuk tabel tinjau di UI.
+ * @param {Array<object>} rowsMentah baris ter-parse dari SheetJS, field-nya
+ *   PERSIS nama kolom template (lihat KOLOM di build_template.py / header
+ *   sheet "Data Siswa"): 'NIS','Nama Lengkap','Kelas','Jenjang Tahsin-Tahfizh',
+ *   'NISN','Tempat Lahir','Tanggal Lahir','Status Aktif','Jenis Kelamin',
+ *   'Agama','Status dalam Keluarga','Anak ke','Alamat Peserta Didik',
+ *   'Nomor Telepon Rumah','Sekolah Asal','Diterima di Kelas','Diterima Tanggal',
+ *   'Nama Ayah','Nama Ibu','Alamat Orang Tua','Pekerjaan Ayah','Pekerjaan Ibu',
+ *   'Nama Wali','Alamat Wali','Telepon Wali','Pekerjaan Wali', plus `_baris`
+ *   (nomor baris Excel, untuk pesan error).
+ * @returns {Promise<Array<object>>} baris diperkaya: { ...asal, status:
+ *   'baru'|'update'|'error', errors: string[], resolvedNis, nisSementara }
+ */
+export async function praLihatImporSiswa(rowsMentah) {
+  // 1. Normalisasi + validasi lokal (tidak perlu ke server).
+  const dipakaiNis = new Map(); // nis -> nomor baris pertama yang pakai (deteksi duplikat DALAM file)
+  const hasil = rowsMentah.map((r) => {
+    const errors = [];
+    const nama = (r['Nama Lengkap'] || '').toString().trim();
+    const kelas = (r['Kelas'] || '').toString().trim().toUpperCase();
+    const nisMentah = (r['NIS'] || '').toString().trim();
+    const nisKosong = !nisMentah || nisMentah === '-';
+
+    if (!nama) errors.push('Nama Lengkap kosong.');
+    if (!kelas) errors.push('Kelas kosong.');
+    else if (!KELAS_SEKOLAH_IMPOR.includes(kelas)) errors.push(`Kelas "${kelas}" tidak dikenali.`);
+
+    if (!nisKosong) {
+      if (dipakaiNis.has(nisMentah)) errors.push(`NIS "${nisMentah}" dobel dengan baris ${dipakaiNis.get(nisMentah)}.`);
+      else dipakaiNis.set(nisMentah, r._baris);
+    }
+
+    return {
+      _baris: r._baris,
+      nisMentah: nisKosong ? '' : nisMentah,
+      nisKosong,
+      nama, kelas,
+      jenjangMentah: (r['Jenjang Tahsin-Tahfizh'] || '').toString().trim(),
+      nisn: (r['NISN'] || '').toString().trim(),
+      tempatLahir: (r['Tempat Lahir'] || '').toString().trim(),
+      tanggalLahir: normalisasiTanggalImpor(r['Tanggal Lahir']),
+      aktifMentah: (r['Status Aktif'] || '').toString().trim(),
+      jenisKelamin: normalisasiJkImpor(r['Jenis Kelamin']),
+      agama: (r['Agama'] || '').toString().trim(),
+      statusDalamKeluarga: (r['Status dalam Keluarga'] || '').toString().trim(),
+      anakKe: (r['Anak ke'] || '').toString().trim(),
+      alamatSiswa: (r['Alamat Peserta Didik'] || '').toString().trim(),
+      teleponRumah: (r['Nomor Telepon Rumah'] || '').toString().trim(),
+      sekolahAsal: (r['Sekolah Asal'] || '').toString().trim(),
+      diterimaDiKelas: (r['Diterima di Kelas'] || '').toString().trim(),
+      diterimaTanggal: normalisasiTanggalImpor(r['Diterima Tanggal']),
+      namaAyah: (r['Nama Ayah'] || '').toString().trim(),
+      namaIbu: (r['Nama Ibu'] || '').toString().trim(),
+      alamatOrangTua: (r['Alamat Orang Tua'] || '').toString().trim(),
+      pekerjaanAyah: (r['Pekerjaan Ayah'] || '').toString().trim(),
+      pekerjaanIbu: (r['Pekerjaan Ibu'] || '').toString().trim(),
+      namaWali: (r['Nama Wali'] || '').toString().trim(),
+      alamatWali: (r['Alamat Wali'] || '').toString().trim(),
+      teleponWali: (r['Telepon Wali'] || '').toString().trim(),
+      pekerjaanWali: (r['Pekerjaan Wali'] || '').toString().trim(),
+      errors,
+      status: errors.length ? 'error' : 'baru', // 'baru' sementara, dikoreksi jadi 'update' di bawah kalau NIS sudah ada
+      resolvedNis: nisKosong ? null : nisMentah,
+      nisSementara: nisKosong,
+    };
+  });
+
+  // 2. Cek eksistensi ke Firestore untuk baris ber-NIS valid (get by ID,
+  //    bukan list query — lihat catatan di atas). Konkuren, di-chunk 30.
+  const perluCek = hasil.filter(x => !x.nisKosong && x.errors.length === 0);
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    perluCek.forEach(x => { x.status = DEMO_SISWA.some(s => s.id === x.nisMentah) ? 'update' : 'baru'; });
+    return hasil;
+  }
+  const { db, fsMod } = window.__fb;
+  const CHUNK = 30;
+  for (let i = 0; i < perluCek.length; i += CHUNK) {
+    const grup = perluCek.slice(i, i + CHUNK);
+    const snaps = await Promise.all(grup.map(x => fsMod.getDoc(fsMod.doc(db, 'siswa', x.nisMentah))));
+    grup.forEach((x, idx) => { x.status = snaps[idx].exists() ? 'update' : 'baru'; });
+  }
+  return hasil;
+}
+
+/**
+ * Simpan baris hasil praLihatImporSiswa() ke Firestore. Baris berstatus
+ * 'error' otomatis dilewati. NIS kosong dibuatkan NIS sementara unik
+ * (dicoba ulang kalau kebetulan bentrok, sama seperti gantiNis()/
+ * setujuiMutasi()). 'baru' → data lengkap dengan default (jenjang dari
+ * kelas, aktif=true kalau kosong). 'update' → HANYA field yang diisi di
+ * file yang dikirim ke updateSiswaData()/saveIdentitasSiswa() (field
+ * kosong di file benar-benar DIHILANGKAN dari payload, bukan dikirim
+ * sebagai string kosong — supaya tidak menimpa data lama, lihat komentar
+ * di updateSiswaData()/saveIdentitasSiswa()).
+ * @param {Array<object>} baris hasil praLihatImporSiswa() (boleh sudah
+ *   diedit sedikit oleh UI, mis. baris error yang di-uncheck).
+ * @param {(msg:string)=>void} [onLog]
+ * @returns {Promise<{berhasil:number, dilewati:number}>}
+ */
+export async function jalankanImporSiswa(baris, onLog) {
+  const log = (msg) => { if (onLog) onLog(msg); };
+  const valid = baris.filter(x => x.status !== 'error');
+  const dilewati = baris.length - valid.length;
+  if (!valid.length) { log('Tidak ada baris valid untuk disimpan.'); return { berhasil: 0, dilewati }; }
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 400));
+    for (const x of valid) {
+      const nis = x.nisKosong ? buatNisSementara() : x.nisMentah;
+      const idx = DEMO_SISWA.findIndex(s => s.id === nis);
+      const jenjang = normalisasiJenjangImpor(x.jenjangMentah, x.kelas);
+      if (idx >= 0) {
+        DEMO_SISWA[idx] = {
+          ...DEMO_SISWA[idx],
+          nama: x.nama, kelas: x.kelas,
+          ...(x.jenjangMentah ? { jenjang } : {}),
+          ...(x.nisn ? { nisn: x.nisn } : {}),
+          ...(x.tempatLahir ? { tempatLahir: x.tempatLahir } : {}),
+          ...(x.tanggalLahir ? { tanggalLahir: x.tanggalLahir } : {}),
+          ...(normalisasiAktifImpor(x.aktifMentah) !== null ? { aktif: normalisasiAktifImpor(x.aktifMentah) } : {}),
+        };
+      } else {
+        DEMO_SISWA.push({
+          id: nis, nis, nama: x.nama, kelas: x.kelas, jenjang,
+          aktif: normalisasiAktifImpor(x.aktifMentah) ?? true,
+          tempatLahir: x.tempatLahir, tanggalLahir: x.tanggalLahir, nisn: x.nisn,
+          nisSementara: x.nisKosong,
+        });
+      }
+    }
+    log(`Mode pratinjau: ${valid.length} baris disimulasikan (biodata Identitas tidak disimulasikan di sini).`);
+    return { berhasil: valid.length, dilewati };
+  }
+
+  const { db, fsMod } = window.__fb;
+  let batch = fsMod.writeBatch(db);
+  let opsInBatch = 0;
+  let berhasil = 0;
+  const nisTerpakaiSesi = new Set(); // NIS sementara yang sudah dipakai baris LAIN di file yang sama
+
+  async function nisSementaraUnik() {
+    for (let percobaan = 0; percobaan < 8; percobaan++) {
+      const kandidat = buatNisSementara();
+      if (nisTerpakaiSesi.has(kandidat)) continue;
+      const snap = await fsMod.getDoc(fsMod.doc(db, 'siswa', kandidat));
+      if (!snap.exists()) { nisTerpakaiSesi.add(kandidat); return kandidat; }
+    }
+    throw new Error('Gagal membuat NIS sementara unik setelah beberapa percobaan.');
+  }
+
+  async function commitJikaPenuh(ambang = 400) {
+    if (opsInBatch >= ambang) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+  }
+
+  let ke = 0;
+  for (const x of valid) {
+    ke++;
+    if (ke % 25 === 0) log(`Memproses baris ${ke} dari ${valid.length}…`);
+    const nis = x.nisKosong ? await nisSementaraUnik() : x.nisMentah;
+    const jenjang = normalisasiJenjangImpor(x.jenjangMentah, x.kelas);
+    const aktif = normalisasiAktifImpor(x.aktifMentah);
+
+    const dataSiswa = x.status === 'baru'
+      ? { // CREATE — payload penuh, dengan default utk kolom kosong
+          nama: x.nama, nis, kelas: x.kelas, jenjang, aktif: aktif ?? true,
+          tempatLahir: x.tempatLahir || '', tanggalLahir: x.tanggalLahir || null,
+          nisn: x.nisn || '', nisSementara: x.nisKosong,
+        }
+      : (() => { // UPDATE — HANYA kolom yang diisi di file
+          const partial = { nama: x.nama, kelas: x.kelas };
+          if (x.jenjangMentah) partial.jenjang = jenjang;
+          if (aktif !== null) partial.aktif = aktif;
+          if (x.tempatLahir) partial.tempatLahir = x.tempatLahir;
+          if (x.tanggalLahir) partial.tanggalLahir = x.tanggalLahir;
+          if (x.nisn) partial.nisn = x.nisn;
+          return partial;
+        })();
+
+    if (x.status === 'baru') {
+      batch.set(fsMod.doc(db, 'siswa', nis), dataSiswa);
+    } else {
+      batch.update(fsMod.doc(db, 'siswa', nis), dataSiswa);
+    }
+    opsInBatch++;
+
+    const kolomIdentitas = {
+      jenisKelamin: x.jenisKelamin, agama: x.agama, statusDalamKeluarga: x.statusDalamKeluarga,
+      anakKe: x.anakKe, alamatSiswa: x.alamatSiswa, teleponRumah: x.teleponRumah, sekolahAsal: x.sekolahAsal,
+      diterimaDiKelas: x.diterimaDiKelas, diterimaTanggal: x.diterimaTanggal,
+      namaAyah: x.namaAyah, namaIbu: x.namaIbu, alamatOrangTua: x.alamatOrangTua,
+      pekerjaanAyah: x.pekerjaanAyah, pekerjaanIbu: x.pekerjaanIbu,
+      namaWali: x.namaWali, alamatWali: x.alamatWali, teleponWali: x.teleponWali, pekerjaanWali: x.pekerjaanWali,
+    };
+    const identitasDiisi = Object.fromEntries(Object.entries(kolomIdentitas).filter(([, v]) => v));
+    if (Object.keys(identitasDiisi).length) {
+      batch.set(fsMod.doc(db, 'identitas_siswa', nis), identitasDiisi, { merge: true });
+      opsInBatch++;
+    }
+
+    berhasil++;
+    await commitJikaPenuh();
+  }
+  if (opsInBatch > 0) await batch.commit();
+  log(`Selesai — ${berhasil} baris tersimpan, ${dilewati} baris dilewati.`);
+  return { berhasil, dilewati };
+}
+
+/* ==========================================================================
    Config — semester & tahun ajaran aktif, satu dokumen untuk sekolah.
    ========================================================================== */
 
