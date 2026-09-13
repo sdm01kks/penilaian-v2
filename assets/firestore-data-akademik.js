@@ -890,6 +890,7 @@ export async function saveProfilSekolah(payload) {
     kecamatan:      payload.kecamatan      || '',
     kotaSekolah:    payload.kotaSekolah    || '',
     provinsi:       payload.provinsi       || '',
+    kodePos:        payload.kodePos        || '',
     website:        payload.website        || '',
     email:          payload.email          || '',
   };
