@@ -1,7 +1,26 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), dan 2026-09-12 (Kelengkapan Rapor).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), dan 2026-09-12 revisi (format cetak dibangun ulang).
+
+---
+
+## Status per 2026-09-12 revisi (format cetak Kelengkapan Rapor dibangun ulang)
+
+**Belum dikirim/dideploy.** Detail penuh di `changelog.md` entri "cetak dibangun ulang PERSIS mengikuti format asli" dan `antiregresi.md` §12.8.
+
+**Kenapa ada revisi:** versi pertama Kelengkapan Rapor (lihat status sebelumnya di bawah) membuat tampilan cetak dengan gaya sendiri, TIDAK sesuai 3 PDF contoh yang diberikan pemilik proyek. Ditegur, lalu dibangun ulang PERSIS mengikuti struktur asli setelah merasterisasi & membaca visual tiap halaman PDF sumber (`pdftoppm`, bukan cuma ekstraksi teks).
+
+**Perubahan struktur signifikan dari versi pertama:**
+- Identitas Peserta Didik ternyata **3 halaman** (biodata tanpa kop / Data Sekolah / Petunjuk Penggunaan statis), bukan 1 halaman dengan kop tambahan seperti versi pertama.
+- Keterangan Pindah Sekolah ternyata **2 halaman terpisah** (KELUAR, MASUK), bukan 1 halaman ringkasan gabungan.
+- Petunjuk Penggunaan disalin verbatim TERMASUK cacat kecil dokumen sumber (nomor loncat 10→12) — sengaja tidak diperbaiki.
+- Tabel KELUAR/MASUK selalu 3 slot (kapasitas form asli), slot kosong tetap dotted-line, TTD Kepsek sengaja dibiarkan kosong (tidak auto-isi dari Profil Sekolah) karena begitu di form asli.
+- `config/akademik` bertambah `kodePos`.
+
+**Kalau melanjutkan area cetak rapor manapun di masa depan:** SELALU rasterisasi & baca visual dulu kalau pemilik proyek memberi contoh format (PDF/gambar) — jangan cuma mengandalkan teks yang terekstrak, karena tabel/kop/penomoran/halaman terpisah tidak kelihatan dari teks saja. Pola verifikasi "bangun skrip Node standalone → render `wkhtmltopdf` → rasterisasi `pdftoppm` → bandingkan visual" di `antiregresi.md` §12.8 bisa dipakai lagi.
+
+**Masih berlaku dari sebelumnya:** Impor Data Siswa belum dibangun, menunggu file dari pemilik proyek — **tanyakan format filenya dulu sebelum membangun.**
 
 ---
 

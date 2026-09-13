@@ -17,6 +17,26 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-12 (revisi) — `[Akademik]` Kelengkapan Rapor: cetak dibangun ulang PERSIS mengikuti format asli
+
+### Kenapa direvisi
+Versi pertama (entri di bawah ini) membangun ulang tampilan cetak dengan gaya sendiri (kop tambahan yang tidak ada di sumber, satu halaman ringkas untuk Identitas & Keterangan Pindah Sekolah) alih-alih mengikuti struktur asli tiga PDF yang diberikan pemilik proyek. Ditegur karena hasilnya tidak sesuai. Diperbaiki dengan merasterisasi (`pdftoppm`) dan membaca visual tiap halaman PDF sumber — ekstraksi teks saja tidak cukup untuk menangkap tabel/kop/penomoran.
+
+### Temuan yang mengubah struktur
+- `identitas_rapor.pdf` **ternyata 3 halaman**, bukan 1: (1) biodata 17-poin TANPA kop sekolah, (2) halaman "Data Sekolah" terpisah (kop 3-baris), (3) halaman "Petunjuk Penggunaan" (teks statis, sama untuk semua siswa).
+- `mutasi_rapor.pdf` **2 halaman terpisah** (KELUAR lalu MASUK), bukan satu halaman gabungan.
+- Petunjuk Penggunaan disalin verbatim TERMASUK cacat kecil dokumen sumber (penomoran loncat 10→12, kalimat No. 9 terpotong tanpa titik) — sengaja tidak "diperbaiki", lihat antiregresi.md §12.8.
+- Tabel KELUAR/MASUK selalu tampilkan 3 slot (kapasitas form asli); slot tanpa data tetap kosong dengan dotted-line, tidak disembunyikan. Area tanda tangan Kepala Sekolah di KELUAR/MASUK SENGAJA dibiarkan dotted-line kosong (tidak diisi otomatis dari Profil Sekolah) karena begitu adanya di form asli.
+- Ditambahkan field `kodePos` ke `config/akademik` (muncul di halaman Data Sekolah, terlewat di iterasi pertama).
+
+### Metode verifikasi baru (dipakai untuk revisi ini, bisa dipakai lagi)
+Karena tidak ada browser di lingkungan kerja: skrip Node standalone meniru persis template literal HTML cetak, dirender ke PDF via `wkhtmltopdf --enable-local-file-access`, dirasterisasi (`pdftoppm`), dibandingkan visual terhadap PDF asli. Jauh lebih andal daripada menebak dari CSS tanpa render sungguhan — lihat antiregresi.md §12.8 untuk detail.
+
+### Catatan
+Status masih **belum dikirim/dideploy, belum diuji end-to-end**. `akademik/profil-sekolah.html` bertambah field Kode Pos (form + load/save).
+
+---
+
 ## 2026-09-12 — `[Akademik]` Kelengkapan Rapor: Cover, Identitas Peserta Didik, Keterangan Pindah Sekolah
 
 ### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §12)
