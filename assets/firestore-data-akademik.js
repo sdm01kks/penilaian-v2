@@ -654,7 +654,7 @@ function buatNisSementara() {
 }
 
 /** [Wali kelas] Ajukan siswa baru masuk kelasnya. */
-export async function ajukanMutasiMasuk({ kelas, createdBy, createdByNama, calonNama, calonTempatLahir, calonTanggalLahir, calonNisn, calonNis }) {
+export async function ajukanMutasiMasuk({ kelas, createdBy, createdByNama, calonNama, calonTempatLahir, calonTanggalLahir, calonNisn, calonNis, calonSekolahAsal }) {
   const data = {
     jenis: 'masuk', status: 'pending', kelas,
     createdBy, createdByNama: createdByNama || null,
@@ -663,6 +663,9 @@ export async function ajukanMutasiMasuk({ kelas, createdBy, createdByNama, calon
     calonTanggalLahir: calonTanggalLahir || null,
     calonNisn: calonNisn ? String(calonNisn).trim() : '',
     calonNis: (calonNis && calonNis.trim() && calonNis.trim() !== '-') ? calonNis.trim() : '',
+    // Kosong = siswa baru pertama kali sekolah (bukan pindahan) — dipakai
+    // di cetak "Keterangan Pindah Sekolah" bagian MASUK (lihat §12).
+    calonSekolahAsal: calonSekolahAsal ? String(calonSekolahAsal).trim() : '',
   };
   if (!data.calonNama) throw new Error('Nama calon siswa wajib diisi.');
 
@@ -728,6 +731,15 @@ export async function getMutasiSemua() {
  * [Admin] Setujui satu usulan. `masuk` → createSiswa() (NIS sementara
  * auto-generate kalau calonNis kosong, dicoba ulang beberapa kali kalau
  * kebetulan sudah dipakai). `keluar` → updateSiswaData(aktif:false).
+ *
+ * Sekaligus merekam field yang dibutuhkan cetak "Keterangan Pindah
+ * Sekolah" (lihat §12 antiregresi.md) — TIDAK diminta dari wali kelas
+ * saat mengusulkan (supaya form usulan tetap ringkas), diisi otomatis
+ * dari tanggal & semester/tahun ajaran AKTIF pada saat admin menyetujui:
+ * `tanggalMasuk`/`semesterMasuk`/`tahunAjaranMasuk` (masuk) atau
+ * `tanggalKeluar` (keluar). `siswaIdHasil` merekam ID siswa yang baru
+ * dibuat (masuk) — dipakai buat mencari balik usulan ini dari halaman
+ * cetak lewat siswaId, karena saat diajukan siswanya belum punya ID.
  */
 export async function setujuiMutasi(mutasiId) {
   if (DEMO_MODE) {
@@ -735,16 +747,23 @@ export async function setujuiMutasi(mutasiId) {
     const list = readDemoMutasi();
     const m = list.find(x => x.id === mutasiId);
     if (!m) throw new Error('Usulan tidak ditemukan.');
+    const config = await getConfigAkademik();
+    const hariIni = new Date().toISOString().slice(0, 10);
     if (m.jenis === 'masuk') {
       const nis = m.calonNis || buatNisSementara();
-      await createSiswa({
+      const siswaBaru = await createSiswa({
         nis, nama: m.calonNama, kelas: m.kelas,
         jenjang: /^[12]/.test(m.kelas) ? 'iqro' : 'quran',
         aktif: true, tempatLahir: m.calonTempatLahir, tanggalLahir: m.calonTanggalLahir,
         nisn: m.calonNisn, nisSementara: !m.calonNis,
       });
+      m.siswaIdHasil = siswaBaru.id;
+      m.tanggalMasuk = hariIni;
+      m.semesterMasuk = config.semesterAktif;
+      m.tahunAjaranMasuk = config.tahunAjaran;
     } else {
       await updateSiswaData(m.siswaId, { aktif: false });
+      m.tanggalKeluar = hariIni;
     }
     m.status = 'disetujui';
     m.reviewedAt = new Date().toISOString();
@@ -759,12 +778,16 @@ export async function setujuiMutasi(mutasiId) {
   const m = snap.data();
   if (m.status !== 'pending') throw new Error('Usulan ini sudah diproses sebelumnya.');
 
+  const config = await getConfigAkademik();
+  const hariIni = new Date().toISOString().slice(0, 10);
+  const extraUpdate = {};
+
   if (m.jenis === 'masuk') {
-    let attempt = 0, lastErr = null;
+    let siswaBaru = null, lastErr = null, attempt = 0;
     while (attempt < 5) {
       const nis = m.calonNis || buatNisSementara();
       try {
-        await createSiswa({
+        siswaBaru = await createSiswa({
           nis, nama: m.calonNama, kelas: m.kelas,
           jenjang: /^[12]/.test(m.kelas) ? 'iqro' : 'quran',
           aktif: true, tempatLahir: m.calonTempatLahir, tanggalLahir: m.calonTanggalLahir,
@@ -779,11 +802,17 @@ export async function setujuiMutasi(mutasiId) {
       }
     }
     if (lastErr) throw lastErr;
+    extraUpdate.siswaIdHasil = siswaBaru.id;
+    extraUpdate.tanggalMasuk = hariIni;
+    extraUpdate.semesterMasuk = config.semesterAktif;
+    extraUpdate.tahunAjaranMasuk = config.tahunAjaran;
   } else {
     await updateSiswaData(m.siswaId, { aktif: false });
+    extraUpdate.tanggalKeluar = hariIni;
   }
 
   await fsMod.updateDoc(ref, {
+    ...extraUpdate,
     status: 'disetujui',
     reviewedBy: window.__fb.auth.currentUser?.uid || null,
     reviewedAt: fsMod.serverTimestamp(),
@@ -838,20 +867,31 @@ export async function getConfigAkademik() {
 }
 
 /**
- * Simpan profil sekolah (dipakai kop & tanda tangan rapor cetak) ke
+ * Simpan profil sekolah (dipakai kop & tanda tangan rapor cetak, plus
+ * Cover Rapor & Identitas Peserta Didik — lihat "Kelengkapan Rapor") ke
  * config/akademik — dokumen SAMA dengan semesterAktif/tahunAjaran, cuma
  * field-nya berbeda (merge, bukan overwrite) supaya tidak menimpa
  * semesterAktif/tahunAjaran yang selama ini diisi manual lewat Firebase
  * Console. Field: namaSekolah, alamatSekolah, namaKepsek, nbmKepsek,
- * kotaRapor.
+ * kotaRapor, npsn, nss, teleponSekolah, kelurahan, kecamatan, kotaSekolah,
+ * provinsi, website, email.
  */
 export async function saveProfilSekolah(payload) {
   const data = {
-    namaSekolah:   payload.namaSekolah   || '',
-    alamatSekolah: payload.alamatSekolah || '',
-    namaKepsek:    payload.namaKepsek    || '',
-    nbmKepsek:     payload.nbmKepsek     || '',
-    kotaRapor:     payload.kotaRapor     || '',
+    namaSekolah:    payload.namaSekolah    || '',
+    alamatSekolah:  payload.alamatSekolah  || '',
+    namaKepsek:     payload.namaKepsek     || '',
+    nbmKepsek:      payload.nbmKepsek      || '',
+    kotaRapor:      payload.kotaRapor      || '',
+    npsn:           payload.npsn           || '',
+    nss:            payload.nss            || '',
+    teleponSekolah: payload.teleponSekolah || '',
+    kelurahan:      payload.kelurahan      || '',
+    kecamatan:      payload.kecamatan      || '',
+    kotaSekolah:    payload.kotaSekolah    || '',
+    provinsi:       payload.provinsi       || '',
+    website:        payload.website        || '',
+    email:          payload.email          || '',
   };
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));
@@ -861,6 +901,52 @@ export async function saveProfilSekolah(payload) {
   }
   const { db, fsMod } = window.__fb;
   await fsMod.setDoc(fsMod.doc(db, 'config', 'akademik'), data, { merge: true });
+}
+
+/* ==========================================================================
+   Identitas Siswa — biodata lengkap untuk cetak Identitas Peserta Didik
+   (bagian dari "Kelengkapan Rapor"). SENGAJA koleksi terpisah dari
+   `siswa` (bukan field tambahan di sana) — supaya wali kelas bisa ikut
+   mengisi tanpa memperluas akses admin-only `siswa` (NIS/nama/kelas/aktif
+   tetap admin-only lewat kelola-siswa.html, TIDAK berubah oleh koleksi
+   ini). Document ID = siswaId (sama dengan NIS) — satu-satu dengan siswa.
+   ========================================================================== */
+
+const DEMO_IDENTITAS_KEY = 'akd_demo_identitas';
+
+/** @returns {Promise<object>} objek biodata, {} kalau belum pernah diisi. */
+export async function getIdentitasSiswa(siswaId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 150));
+    const all = JSON.parse(localStorage.getItem(DEMO_IDENTITAS_KEY) || '{}');
+    return all[siswaId] || {};
+  }
+  const { db, fsMod } = window.__fb;
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'identitas_siswa', siswaId));
+  return snap.exists() ? snap.data() : {};
+}
+
+/** Simpan (merge) biodata Identitas Peserta Didik untuk satu siswa. */
+export async function saveIdentitasSiswa(siswaId, payload) {
+  const kolomBoleh = [
+    'jenisKelamin', 'agama', 'statusDalamKeluarga', 'anakKe',
+    'alamatSiswa', 'teleponRumah', 'sekolahAsal',
+    'diterimaDiKelas', 'diterimaTanggal',
+    'namaAyah', 'namaIbu', 'alamatOrangTua', 'pekerjaanAyah', 'pekerjaanIbu',
+    'namaWali', 'alamatWali', 'teleponWali', 'pekerjaanWali',
+  ];
+  const data = {};
+  kolomBoleh.forEach(k => { data[k] = (payload[k] ?? '').toString().trim(); });
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const all = JSON.parse(localStorage.getItem(DEMO_IDENTITAS_KEY) || '{}');
+    all[siswaId] = { ...(all[siswaId] || {}), ...data };
+    localStorage.setItem(DEMO_IDENTITAS_KEY, JSON.stringify(all));
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  await fsMod.setDoc(fsMod.doc(db, 'identitas_siswa', siswaId), data, { merge: true });
 }
 
 /* ==========================================================================
