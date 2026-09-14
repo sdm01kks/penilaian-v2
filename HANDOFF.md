@@ -1,7 +1,19 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), dan 2026-09-14 (perombakan cakupan fungsi Admin).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), dan 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas).
+
+---
+
+## Status per 2026-09-14 lanjutan (Cetak Cover Rapor: centering & Tanggal TTD Identitas)
+
+**Belum dikirim/dideploy. PENTING: perubahan centering Cover Rapor BELUM bisa diverifikasi visual dari sisi Claude** — lihat `antiregresi.md` §15.1 untuk detail. Ringkasnya: alat rasterisasi (`wkhtmltopdf`) yang biasa dipakai untuk verifikasi visual di sesi-sesi sebelumnya terbukti punya bug pengukuran tinggi halaman untuk unit `cm`, jadi tidak bisa dipercaya khusus untuk menguji centering. Tidak ada Chromium/Puppeteer yang bisa diunduh di lingkungan kerja sebagai gantinya.
+
+**Yang perlu Fairel lakukan**: setelah deploy, coba cetak Cover Rapor untuk satu siswa dan lihat langsung di preview cetak browser — apakah kontennya benar-benar di tengah halaman A4 (vertikal & horizontal). Kalau belum tepat, kabari saya bagian mana yang meleset (terlalu ke atas/bawah/kiri/kanan) supaya saya bisa koreksi teknik CSS-nya — lihat antiregresi.md §15.2 untuk pola yang dipakai dan kemungkinan penyebab kalau masih salah.
+
+**Yang lain (logo diperbesar, kotak Nama/NIS-NISN center+bold+lebih besar, field Tanggal TTD Identitas baru di Profil Sekolah) — perubahan CSS/data sederhana, risiko rendah, tidak perlu verifikasi visual khusus.**
+
+**Masih berlaku dari sebelumnya:** tidak ada lagi item terbuka dari sesi-sesi sebelum ini.
 
 ---
 

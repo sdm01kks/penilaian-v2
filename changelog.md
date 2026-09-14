@@ -17,6 +17,20 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-14 (lanjutan) — `[Akademik]` Cetak Cover Rapor: centering & Tanggal TTD Identitas terpisah
+
+### Ditambahkan/Diubah
+- **`akademik/kelengkapan-rapor.html`** (Cetak Cover Rapor): logo diperbesar (170pt → 260pt), kotak Nama/NIS-NISN jadi center-align + bold + font lebih besar (11pt → 15pt), dan konten diusahakan center vertikal+horizontal di halaman A4 lewat teknik `@page{margin:0}` + div berukuran fisik 21cm×29.7cm + flexbox (lihat antiregresi.md §15.1-15.2 untuk detail & KETERBATASAN VERIFIKASI — **belum bisa dipastikan visual dari sisi Claude**, tolong cek langsung di preview cetak browser).
+- **`assets/firestore-data-akademik.js`** (`saveProfilSekolah`/`getConfigAkademik`): field baru `tanggalTtdIdentitas`.
+- **`akademik/profil-sekolah.html`**: input tanggal baru "Tanggal TTD Identitas Rapor" dengan penjelasan bedanya dari tanggal TTD rapor STS/SAS.
+- **`akademik/kelengkapan-rapor.html`** (Cetak Identitas Peserta Didik): baris tanda tangan Kepala Sekolah sekarang pakai `tanggalTtdIdentitas` (diformat Indonesia), bukan lagi tanda "…" kosong. Kosong tetap tampil titik-titik kalau admin belum mengisi.
+
+### Catatan
+- **Verifikasi visual TIDAK bisa dituntaskan** untuk perbaikan centering Cover — `wkhtmltopdf` (alat verifikasi yang sudah dipakai sejak §12) terbukti punya bug pengukuran tinggi halaman untuk unit `cm` (dites langsung, div `height:29.7cm` cuma mengisi ~78% tinggi terlihat). Puppeteer/Chromium tidak bisa diunduh dari lingkungan kerja ini. Teknik yang dipakai adalah pola standar yang mestinya benar di Chrome sungguhan, tapi **wajib dicek langsung oleh Fairel** setelah deploy.
+- `node --check` pada `firestore-data-akademik.js` + script module `kelengkapan-rapor.html`/`profil-sekolah.html`, audit balance tag `<div>` — semua bersih (ini memverifikasi SINTAKS, bukan hasil visual).
+
+---
+
 ## 2026-09-14 — `[Akademik]` Perombakan cakupan fungsi Admin
 
 ### Latar belakang
