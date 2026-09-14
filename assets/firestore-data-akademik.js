@@ -1142,6 +1142,12 @@ export async function saveProfilSekolah(payload) {
     kodePos:        payload.kodePos        || '',
     website:        payload.website        || '',
     email:          payload.email          || '',
+    // Tanggal TTD Kepala Sekolah di cetak Identitas Peserta Didik SENGAJA
+    // field terpisah dari tanggal TTD rapor STS/SAS (yang selalu pakai
+    // tanggal hari cetak, lihat rapor-sts-cetak.html/rapor-sas-cetak.html)
+    // — Identitas biasanya ditandatangani sekali di awal tahun ajaran
+    // (umumnya Juli), bukan setiap kali dicetak. Lihat antiregresi.md §15.
+    tanggalTtdIdentitas: payload.tanggalTtdIdentitas || '',
   };
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 250));
