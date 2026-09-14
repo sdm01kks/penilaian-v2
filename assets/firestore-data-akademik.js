@@ -372,25 +372,11 @@ export async function getSiswaByKelas(kelas) {
  * nisn yang sudah ada dengan string kosong secara tidak sengaja).
  * @param {Array<{siswaId:string, nisn:string}>} entries
  */
-export async function saveNisnBatch(entries) {
-  const valid = entries.filter(e => e.nisn && e.nisn.trim());
-  if (!valid.length) return;
-
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 300));
-    valid.forEach(e => {
-      const s = DEMO_SISWA.find(x => x.id === e.siswaId);
-      if (s) s.nisn = e.nisn.trim();
-    });
-    return;
-  }
-  const { db, fsMod } = window.__fb;
-  const batch = fsMod.writeBatch(db);
-  valid.forEach(e => {
-    batch.update(fsMod.doc(db, 'siswa', e.siswaId), { nisn: e.nisn.trim() });
-  });
-  await batch.commit();
-}
+/* saveNisnBatch() (Kelola NISN/Impor NISN per-kelas) DIHAPUS 2026-09-14 —
+   fungsi itu sudah digantikan sepenuhnya oleh field NISN di
+   updateSiswaData()/createSiswa() (Kelola Data Siswa) dan oleh
+   praLihatImporSiswa()/jalankanImporSiswa() (Impor Data Siswa massal).
+   Lihat antiregresi.md §14.2 kalau butuh riwayatnya. */
 
 /**
  * [Admin] Ambil SEMUA siswa satu kelas — aktif MAUPUN nonaktif — terurut
@@ -865,12 +851,16 @@ export async function batalkanMutasi(mutasiId) {
 
 const KELAS_SEKOLAH_IMPOR = ['1A','1B','1C','2A','2B','3A','3B','3C','4A','4B','5A','5B','5C','6A','6B'];
 
-function normalisasiJenjangImpor(val, kelas) {
-  const v = (val || '').toString().trim().toLowerCase();
-  if (v.startsWith('iqro')) return 'iqro';
-  if (v.startsWith('quran') || v.startsWith("qur'an") || v.startsWith('al-quran') || v.startsWith('al quran')) return 'quran';
-  if (v) return null; // diisi tapi tidak dikenali — biarkan null, ditandai bukan error fatal
-  return /^[12]/.test(kelas) ? 'iqro' : 'quran'; // default utk siswa BARU kalau kosong
+/**
+ * `jenjang` (Tahsin-Tahfizh) TIDAK PERNAH diminta dari file impor — impor
+ * data siswa adalah fungsi admin, dan admin tidak berkaitan dengan data
+ * Tahsin-Tahfizh (lihat antiregresi.md §14.3). Ini SELALU otomatis dari
+ * kelas, dipakai HANYA untuk siswa BARU supaya field itu tidak kosong
+ * total (kalau dibiarkan kosong, fitur Tahsin-Tahfizh bisa salah kelola
+ * siswa itu) — guru Tahsin-Tahfizh yang mengoreksi kalau perlu.
+ */
+function jenjangOtomatisDariKelas(kelas) {
+  return /^[12]/.test(kelas) ? 'iqro' : 'quran';
 }
 function normalisasiAktifImpor(val) {
   const v = (val || '').toString().trim().toLowerCase();
@@ -903,7 +893,7 @@ function normalisasiTanggalImpor(val) {
  * parse template. TIDAK menulis apa pun — murni untuk tabel tinjau di UI.
  * @param {Array<object>} rowsMentah baris ter-parse dari SheetJS, field-nya
  *   PERSIS nama kolom template (lihat KOLOM di build_template.py / header
- *   sheet "Data Siswa"): 'NIS','Nama Lengkap','Kelas','Jenjang Tahsin-Tahfizh',
+ *   sheet "Data Siswa"): 'NIS','Nama Lengkap','Kelas',
  *   'NISN','Tempat Lahir','Tanggal Lahir','Status Aktif','Jenis Kelamin',
  *   'Agama','Status dalam Keluarga','Anak ke','Alamat Peserta Didik',
  *   'Nomor Telepon Rumah','Sekolah Asal','Diterima di Kelas','Diterima Tanggal',
@@ -937,7 +927,6 @@ export async function praLihatImporSiswa(rowsMentah) {
       nisMentah: nisKosong ? '' : nisMentah,
       nisKosong,
       nama, kelas,
-      jenjangMentah: (r['Jenjang Tahsin-Tahfizh'] || '').toString().trim(),
       nisn: (r['NISN'] || '').toString().trim(),
       tempatLahir: (r['Tempat Lahir'] || '').toString().trim(),
       tanggalLahir: normalisasiTanggalImpor(r['Tanggal Lahir']),
@@ -1011,12 +1000,10 @@ export async function jalankanImporSiswa(baris, onLog) {
     for (const x of valid) {
       const nis = x.nisKosong ? buatNisSementara() : x.nisMentah;
       const idx = DEMO_SISWA.findIndex(s => s.id === nis);
-      const jenjang = normalisasiJenjangImpor(x.jenjangMentah, x.kelas);
       if (idx >= 0) {
         DEMO_SISWA[idx] = {
           ...DEMO_SISWA[idx],
           nama: x.nama, kelas: x.kelas,
-          ...(x.jenjangMentah ? { jenjang } : {}),
           ...(x.nisn ? { nisn: x.nisn } : {}),
           ...(x.tempatLahir ? { tempatLahir: x.tempatLahir } : {}),
           ...(x.tanggalLahir ? { tanggalLahir: x.tanggalLahir } : {}),
@@ -1024,7 +1011,7 @@ export async function jalankanImporSiswa(baris, onLog) {
         };
       } else {
         DEMO_SISWA.push({
-          id: nis, nis, nama: x.nama, kelas: x.kelas, jenjang,
+          id: nis, nis, nama: x.nama, kelas: x.kelas, jenjang: jenjangOtomatisDariKelas(x.kelas),
           aktif: normalisasiAktifImpor(x.aktifMentah) ?? true,
           tempatLahir: x.tempatLahir, tanggalLahir: x.tanggalLahir, nisn: x.nisn,
           nisSementara: x.nisKosong,
@@ -1060,18 +1047,19 @@ export async function jalankanImporSiswa(baris, onLog) {
     ke++;
     if (ke % 25 === 0) log(`Memproses baris ${ke} dari ${valid.length}…`);
     const nis = x.nisKosong ? await nisSementaraUnik() : x.nisMentah;
-    const jenjang = normalisasiJenjangImpor(x.jenjangMentah, x.kelas);
     const aktif = normalisasiAktifImpor(x.aktifMentah);
 
     const dataSiswa = x.status === 'baru'
-      ? { // CREATE — payload penuh, dengan default utk kolom kosong
-          nama: x.nama, nis, kelas: x.kelas, jenjang, aktif: aktif ?? true,
+      ? { // CREATE — payload penuh, dengan default utk kolom kosong.
+          // `jenjang` SELALU otomatis dari kelas (bukan dari file — lihat
+          // jenjangOtomatisDariKelas(), admin tidak input ini).
+          nama: x.nama, nis, kelas: x.kelas, jenjang: jenjangOtomatisDariKelas(x.kelas), aktif: aktif ?? true,
           tempatLahir: x.tempatLahir || '', tanggalLahir: x.tanggalLahir || null,
           nisn: x.nisn || '', nisSementara: x.nisKosong,
         }
-      : (() => { // UPDATE — HANYA kolom yang diisi di file
+      : (() => { // UPDATE — HANYA kolom yang diisi di file (jenjang TIDAK
+          // pernah diubah dari sini sama sekali, baru maupun lama).
           const partial = { nama: x.nama, kelas: x.kelas };
-          if (x.jenjangMentah) partial.jenjang = jenjang;
           if (aktif !== null) partial.aktif = aktif;
           if (x.tempatLahir) partial.tempatLahir = x.tempatLahir;
           if (x.tanggalLahir) partial.tanggalLahir = x.tanggalLahir;
