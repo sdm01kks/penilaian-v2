@@ -248,7 +248,10 @@ service cloud.firestore {
     // sebelum koleksi nilai (data nilai siswa sungguhan) dibangun.
     match /tp_kktp/{id} {
       allow read: if isLoggedIn();
-      allow write: if isAdmin() || isGuruAkademik();
+      // SENGAJA tidak ada isAdmin() di sini — TP & KKTP sepenuhnya tanggung
+      // jawab guru kelas/guru bidang studi (guru_akademik), bukan admin.
+      // Lihat antiregresi.md §14.1.
+      allow write: if isGuruAkademik();
     }
 
     // ---- config/akademik ---------------------------------------------------

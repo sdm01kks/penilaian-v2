@@ -17,6 +17,28 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-14 — `[Akademik]` Perombakan cakupan fungsi Admin
+
+### Latar belakang
+Admin punya beberapa kemampuan yang seharusnya bukan tanggung jawabnya, dan beberapa fitur yang tumpang tindih/salah tempat. Diperbaiki atas permintaan eksplisit pemilik proyek — lihat `antiregresi.md` §14.
+
+### Diubah/Dihapus
+- **TP & KKTP sepenuhnya jadi tanggung jawab guru kelas/guru bidang studi**: rule `tp_kktp` di `firestore.rules` — dilepas `isAdmin()`, sekarang cuma `isGuruAkademik()`. Grid "Semua Mapel — Pilih Tingkatan" dihapus total dari `admin-hub.html`. `setup-tp.html` tidak lagi mengizinkan role admin. `setup-tp-hub.html` pesan blokir admin diperbarui.
+- **`akademik/import-nisn.html` dan `akademik/kelola-nisn.html` DIHAPUS** dari repo (bukan cuma di-unlink) — fungsinya sudah sepenuhnya tercakup di `kelola-siswa.html` (NISN satu-siswa) dan `import-siswa.html` (NISN massal). Kartu-kartunya dihapus dari `admin-hub.html`. `saveNisnBatch()` di data layer ikut dihapus (dead code).
+- **`kelola-siswa.html` tidak lagi mengekspos field `jenjang` (Tahsin-Tahfizh) ke admin** — toggle Iqro/Al-Qur'an dihapus dari form Tambah & edit, badge read-only di kartu siswa juga dihapus. Field-nya SENDIRI tetap ada di skema `siswa` dan tetap diisi otomatis (heuristik dari kelas) untuk siswa baru — cuma admin tidak lagi bisa memilih/mengubahnya secara manual.
+- **`import-siswa.html` tidak lagi punya kolom "Jenjang Tahsin-Tahfizh"** — dihapus dari template Excel (25 kolom, bukan 26), dari `KOLOM_TEMPLATE`, dan dari `praLihatImporSiswa()`/`jalankanImporSiswa()` (jenjang untuk siswa baru sekarang murni fungsi `jenjangOtomatisDariKelas()`, tidak bisa dioverride dari file).
+- **Impor Data Siswa dipindah dari kartu top-level `admin-hub.html` ke DALAM `kelola-siswa.html`** — tombol baru "Impor Data Siswa dari Excel" di atas tombol "+ Tambah Siswa"; `import-siswa.html` kembali ke `kelola-siswa.html`, bukan lagi ke `admin-hub.html`.
+- Admin tetap bisa menambah siswa baru secara manual satu-satu (fitur ini sudah ada sejak `kelola-siswa.html` dibangun — dikonfirmasi masih berfungsi setelah perubahan field jenjang di atas).
+
+### Verifikasi
+- `node --check` pada `firestore-data-akademik.js` + semua script module HTML yang tersentuh (`kelola-siswa.html`, `import-siswa.html`, `admin-hub.html`, `setup-tp.html`, `setup-tp-hub.html`).
+- Audit brace/paren `firestore-data-akademik.js` & `firestore.rules`, audit balance tag `<div>` di semua HTML tersentuh.
+- Grep memastikan tidak ada sisa referensi ke `import-nisn.html`/`kelola-nisn.html`/`saveNisnBatch` selain catatan historis yang sengaja ditulis.
+- Template Excel diregenerasi (25 kolom) & diuji ulang dengan data 400 baris (parsing `xlsx@0.18.5` di Node) — semua kolom terbaca benar, konsisten dengan `KOLOM_TEMPLATE` baru.
+- **Belum diuji end-to-end ke Firestore sungguhan** (perubahan rules khususnya `tp_kktp` — sarankan admin & satu guru mapel mencoba akses `setup-tp.html` masing-masing setelah deploy untuk memastikan rule baru berlaku seperti diharapkan).
+
+---
+
 ## 2026-09-13 — `[Akademik]` Impor Data Siswa massal (template Excel, sampai ~400 baris)
 
 ### Keputusan arsitektur (disepakati sebelum coding, lihat `antiregresi.md` §13)

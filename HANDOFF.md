@@ -1,7 +1,19 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), dan 2026-09-13 (Impor Data Siswa massal).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), dan 2026-09-14 (perombakan cakupan fungsi Admin).
+
+---
+
+## Status per 2026-09-14 (perombakan cakupan fungsi Admin)
+
+**Belum dikirim/dideploy, belum diuji ke Firestore sungguhan.** Detail penuh di `changelog.md` entri "Perombakan cakupan fungsi Admin" dan `antiregresi.md` §14.
+
+**Yang berubah:** admin TIDAK LAGI bisa (1) input TP/KKTP (rule `tp_kktp` sekarang murni `isGuruAkademik()`, grid mapel×tingkatan di `admin-hub.html` dihapus total), (2) mengelola NISN lewat halaman terpisah (`import-nisn.html`/`kelola-nisn.html` DIHAPUS dari repo — sudah tercakup di `kelola-siswa.html`/`import-siswa.html`), (3) memilih/mengubah `jenjang` Tahsin-Tahfizh siswa (dihapus dari UI `kelola-siswa.html`, tapi field & default otomatisnya tetap ada di data layer). **Impor Data Siswa** sekarang ditautkan DARI DALAM `kelola-siswa.html`, bukan dari `admin-hub.html`.
+
+**Kalau melanjutkan area admin di masa depan, ingat prinsip yang mendasari sesi ini**: fungsi admin di modul Akademik & Rapor TIDAK BOLEH menyentuh data spesifik Tahsin-Tahfizh KECUALI nama siswa dan kelasnya (dipakai bersama). Kalau ada fitur baru yang berpotensi menyentuh Tahsin-Tahfizh, tanyakan dulu sebelum membangun.
+
+**Rekomendasi ke pemilik proyek**: setelah deploy, coba akses `setup-tp.html` dengan akun admin (harus ditolak) dan dengan akun guru mapel yang punya penugasan (harus tetap berhasil) untuk memastikan rule baru berlaku benar.
 
 ---
 
