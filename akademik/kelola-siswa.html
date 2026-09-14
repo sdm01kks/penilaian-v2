@@ -16,6 +16,11 @@
   }
   .demo-strip svg{flex-shrink:0;width:14px;height:14px}
   .intro-text{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:16px}
+  .btn-unduh-inline{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;
+    margin-bottom:16px;border-radius:12px;border:1.5px solid var(--green-dark);background:var(--green-pale);
+    color:var(--green-dark);font-family:inherit;font-size:12.5px;font-weight:800;text-decoration:none;
+  }
 
   .kelas-chip-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
   .kelas-chip{
@@ -101,7 +106,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
           <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
         </div>
-        <p class="intro-text">Data siswa dipakai bersama oleh modul Tahsin-Tahfizh dan Akademik &amp; Rapor. Nonaktifkan siswa (bukan hapus permanen) supaya riwayat nilai/setoran tetap aman. Ganti NIS tersedia di dalam kartu tiap siswa — dipakai kalau ada kesalahan input NIS.</p>
+        <p class="intro-text">Data siswa dipakai bersama oleh modul Tahsin-Tahfizh dan Akademik &amp; Rapor — tapi dari sini admin hanya mengelola identitas inti (nama, kelas, NIS/NISN, tempat/tanggal lahir, status aktif), bukan data spesifik Tahsin-Tahfizh. Nonaktifkan siswa (bukan hapus permanen) supaya riwayat nilai/setoran tetap aman. Ganti NIS tersedia di dalam kartu tiap siswa — dipakai kalau ada kesalahan input NIS.</p>
+
+        <a class="btn-unduh-inline" href="import-siswa.html">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Impor Data Siswa dari Excel (massal)
+        </a>
 
         <div class="kelas-chip-row" id="kelasChipRow"></div>
 
@@ -129,19 +139,8 @@
           <div class="field-label">NISN</div>
           <input type="text" class="select-field" id="fNisn" placeholder="Kalau sudah tahu">
 
-          <div class="field-row">
-            <div>
-              <div class="field-label">Kelas</div>
-              <select class="select-field" id="fKelas"></select>
-            </div>
-            <div>
-              <div class="field-label">Jenjang Tahsin-Tahfizh</div>
-              <div class="aktif-toggle">
-                <button type="button" id="fJenjangIqro" onclick="pilihJenjangForm('iqro')">Iqro</button>
-                <button type="button" id="fJenjangQuran" onclick="pilihJenjangForm('quran')">Al-Qur'an</button>
-              </div>
-            </div>
-          </div>
+          <div class="field-label">Kelas</div>
+          <select class="select-field" id="fKelas"></select>
 
           <div class="field-label">Status</div>
           <div class="aktif-toggle">
@@ -180,7 +179,7 @@
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import { getSiswaAdminByKelas, updateSiswaData, createSiswa, gantiNis } from '../assets/firestore-data-akademik.js';
 
-  // Duplikasi sengaja dari daftar kelas di generator-akun.html/kelola-nisn.html
+  // Duplikasi sengaja dari daftar kelas di generator-akun.html
   // — data layer Akademik & Tahsin-Tahfizh sengaja dipisah (lihat
   // antiregresi.md §2/§8.1), jadi tidak impor SEMUA_KELAS dari
   // firestore-data.js milik Tahsin-Tahfizh.
@@ -190,7 +189,6 @@
   let kelasAktif = null;
   let siswaList = [];
   let aktifForm = true;
-  let jenjangForm = 'iqro';
 
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -251,7 +249,6 @@
   }
 
   function renderCard(s, i) {
-    const jenjangLabel = s.jenjang === 'quran' ? "Al-Qur'an" : (s.jenjang === 'iqro' ? 'Iqro' : null);
     return `
     <div class="siswa-card ${s.aktif === false ? 'nonaktif' : ''}" id="sc-${i}">
       <div class="siswa-card-head" onclick="toggleCard(${i})">
@@ -262,7 +259,6 @@
             <span class="nis-txt">NIS ${escapeHtml(s.nis || s.id)}</span>
             ${s.nisSementara ? `<span class="jenjang-pill" style="background:var(--red-light);color:var(--red)">NIS Sementara</span>` : ''}
             <span class="status-pill ${s.aktif === false ? 'off' : 'on'}">${s.aktif === false ? 'Nonaktif' : 'Aktif'}</span>
-            ${jenjangLabel ? `<span class="jenjang-pill">${jenjangLabel}</span>` : ''}
           </div>
         </div>
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
@@ -285,21 +281,10 @@
         <div class="field-label">NISN</div>
         <input type="text" class="select-field" id="eNisn-${i}" value="${escapeHtml(s.nisn || '')}" placeholder="Kalau sudah tahu">
 
-        <div class="field-row">
-          <div>
-            <div class="field-label">Kelas</div>
-            <select class="select-field" id="eKelas-${i}">
-              ${KELAS_SEKOLAH.map(k => `<option value="${k}" ${k === s.kelas ? 'selected' : ''}>${k}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <div class="field-label">Jenjang Tahsin-Tahfizh</div>
-            <div class="aktif-toggle">
-              <button type="button" id="eJIqro-${i}" class="${s.jenjang === 'iqro' ? 'active' : ''}" onclick="pilihJenjangCard(${i},'iqro')">Iqro</button>
-              <button type="button" id="eJQuran-${i}" class="${s.jenjang === 'quran' ? 'active' : ''}" onclick="pilihJenjangCard(${i},'quran')">Al-Qur'an</button>
-            </div>
-          </div>
-        </div>
+        <div class="field-label">Kelas</div>
+        <select class="select-field" id="eKelas-${i}">
+          ${KELAS_SEKOLAH.map(k => `<option value="${k}" ${k === s.kelas ? 'selected' : ''}>${k}</option>`).join('')}
+        </select>
 
         <div class="field-label">Status</div>
         <div class="aktif-toggle">
@@ -336,11 +321,6 @@
 
   window.toggleCard = (i) => $('sc-' + i)?.classList.toggle('open');
 
-  window.pilihJenjangCard = (i, val) => {
-    siswaList[i]._jenjangEdit = val;
-    $('eJIqro-' + i).classList.toggle('active', val === 'iqro');
-    $('eJQuran-' + i).classList.toggle('active', val === 'quran');
-  };
   window.pilihAktifCard = (i, val) => {
     siswaList[i]._aktifEdit = val;
     $('eAOn-' + i).classList.toggle('active', val === true);
@@ -353,7 +333,6 @@
     const nama = $('eNama-' + i).value.trim();
     if (!nama) { showToast('Nama tidak boleh kosong.', true); return; }
     const kelasBaru = $('eKelas-' + i).value;
-    const jenjangBaru = s._jenjangEdit !== undefined ? s._jenjangEdit : s.jenjang;
     const aktifBaru = s._aktifEdit !== undefined ? s._aktifEdit : (s.aktif !== false);
     const tempatLahirBaru = $('eTempatLahir-' + i).value.trim();
     const tanggalLahirBaru = $('eTanggalLahir-' + i).value || null;
@@ -362,8 +341,10 @@
     const btn = $('btnSimpan-' + i);
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
+      // SENGAJA tidak mengirim `jenjang` — itu data Tahsin-Tahfizh, bukan
+      // urusan admin lewat halaman ini (lihat antiregresi.md §14.3).
       await updateSiswaData(s.id, {
-        nama, kelas: kelasBaru, jenjang: jenjangBaru, aktif: aktifBaru,
+        nama, kelas: kelasBaru, aktif: aktifBaru,
         tempatLahir: tempatLahirBaru, tanggalLahir: tanggalLahirBaru, nisn: nisnBaru,
       });
       showToast('Perubahan siswa tersimpan.');
@@ -422,11 +403,6 @@
     }
   };
 
-  window.pilihJenjangForm = (val) => {
-    jenjangForm = val;
-    $('fJenjangIqro').classList.toggle('active', val === 'iqro');
-    $('fJenjangQuran').classList.toggle('active', val === 'quran');
-  };
   window.pilihAktifForm = (val) => {
     aktifForm = val;
     $('fAktifOn').classList.toggle('active', val === true);
@@ -440,7 +416,6 @@
     $('fTanggalLahir').value = '';
     $('fNisn').value = '';
     if (kelasAktif) $('fKelas').value = kelasAktif;
-    pilihJenjangForm('iqro');
     pilihAktifForm(true);
     $('formCard').classList.remove('hidden');
     $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -457,8 +432,12 @@
     const btn = $('btnSimpanTambah');
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
+      // `jenjang` BUKAN input admin (lihat antiregresi.md §14.3) — diisi
+      // otomatis dari kelas, sama seperti default di alur Mutasi Masuk/
+      // Impor Data Siswa, supaya fitur Tahsin-Tahfizh tetap punya nilai
+      // awal yang wajar. Guru Tahsin-Tahfizh yang mengoreksi kalau perlu.
       await createSiswa({
-        nis, nama, kelas, jenjang: jenjangForm, aktif: aktifForm,
+        nis, nama, kelas, jenjang: /^[12]/.test(kelas) ? 'iqro' : 'quran', aktif: aktifForm,
         tempatLahir: $('fTempatLahir').value.trim(),
         tanggalLahir: $('fTanggalLahir').value || null,
         nisn: $('fNisn').value.trim(),

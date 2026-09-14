@@ -245,11 +245,15 @@
       return;
     }
 
-    const berhak = s.role === 'admin' || (s.penugasan || []).some(p =>
+    // Setup TP & KKTP sepenuhnya tanggung jawab guru kelas/guru bidang
+    // studi — admin TIDAK berhak lagi (lihat antiregresi.md §14.1).
+    const berhak = (s.penugasan || []).some(p =>
       p.mapel === mapelNama && tingkatanDariKelas(p.kelas) === String(tingkatan)
     );
     if (!berhak) {
-      showEmptyScope(`Anda tidak ditugaskan mengampu ${mapelNama} di kelas tingkat ${tingkatan}.`);
+      showEmptyScope(s.role === 'admin'
+        ? 'Setup TP & KKTP kini sepenuhnya tanggung jawab guru kelas/guru bidang studi — admin tidak lagi mengelola halaman ini.'
+        : `Anda tidak ditugaskan mengampu ${mapelNama} di kelas tingkat ${tingkatan}.`);
       return;
     }
 
@@ -451,9 +455,7 @@
   };
 
   $('btnBack').addEventListener('click', () => {
-    // Admin masuk lewat grid mapel×tingkatan di beranda.html (belum
-    // direstrukturisasi) — guru masuk lewat nilai-hub.html -> setup-tp-hub.html.
-    window.location.href = session?.role === 'admin' ? 'admin-hub.html' : 'setup-tp-hub.html';
+    window.location.href = 'setup-tp-hub.html';
   });
 </script>
 </body>

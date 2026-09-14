@@ -95,7 +95,7 @@
     $('appBody').style.display = 'block';
 
     if (session.role === 'admin') {
-      $('emptyStateMsg').textContent = 'Admin mengelola Setup TP lewat menu Administrasi (semua mapel & tingkatan), bukan lewat sini.';
+      $('emptyStateMsg').textContent = 'Setup TP & KKTP sepenuhnya tanggung jawab guru kelas/guru bidang studi — admin tidak lagi mengelola ini.';
       $('emptyState').classList.remove('hidden');
       return;
     }

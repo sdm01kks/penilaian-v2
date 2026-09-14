@@ -189,7 +189,7 @@
   });
 
   const KOLOM_TEMPLATE = [
-    'NIS','Nama Lengkap','Kelas','Jenjang Tahsin-Tahfizh','NISN','Tempat Lahir','Tanggal Lahir',
+    'NIS','Nama Lengkap','Kelas','NISN','Tempat Lahir','Tanggal Lahir',
     'Status Aktif','Jenis Kelamin','Agama','Status dalam Keluarga','Anak ke','Alamat Peserta Didik',
     'Nomor Telepon Rumah','Sekolah Asal','Diterima di Kelas','Diterima Tanggal','Nama Ayah','Nama Ibu',
     'Alamat Orang Tua','Pekerjaan Ayah','Pekerjaan Ibu','Nama Wali','Alamat Wali','Telepon Wali','Pekerjaan Wali',
@@ -203,7 +203,7 @@
     showToast('Membaca file…');
 
     try {
-      // Dynamic import ESM — pola sama dgn import-nisn.html.
+      // Dynamic import ESM — pola sama dgn assets/firebase.js (import() CDN).
       const mod = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
       const XLSX = mod.default || mod;
 
@@ -335,7 +335,7 @@
     }
   });
 
-  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+  $('btnBack').addEventListener('click', () => { window.location.href = 'kelola-siswa.html'; });
 </script>
 </body>
 </html>
