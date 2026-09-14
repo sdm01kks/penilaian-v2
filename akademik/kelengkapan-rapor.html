@@ -213,10 +213,6 @@
     if (isNaN(d)) return '…………………';
     return `${d.getDate()} ${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function tanggalHariIni() {
-    const d = new Date();
-    return `${d.getDate()} ${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`;
-  }
   function isi(val) { return val ? escapeHtml(val) : ''; }
 
   window.pilihJk = (val) => {
@@ -341,16 +337,24 @@ ${isiHtml}
 
   /* ---- 1. Cover Rapor --------------------------------------------------- */
   $('btnCetakCover').addEventListener('click', () => {
+    // Sengaja override @page margin jadi 0 dan bikin sendiri div seukuran
+    // A4 PERSIS (21cm x 29.7cm) dengan padding 2cm sebagai pengganti
+    // margin halaman — supaya flexbox center vertikal+horizontal punya
+    // tinggi acuan yang pasti (height:100% pada body/html tidak selalu
+    // bisa diandalkan di semua browser untuk konteks cetak, tapi
+    // ukuran fisik eksplisit pada div selalu konsisten).
     const css = `
-.cv-wrap{text-align:center;padding-top:40pt}
+@page{ size: A4; margin: 0; }
+.cv-page{width:21cm;height:29.7cm;box-sizing:border-box;padding:2cm;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cv-wrap{text-align:center}
 .cv-title{font-size:22pt;font-weight:bold}
 .cv-sub{font-size:22pt;font-weight:bold;margin-top:2pt}
 .cv-nss{font-size:11pt;margin-top:6pt}
-.cv-logo{width:170pt;margin:40pt auto}
-.cv-box-label{font-size:11pt;margin-top:36pt}
-.cv-box{border:1pt solid #000;padding:8pt 10pt;margin:6pt auto 0;width:340pt;min-height:16pt;font-size:11pt;text-align:left}`;
+.cv-logo{width:260pt;margin:44pt auto}
+.cv-box-label{font-size:11pt;margin-top:38pt}
+.cv-box{border:1pt solid #000;padding:12pt;margin:7pt auto 0;width:340pt;min-height:20pt;font-size:15pt;font-weight:bold;text-align:center}`;
     const html = `
-<div class="cv-wrap">
+<div class="cv-page"><div class="cv-wrap">
   <div class="cv-title">RAPOR</div>
   <div class="cv-sub">${(isi(config.namaSekolah) || 'SD MUHAMMADIYAH 01 KUKUSAN').toUpperCase()}</div>
   <div class="cv-nss">${config.nss ? 'NSS : ' + isi(config.nss) + '  |  ' : ''}${config.npsn ? 'NPSN: ' + isi(config.npsn) : ''}</div>
@@ -359,7 +363,7 @@ ${isiHtml}
   <div class="cv-box">${isi(siswa.nama)}</div>
   <div class="cv-box-label">NIS / NISN:</div>
   <div class="cv-box">${isi(siswa.nis || siswa.id)} / ${isi(siswa.nisn) || ''}</div>
-</div>`;
+</div></div>`;
     bukaJendelaCetak(`Cover Rapor - ${siswa.nama}`, html, css);
   });
 
@@ -444,7 +448,7 @@ ${isiHtml}
   <div class="id-bottom">
     <div class="id-photo">Pas Foto<br>3 x 4 cm</div>
     <div class="id-ttd">
-      ${isi(config.kotaRapor) || 'Kota Depok'}, …<br>Kepala Sekolah,
+      ${isi(config.kotaRapor) || 'Kota Depok'}, ${config.tanggalTtdIdentitas ? tanggalIndonesia(config.tanggalTtdIdentitas) : '…………………'}<br>Kepala Sekolah,
       <div class="id-ttd-space"></div>
       <div class="id-ttd-name">${isi(config.namaKepsek) || 'Mudzakkir Walad, S.Pd'}</div>
       NBM. ${isi(config.nbmKepsek) || '1167327'}

@@ -152,6 +152,12 @@
           <input type="text" class="input-field" id="fKotaRapor" placeholder="Depok">
         </div>
 
+        <div class="field-group">
+          <div class="field-label">Tanggal TTD Identitas Rapor</div>
+          <div class="field-hint">Khusus tanggal tanda tangan Kepala Sekolah di cetak "Identitas Peserta Didik" — SENGAJA beda dari tanggal TTD rapor STS/SAS (yang selalu ikut tanggal hari cetak). Identitas biasanya ditandatangani sekali di awal tahun ajaran (umumnya bulan Juli), bukan setiap kali dicetak.</div>
+          <input type="date" class="input-field" id="fTanggalTtdIdentitas">
+        </div>
+
         <button class="btn btn-primary-light btn-simpan" id="btnSimpan">Simpan Profil Sekolah</button>
 
         <div id="emptyState" class="field-group hidden">
@@ -210,6 +216,7 @@
       $('fNamaKepsek').value     = config.namaKepsek     || '';
       $('fNbmKepsek').value      = config.nbmKepsek      || '';
       $('fKotaRapor').value      = config.kotaRapor      || '';
+      $('fTanggalTtdIdentitas').value = config.tanggalTtdIdentitas || '';
     } catch (e) {
       console.error(e);
       showToast('Gagal memuat data.', true);
@@ -236,6 +243,7 @@
         namaKepsek:     $('fNamaKepsek').value.trim(),
         nbmKepsek:      $('fNbmKepsek').value.trim(),
         kotaRapor:      $('fKotaRapor').value.trim(),
+        tanggalTtdIdentitas: $('fTanggalTtdIdentitas').value || '',
       });
       showToast('Profil sekolah tersimpan.');
     } catch (e) {
