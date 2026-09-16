@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Perbaikan Duplikat Siswa | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .warn-box{
+    background:var(--red-light);border:1.5px solid var(--red);border-radius:14px;padding:14px;margin-bottom:16px;
+  }
+  .warn-title{font-size:13px;font-weight:800;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .warn-text{font-size:11.5px;color:#7a2e26;line-height:1.6}
+  .summary-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center}
+  .summary-num{font-size:32px;font-weight:800;color:var(--green-dark)}
+  .summary-label{font-size:11.5px;color:var(--ink-muted);font-weight:700;margin-top:2px}
+  .btn-jalankan{width:100%;padding:14px;border-radius:14px;border:none;background:var(--red);color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+  .btn-jalankan:disabled{opacity:.5}
+  .log-box{background:#111;color:#c9f7d8;font-family:'SF Mono',Consolas,monospace;font-size:10px;line-height:1.7;border-radius:11px;padding:10px 12px;margin-top:14px;max-height:420px;overflow-y:auto;display:none;white-space:pre-wrap}
+  .log-box.show{display:block}
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Perbaikan Duplikat Siswa</div>
+            <div class="app-header-sub">Sekali-jalan, 2026-09-15</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini, riwayat lintas koleksi TIDAK ikut disimulasikan.</span>
+        </div>
+
+        <div class="warn-box">
+          <div class="warn-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+            Operasi Sekali-Jalan — Tidak Bisa Dibatalkan
+          </div>
+          <div class="warn-text">Halaman ini menggabungkan 355 pasangan siswa duplikat (akibat impor Dapodik menemukan NIS baru untuk siswa yang NIS lamanya beda skema penomoran). NIS lama akan DIHAPUS setelah riwayatnya dipindah ke NIS baru (Dapodik). Jalankan cuma SEKALI. Aman diulang kalau prosesnya terhenti di tengah jalan (pasangan yang sudah selesai otomatis dilewati kalau dijalankan lagi).</div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-num" id="jumlahPasangan">355</div>
+          <div class="summary-label">PASANGAN SIAP DIGABUNGKAN</div>
+        </div>
+
+        <button class="btn-jalankan" id="btnJalankan">Jalankan Perbaikan Sekarang</button>
+        <div class="log-box" id="logBox"></div>
+
+        <div id="emptyState" class="summary-box hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { jalankanPerbaikanDuplikat } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  // 355 pasangan (nisLama=n, nisBaru=b, kelas=k, namaLama=nm) — dicocokkan
+  // OFFLINE oleh Claude dari seed-siswa.html (NIS lama Tahsin-Tahfizh) vs
+  // hasil impor Dapodik (NIS baru), lihat antiregresi.md §16. Dari 403
+  // siswa yang ada, 48 ternyata NIS lama & barunya SUDAH SAMA sejak awal
+  // (tidak pernah dobel — sudah disaring, tidak masuk daftar ini). Sisa
+  // 355 ini: 349 cocok nama persis, 6 cocok lewat variasi penulisan
+  // (dikonfirmasi manual, similaritas >95%).
+  const PASANGAN_DUPLIKAT = [
+  {n:'2627010002',b:'262701001',k:'1A',nm:'Abdurrahman Ukasyah'},
+  {n:'2627010001',b:'262701005',k:'1A',nm:'Aifa Safwana Fauzi'},
+  {n:'2627010003',b:'262701007',k:'1A',nm:'Aleeya Salma Medhavi'},
+  {n:'2627010004',b:'262701014',k:'1A',nm:'Ayunda Nafeesa Janitra'},
+  {n:'2627010005',b:'262701015',k:'1A',nm:'Azmah Shofiah'},
+  {n:'2627010006',b:'262701019',k:'1A',nm:'Daniyal Alfarizi Suhendra'},
+  {n:'2627010007',b:'262701022',k:'1A',nm:'Faiz Kenzie Hamizan'},
+  {n:'2627010008',b:'262701025',k:'1A',nm:'Fathir Ahmad Azami'},
+  {n:'2627010009',b:'262701030',k:'1A',nm:'Ghifari Al Fahrezi'},
+  {n:'2627010010',b:'262701032',k:'1A',nm:'Grizelda Mecca Asyari'},
+  {n:'2627010011',b:'262701033',k:'1A',nm:'Hamida Hurumil Qodah'},
+  {n:'2627010012',b:'262701035',k:'1A',nm:'Haziq Irsyaddin Alhanan'},
+  {n:'2627010013',b:'262701037',k:'1A',nm:'Kalula Almahyra'},
+  {n:'2627010014',b:'262701043',k:'1A',nm:'Malika Alfathunnisa Syahidah'},
+  {n:'2627010015',b:'262701047',k:'1A',nm:'Muhammad Adzra Azzhafran'},
+  {n:'2627010016',b:'262701048',k:'1A',nm:'Muhammad Ammar Abdurrahman'},
+  {n:'2627010017',b:'262701051',k:'1A',nm:'Muhammad Faaz Aldien'},
+  {n:'2627010018',b:'262701053',k:'1A',nm:'Muhammad Fatih Alfarizi'},
+  {n:'2627010019',b:'262701055',k:'1A',nm:'Muhammad Ibrahim Wirakusuma'},
+  {n:'2627010020',b:'262701058',k:'1A',nm:'Muhammad Syafi\'i'},
+  {n:'2627010021',b:'262701061',k:'1A',nm:'Olivia Aqsha Kirana'},
+  {n:'2627010022',b:'262701066',k:'1A',nm:'Sada Binar Kelana Prameswari'},
+  {n:'2627010023',b:'262701068',k:'1A',nm:'Salma Inara Ramadhani'},
+  {n:'2627010024',b:'262701069',k:'1A',nm:'Salwa Elok Perdana'},
+  {n:'2627010025',b:'262701071',k:'1A',nm:'Sheryl Kirana Putri Pratama'},
+  {n:'2627010026',b:'262701074',k:'1A',nm:'Yazid Alfahrezi Azgefa'},
+  {n:'2627010027',b:'262701002',k:'1B',nm:'Abqary Said Ramadhan'},
+  {n:'2627010028',b:'262701003',k:'1B',nm:'Adyaksa Setianto Herlambang'},
+  {n:'2627010029',b:'262701004',k:'1B',nm:'Ahmad Emran Ghifari'},
+  {n:'2627010030',b:'262701010',k:'1B',nm:'Amr Mikairo Mahika'},
+  {n:'2627010031',b:'262701011',k:'1B',nm:'Ariq Yusuf Khautal Sandi'},
+  {n:'2627010032',b:'262701016',k:'1B',nm:'Clarissa Nur Argity'},
+  {n:'2627010033',b:'262701018',k:'1B',nm:'Dahayu Aksara Sajani Al Rasyid'},
+  {n:'2627010034',b:'262701020',k:'1B',nm:'Degesita Anju Rafsanjani'},
+  {n:'2627010035',b:'262701021',k:'1B',nm:'Dhio Arkana Syahid'},
+  {n:'2627010036',b:'262701023',k:'1B',nm:'Fathan Daniyal Raqqilla'},
+  {n:'2627010037',b:'262701027',k:'1B',nm:'Felisha Zia Almahyra'},
+  {n:'2627010038',b:'262701029',k:'1B',nm:'Ghefira Alfathunnisa'},
+  {n:'2627010039',b:'262701031',k:'1B',nm:'Gibraltar Parsa Hakim'},
+  {n:'2627010040',b:'262701036',k:'1B',nm:'Kaina Mala Lufias'},
+  {n:'2627010041',b:'262701038',k:'1B',nm:'Karen Freya Olivia'},
+  {n:'2627010042',b:'262701039',k:'1B',nm:'Keandra Athalla Herdis'},
+  {n:'2627010043',b:'262701041',k:'1B',nm:'Kiyomi Shafiyatunnisa'},
+  {n:'2627010091',b:'262701075',k:'1B',nm:'Mahesa Tegar'},
+  {n:'2627010044',b:'262701044',k:'1B',nm:'Mikazuki Fazzura Reina'},
+  {n:'2627010046',b:'262701049',k:'1B',nm:'Muhammad Dhuha Fahreza'},
+  {n:'2627010047',b:'262701050',k:'1B',nm:'Muhammad Dzakwan Alfarizqi'},
+  {n:'2627010048',b:'262701054',k:'1B',nm:'Muhammad Hanif Husaini'},
+  {n:'2627010081',b:'262701056',k:'1B',nm:'Muhammad Izzul Hanif'},
+  {n:'2627010049',b:'262701065',k:'1B',nm:'Rasya Malik Akbar'},
+  {n:'2627010050',b:'262701067',k:'1B',nm:'Saffana Nesya Zhafira'},
+  {n:'2627010051',b:'262701072',k:'1B',nm:'Taqiah Khalisa'},
+  {n:'2627010074',b:'262701073',k:'1B',nm:'Yazid Ahsan Hamizan'},
+  {n:'2627010052',b:'262701006',k:'1C',nm:'Aleena Ros Aini'},
+  {n:'2627010053',b:'262701008',k:'1C',nm:'Alena Naadhira Adtyana'},
+  {n:'2627010054',b:'262701009',k:'1C',nm:'Almeera Shaqueena Azzahra'},
+  {n:'2627010055',b:'262701012',k:'1C',nm:'Ashadiya Maryam Ariefa'},
+  {n:'2627010056',b:'262701013',k:'1C',nm:'Auristella Shalimar Azzahra'},
+  {n:'2627010057',b:'262701017',k:'1C',nm:'Daffa Atharrazka Malik'},
+  {n:'2627010058',b:'262701024',k:'1C',nm:'Fathian Zidan Al Farezi'},
+  {n:'2627010059',b:'262701026',k:'1C',nm:'Fawwaz Hisan Zakkiya'},
+  {n:'2627010060',b:'262701028',k:'1C',nm:'Ghania Saufa Fahrizka'},
+  {n:'2627010061',b:'262701034',k:'1C',nm:'Hanna Althafunnisa Praseptie'},
+  {n:'2627010075',b:'262701040',k:'1C',nm:'Khandra Gavin Dareendra'},
+  {n:'2627010062',b:'262701042',k:'1C',nm:'Kyra Yumna Vanri'},
+  {n:'2627010063',b:'262701045',k:'1C',nm:'Mohammad Nur Fazli Anwar'},
+  {n:'2627010064',b:'262701046',k:'1C',nm:'Mohammad Zahran Arif'},
+  {n:'2627010065',b:'262701052',k:'1C',nm:'Muhammad Fathan Al Ghazali'},
+  {n:'2627010066',b:'262701057',k:'1C',nm:'Muhammad Nazif Iqra Nasution'},
+  {n:'2627010068',b:'262701059',k:'1C',nm:'Narendra Dirga Alhafiz'},
+  {n:'2627010069',b:'262701060',k:'1C',nm:'Navya Kananta'},
+  {n:'2627010070',b:'262701062',k:'1C',nm:'Pijar Lentera Kaukibi'},
+  {n:'2627010071',b:'262701063',k:'1C',nm:'Qianu Uwais Bayuntara'},
+  {n:'2627010072',b:'262701064',k:'1C',nm:'Raffandra Ali Arasy'},
+  {n:'2627010073',b:'262701070',k:'1C',nm:'Sarah Almira'},
+  {n:'2526010059',b:'252601001',k:'2A',nm:'Abdullah Fatih Fatoni'},
+  {n:'2526010003',b:'252601008',k:'2A',nm:'Alesha Putri Rezdia'},
+  {n:'2526010062',b:'252601009',k:'2A',nm:'Almer Ayyasy Ibrahim'},
+  {n:'2526010004',b:'252601010',k:'2A',nm:'Aminah Nur Rahman'},
+  {n:'2526010028',b:'252601013',k:'2A',nm:'Arshiyla Ceisya Dharma'},
+  {n:'2526010051',b:'252601015',k:'2A',nm:'Arsyila Qurrotu\'aini Wahyudi'},
+  {n:'2526010042',b:'252601017',k:'2A',nm:'Cattleya Shazia'},
+  {n:'2526010057',b:'252601018',k:'2A',nm:'Citra Nahda Rafanda'},
+  {n:'2526010035',b:'252601022',k:'2A',nm:'Dzaky Abyan Askara'},
+  {n:'2526010029',b:'252601024',k:'2A',nm:'Fatimah Nurul Khansa'},
+  {n:'2526010010',b:'252601025',k:'2A',nm:'Gemila Namira Sakti'},
+  {n:'2526010006',b:'252601029',k:'2A',nm:'Hafizh Obdeen Mahardika'},
+  {n:'2526010024',b:'252601032',k:'2A',nm:'Kemilau Senja Prameswari'},
+  {n:'2526010022',b:'252601033',k:'2A',nm:'Kenzi Syafiq Alfatih'},
+  {n:'2526010023',b:'252601034',k:'2A',nm:'Khadija'},
+  {n:'2526010012',b:'252601035',k:'2A',nm:'Kidwa Yasafesa Ligarcita'},
+  {n:'2526010025',b:'252601036',k:'2A',nm:'Maezurra Anaking Ekasetya'},
+  {n:'2526010014',b:'252601038',k:'2A',nm:'Meydita Salwa Setyawan'},
+  {n:'2526010032',b:'252601039',k:'2A',nm:'Miftahul Roziqoh Ibrahim'},
+  {n:'2526010046',b:'252601041',k:'2A',nm:'Milana Birru Dhyana'},
+  {n:'2526010048',b:'252601042',k:'2A',nm:'Moch. Hisyam Satria Akhdan'},
+  {n:'2526010009',b:'252601045',k:'2A',nm:'Muhammad Rafif Sava'},
+  {n:'2526010018',b:'252601048',k:'2A',nm:'Narendra Shidqi Adli'},
+  {n:'2526010061',b:'252601051',k:'2A',nm:'Qiana Omera Ferdian'},
+  {n:'2526010008',b:'252601052',k:'2A',nm:'Qiandra Khairani Safitri'},
+  {n:'2526010047',b:'252601057',k:'2A',nm:'Sakhi Abdan Syakuro'},
+  {n:'2526010033',b:'252601058',k:'2A',nm:'Shanum Ayesha Kurniawan'},
+  {n:'2526010050',b:'252601060',k:'2A',nm:'Syakirah Raniah Almeramekka'},
+  {n:'2526010041',b:'252601061',k:'2A',nm:'Umar Aidan Alfarizqy'},
+  {n:'2526010016',b:'252601062',k:'2A',nm:'Vinna Atifa Zhafirah'},
+  {n:'2526010043',b:'252601064',k:'2A',nm:'Ziya Izzatunnisa'},
+  {n:'2526010036',b:'252601002',k:'2B',nm:'Adifa Nafiza Prabaswara Hadiyan'},
+  {n:'2526010001',b:'252601003',k:'2B',nm:'Adreena Mikayla Sasmita'},
+  {n:'2526010044',b:'252601004',k:'2B',nm:'Adresia Mukhbita Rachnu'},
+  {n:'2526010021',b:'252601005',k:'2B',nm:'Aisyah Ayudia Inara'},
+  {n:'2526010020',b:'252601006',k:'2B',nm:'Alesha Khafiyya Yasirli'},
+  {n:'2526010060',b:'252601007',k:'2B',nm:'Alesha Malaika Nur Ryanti'},
+  {n:'2526010002',b:'252601011',k:'2B',nm:'Anaya Khumaira Liberty'},
+  {n:'2526010054',b:'252601012',k:'2B',nm:'Aqilla Mumtaz Mufida'},
+  {n:'2526010019',b:'252601016',k:'2B',nm:'Aysha Farzana Rahma'},
+  {n:'2526010005',b:'252601019',k:'2B',nm:'Daniyal Riza Murphy'},
+  {n:'2526010065',b:'252601020',k:'2B',nm:'Daviandra Fathaan Putra'},
+  {n:'2526010056',b:'252601023',k:'2B',nm:'Farzana Naina Putri Hidayatulloh'},
+  {n:'2526010058',b:'252601026',k:'2B',nm:'Ghani Mulya Putra Jauhari'},
+  {n:'2526010007',b:'252601027',k:'2B',nm:'Ghaziya Airina Maulidya'},
+  {n:'2526010038',b:'252601028',k:'2B',nm:'Gumaisha Kyara'},
+  {n:'2526010064',b:'252601030',k:'2B',nm:'Hanif Imran Affan'},
+  {n:'2526010013',b:'252601031',k:'2B',nm:'Keenan Zayn Partama'},
+  {n:'2526010031',b:'252601037',k:'2B',nm:'Malikha Khawla Alfathunisa'},
+  {n:'2526010039',b:'252601040',k:'2B',nm:'Mikayla Azzahra Arkaputri'},
+  {n:'2526010040',b:'252601043',k:'2B',nm:'Muhammad Abidzar Calief'},
+  {n:'2526010026',b:'252601046',k:'2B',nm:'Nabila Nur Sabrina'},
+  {n:'2526010055',b:'252601047',k:'2B',nm:'Naladhipa Tsabit Qeis'},
+  {n:'2526010011',b:'252601049',k:'2B',nm:'Nusaibah Az Zahra'},
+  {n:'2526010045',b:'252601050',k:'2B',nm:'Omar Zhafran Alfatih'},
+  {n:'2526010049',b:'252601053',k:'2B',nm:'Raden Ersya Nurramadhani Djaen'},
+  {n:'2526010030',b:'252601054',k:'2B',nm:'Razanah Zahida Aggi'},
+  {n:'2526010015',b:'252601055',k:'2B',nm:'Reyndra Harya Pambudi'},
+  {n:'2526010052',b:'252601056',k:'2B',nm:'Sabrina Atha Tabina Kandow'},
+  {n:'2627010076',b:'262702076',k:'2B',nm:'Shafiyah Alika Kesuma'},
+  {n:'2526010027',b:'252601059',k:'2B',nm:'Sulthan Akmal Keenan'},
+  {n:'2526010037',b:'252601063',k:'2B',nm:'Zhafira Hanan Rifa\'i'},
+  {n:'2526010068',b:'252602069',k:'3A',nm:'Abiyyu Khaleev Fadiyanto'},
+  {n:'2425010010',b:'242501003',k:'3A',nm:'Adlyna Qaireen Suhermanto'},
+  {n:'2425010051',b:'242501005',k:'3A',nm:'Ahmad Syauqi'},
+  {n:'2425010023',b:'242501008',k:'3A',nm:'Alfariq Dwi Ramadhan'},
+  {n:'2425010004',b:'242501009',k:'3A',nm:'Alika Anjani Santosa'},
+  {n:'2425010031',b:'242501013',k:'3A',nm:'Ammar Zafran Rafassya Dianto'},
+  {n:'2425010012',b:'242501019',k:'3A',nm:'Aushaf Sharkan Kurniawan'},
+  {n:'2425010007',b:'242501024',k:'3A',nm:'Embun Naza Azzahra'},
+  {n:'2425010039',b:'242501026',k:'3A',nm:'Faeyza Ihsan Andhika'},
+  {n:'2425010083',b:'242501027',k:'3A',nm:'Farra Alula Inaranti'},
+  {n:'2425010085',b:'242501029',k:'3A',nm:'Faza Abdullah Lullail'},
+  {n:'2425010017',b:'242501032',k:'3A',nm:'Gerald Muhammad Eezar'},
+  {n:'2425010077',b:'242501033',k:'3A',nm:'Hanan Nafis Hidayat'},
+  {n:'2425010040',b:'242501034',k:'3A',nm:'Humaira Zahwa'},
+  {n:'2425010080',b:'242501036',k:'3A',nm:'Jihan Aprilia Sutrisno'},
+  {n:'2425010034',b:'242501039',k:'3A',nm:'Kamadiya Kenar Adiluhung'},
+  {n:'2425010022',b:'242501040',k:'3A',nm:'Kamadiya Maldini Ridwan'},
+  {n:'2425010062',b:'242501048',k:'3A',nm:'Muhammad Azzam Khalif'},
+  {n:'2425010030',b:'242501055',k:'3A',nm:'Nadhifah Aisha Faiha'},
+  {n:'2425010036',b:'242501062',k:'3A',nm:'Putra Taqi Hamizan'},
+  {n:'2425010053',b:'242501067',k:'3A',nm:'Ratu Latifa Qotrunnada'},
+  {n:'2425010020',b:'242501068',k:'3A',nm:'Reinissa Zalfa Ashalina'},
+  {n:'2425010024',b:'242501069',k:'3A',nm:'Rumaisha Fatimah Azzahra'},
+  {n:'2425010005',b:'242501072',k:'3A',nm:'Sora Nareswara Putra'},
+  {n:'2425010014',b:'242501073',k:'3A',nm:'Syakira Aulia Putri'},
+  {n:'2425010048',b:'242501079',k:'3A',nm:'Zhafira Taqiyya'},
+  {n:'2425010046',b:'242501001',k:'3B',nm:'Abdullah Fahreza'},
+  {n:'2425010055',b:'242501004',k:'3B',nm:'Adzkiyya Aryuni Maksum'},
+  {n:'2425010074',b:'242501006',k:'3B',nm:'Aisyah Adibah Abqariah'},
+  {n:'2425010084',b:'242501007',k:'3B',nm:'Aiyra Khansa Nasywa'},
+  {n:'2425010041',b:'242501012',k:'3B',nm:'Aluna Yasmin Arizki'},
+  {n:'2425010081',b:'242501014',k:'3B',nm:'Aqila Putri Darmawan'},
+  {n:'2425010065',b:'242501015',k:'3B',nm:'Arka Prabu Albifardzan'},
+  {n:'2425010059',b:'242501020',k:'3B',nm:'Azeeza Shakeela Abad'},
+  {n:'2425010070',b:'242501028',k:'3B',nm:'Fathan Ali Rahman'},
+  {n:'2425010057',b:'242501031',k:'3B',nm:'Genta Danishwira Adyatama Ramdhani'},
+  {n:'2526010066',b:'252602071',k:'3B',nm:'Hanifah Wafdan Wahyudhi'},
+  {n:'2425010043',b:'242501035',k:'3B',nm:'Jazeel Atha Prianto'},
+  {n:'2425010028',b:'242501038',k:'3B',nm:'Kaizan Albirru Said'},
+  {n:'2425010089',b:'242501087',k:'3B',nm:'Kanzia Nadheera Rican'},
+  {n:'2425010006',b:'242501042',k:'3B',nm:'Keenandra Gibran Arshaka'},
+  {n:'2425010060',b:'242501043',k:'3B',nm:'Keysha Syakila Farizki'},
+  {n:'2425010013',b:'242501044',k:'3B',nm:'Khairi Rayyan Alfarizky'},
+  {n:'2425010038',b:'242501047',k:'3B',nm:'Muhammad Al Fatih Rahman'},
+  {n:'2425010075',b:'242501052',k:'3B',nm:'Muhammad Sholahuddin Syarief'},
+  {n:'2627010079',b:'262703077',k:'3B',nm:'Nada Azkiya Adtyana'},
+  {n:'2627010080',b:'262703078',k:'3B',nm:'Naurah Shofiyyah'},
+  {n:'2425010052',b:'242501056',k:'3B',nm:'Nayyara Almahyra Salwa'},
+  {n:'2425010049',b:'242501058',k:'3B',nm:'Nizar Arshad Ramadhan'},
+  {n:'2425010071',b:'242501059',k:'3B',nm:'Olivia Saleha'},
+  {n:'2425010003',b:'242501071',k:'3B',nm:'Saffana Aulia Refrin'},
+  {n:'2425010042',b:'242501077',k:'3B',nm:'Zafran Fatih Raqila'},
+  {n:'2425010027',b:'242501002',k:'3C',nm:'Adeeva Salsabilla Dzahin'},
+  {n:'2425010025',b:'242501010',k:'3C',nm:'Almeera Nadhifa Alfathunnissa'},
+  {n:'2425010079',b:'242501011',k:'3C',nm:'Altan Kayyas Muttaqi'},
+  {n:'2425010035',b:'242501016',k:'3C',nm:'Arsyila Gemintang Fazandra'},
+  {n:'2425010067',b:'242501018',k:'3C',nm:'Aurelino Nizar Alfarizi'},
+  {n:'2425010068',b:'242501021',k:'3C',nm:'Azkadina Syakira Ramadhani'},
+  {n:'2425010073',b:'242501022',k:'3C',nm:'Azril Raqila Ramadhan'},
+  {n:'2425010018',b:'252602088',k:'3C',nm:'Faariq Ghaisullah Santoso'},
+  {n:'2425010011',b:'242501030',k:'3C',nm:'Fikra Tajusa Aksa'},
+  {n:'2425010019',b:'242501037',k:'3C',nm:'Jihan Khasyafarina Mecca'},
+  {n:'2425010058',b:'242501041',k:'3C',nm:'Kayyis Alfarizqi'},
+  {n:'2425010032',b:'242501045',k:'3C',nm:'Khalif Althaf Muttaqin'},
+  {n:'2425010066',b:'242501046',k:'3C',nm:'Kynan Aurellio Ahzafani'},
+  {n:'2425010009',b:'242501049',k:'3C',nm:'Muhammad Damar Falah'},
+  {n:'2425010061',b:'242501051',k:'3C',nm:'Muhammad Sakha Syaikhan'},
+  {n:'2425010026',b:'242501054',k:'3C',nm:'Mutiara Putri'},
+  {n:'2425010044',b:'242501057',k:'3C',nm:'Nayyira Anisa Rasyanda'},
+  {n:'2526010077',b:'252602076',k:'3C',nm:'Novita Putri Lestari'},
+  {n:'2425010056',b:'242501060',k:'3C',nm:'Olivia Tribhuwana Zaffara'},
+  {n:'2425010021',b:'242501061',k:'3C',nm:'Pradipa Aka Al Khalifi'},
+  {n:'2425010054',b:'242501063',k:'3C',nm:'Queenzha Aqila Fariza'},
+  {n:'2425010037',b:'242501066',k:'3C',nm:'Rahma Pramudita Wijayanto'},
+  {n:'2425010033',b:'242501074',k:'3C',nm:'Syifa Fahira Taqwa'},
+  {n:'2425010016',b:'242501075',k:'3C',nm:'Umar Syafiq Rasyid'},
+  {n:'2425010050',b:'242501076',k:'3C',nm:'Umar Yusuf Bayuntara'},
+  {n:'2425010078',b:'242501078',k:'3C',nm:'Zein Mu\'ammar Khadafi'},
+  {n:'2324010041',b:'232401002',k:'4A',nm:'Adila Anissa'},
+  {n:'2324010003',b:'232401004',k:'4A',nm:'Ahmad Karim Rajendra'},
+  {n:'2324010010',b:'232401006',k:'4A',nm:'Akbar Kendra Jusuf'},
+  {n:'2324010029',b:'232401010',k:'4A',nm:'Artzeta Sabilla Yasin'},
+  {n:'2526010071',b:'252603066',k:'4A',nm:'Arumi Misha Shafana'},
+  {n:'2324010055',b:'232401011',k:'4A',nm:'Askayra Yasna Shakayla'},
+  {n:'2324010038',b:'232401014',k:'4A',nm:'Aztan Khairi'},
+  {n:'2526010075',b:'252603072',k:'4A',nm:'Denis Fathian Fauzi'},
+  {n:'2324010059',b:'232401016',k:'4A',nm:'Dilla Adistia'},
+  {n:'2324010062',b:'232401019',k:'4A',nm:'Fathimah Nurul Chosilah'},
+  {n:'2324010035',b:'232401022',k:'4A',nm:'Hafidz Alfarezel Javier'},
+  {n:'2324010063',b:'232401024',k:'4A',nm:'Hanania Malika Fitri'},
+  {n:'2324010015',b:'232401025',k:'4A',nm:'Hanifa Fathiyya Rahma'},
+  {n:'2324010034',b:'232401026',k:'4A',nm:'Hassan Effendi Siddiq'},
+  {n:'2324010057',b:'232401029',k:'4A',nm:'Iffatu Inaayatin Izzatunnisa'},
+  {n:'2324010001',b:'232401030',k:'4A',nm:'Izzam Al Khwarizmi'},
+  {n:'2324010040',b:'232401031',k:'4A',nm:'Kanaya Fathimah Abdul'},
+  {n:'2324010066',b:'232401037',k:'4A',nm:'Maulana Nur Muhammad'},
+  {n:'2324010019',b:'232401039',k:'4A',nm:'Mikail Rayan Sakti'},
+  {n:'2324010025',b:'232401040',k:'4A',nm:'Moch Arkana Lauda Favian'},
+  {n:'2324010052',b:'232401042',k:'4A',nm:'Muhamad Rasyad Muharam'},
+  {n:'2324010048',b:'232401052',k:'4A',nm:'Muhammad Fathir Alrasyid'},
+  {n:'2324010042',b:'232401047',k:'4A',nm:'Muhammad Hafiz Azzamy'},
+  {n:'2324010016',b:'232401049',k:'4A',nm:'Muhammad Khalif Alfarabi'},
+  {n:'2324010036',b:'232401050',k:'4A',nm:'Muhammad Omar Abrisam'},
+  {n:'2324010032',b:'232401053',k:'4A',nm:'Nadillah Arapah Lota Lova'},
+  {n:'2324010013',b:'232401054',k:'4A',nm:'Naura Safwa Haniya'},
+  {n:'2324010054',b:'232401055',k:'4A',nm:'Nayla Adelia Putri'},
+  {n:'2324010045',b:'232401058',k:'4A',nm:'Raksi Nuansafesa Citarahagi'},
+  {n:'2324010026',b:'232401060',k:'4A',nm:'Reva Qirani Aslamah'},
+  {n:'2324010007',b:'232401003',k:'4B',nm:'Adinda Shaqueena Humaira'},
+  {n:'2324010027',b:'232401005',k:'4B',nm:'Aisyah Najma Alifah'},
+  {n:'2425010090',b:'242502088',k:'4B',nm:'Alifaningtyas Tri Suseno'},
+  {n:'2324010014',b:'232401007',k:'4B',nm:'Alika Laras Anjani'},
+  {n:'2324010065',b:'232401008',k:'4B',nm:'Anas Zhafran Praseptie'},
+  {n:'2324010028',b:'232401009',k:'4B',nm:'Arsyila Ayra Prayuda'},
+  {n:'2324010060',b:'232401013',k:'4B',nm:'Ayra Cahaya Malika'},
+  {n:'2324010051',b:'232401017',k:'4B',nm:'Fahrizi Abbiyu Salam'},
+  {n:'2324010053',b:'232401018',k:'4B',nm:'Fathian Rasyid Suryamsyah'},
+  {n:'2627010078',b:'262704079',k:'4B',nm:'Fathir Ahmad Azzami'},
+  {n:'2324010050',b:'232401020',k:'4B',nm:'Fathir Al Zunnah'},
+  {n:'2324010006',b:'232401021',k:'4B',nm:'Fatimatuzzahra Yameena Fadhil'},
+  {n:'2627010077',b:'262704080',k:'4B',nm:'Hafiz Edsel Kesuma'},
+  {n:'2324010022',b:'232401023',k:'4B',nm:'Hafizh Muhyiddin Syamil'},
+  {n:'2324010018',b:'232401028',k:'4B',nm:'Ibnu Zhafran Akbarian'},
+  {n:'2324010012',b:'232401032',k:'4B',nm:'Karim Abgary Wyreztiyo'},
+  {n:'2324010021',b:'232401033',k:'4B',nm:'Keiichi Maher Az-zumar'},
+  {n:'2324010024',b:'232401034',k:'4B',nm:'Kidung Senja Kilia Al Rasyid'},
+  {n:'2324010044',b:'232401035',k:'4B',nm:'Kinanti Lituhayu Anak Hamid'},
+  {n:'2324010067',b:'232401041',k:'4B',nm:'Mufia Zareen Humaira'},
+  {n:'2324010061',b:'232401043',k:'4B',nm:'Muhammad Alkhalifi Subadio'},
+  {n:'2324010058',b:'232401044',k:'4B',nm:'Muhammad Arfan Asshidiq'},
+  {n:'2324010011',b:'232401045',k:'4B',nm:'Muhammad Aydin Raka'},
+  {n:'2324010039',b:'232401048',k:'4B',nm:'Muhammad Hisyam Alfatich'},
+  {n:'2526010076',b:'252603075',k:'4B',nm:'Muhammad Rayyan Safwan'},
+  {n:'2324010043',b:'232401051',k:'4B',nm:'Muhammad Rifat Alfatih'},
+  {n:'2526010069',b:'252603068',k:'4B',nm:'Naufal Fatih Putra'},
+  {n:'2324010033',b:'232401057',k:'4B',nm:'Raisha Revalina Saragih'},
+  {n:'2324010064',b:'232401059',k:'4B',nm:'Raline Ayesha Azkadina'},
+  {n:'2324010037',b:'232401061',k:'4B',nm:'Sajiva Arundaya Tsabit'},
+  {n:'2324010020',b:'232401062',k:'4B',nm:'Syifa Fadila Abida'},
+  {n:'222301083',b:'222301003',k:'5A',nm:'Abdurrahman Ar Ribery'},
+  {n:'222301055',b:'222301004',k:'5A',nm:'Abyan Nandana Khalif'},
+  {n:'222301042',b:'222301006',k:'5A',nm:'Adskhan Ibran Elfatih'},
+  {n:'222301028',b:'222301008',k:'5A',nm:'Afiya Nur Ataya Sandi'},
+  {n:'2526010070',b:'252604067',k:'5A',nm:'Aisyah Afqohunnisa'},
+  {n:'222301075',b:'222301010',k:'5A',nm:'Akhdan Ziyad'},
+  {n:'222301008',b:'222301011',k:'5A',nm:'Alam Rayyan Fiyanto'},
+  {n:'222301074',b:'222301015',k:'5A',nm:'Arsyila Almahyira Azgefa'},
+  {n:'222301020',b:'222301016',k:'5A',nm:'Athifa Nur Pelangi'},
+  {n:'222301001',b:'222301027',k:'5A',nm:'Fairel Atharizz Calief'},
+  {n:'222301090',b:'222301028',k:'5A',nm:'Fatih Pratama Basuki'},
+  {n:'222301073',b:'222301029',k:'5A',nm:'Flora Baby Queen'},
+  {n:'222301064',b:'222301031',k:'5A',nm:'Gilang Aditya Ramadhan'},
+  {n:'222301017',b:'222301038',k:'5A',nm:'Ilham Ibrahim'},
+  {n:'222301003',b:'222301039',k:'5A',nm:'Inara Huwaida Ardhani'},
+  {n:'222301022',b:'222301045',k:'5A',nm:'Kinara Adisti Salsabila'},
+  {n:'222301036',b:'222301047',k:'5A',nm:'Kirana Hafizah Iqra Nasution'},
+  {n:'222301050',b:'222301048',k:'5A',nm:'Latifa Rafanda'},
+  {n:'222301039',b:'222301050',k:'5A',nm:'Meshya Belliza Utama'},
+  {n:'2425010072',b:'242503085',k:'5A',nm:'Muhammad Ali Alfarizi'},
+  {n:'222301016',b:'222301059',k:'5A',nm:'Nayla Latifa'},
+  {n:'222301007',b:'222301064',k:'5A',nm:'Quenzino Satria Hadika'},
+  {n:'222301005',b:'222301067',k:'5A',nm:'Reynand Pratama'},
+  {n:'222301079',b:'222301071',k:'5A',nm:'Shakila Qiyana Shadiqah'},
+  {n:'222301060',b:'222301072',k:'5A',nm:'Shanum Meyra Rosadi'},
+  {n:'222301031',b:'222301002',k:'5B',nm:'Abdullah Hanif'},
+  {n:'222301014',b:'222301013',k:'5B',nm:'Almeera Faiza Azzahra'},
+  {n:'2425010088',b:'242503081',k:'5B',nm:'Alzam Khairuddin Yulianto'},
+  {n:'222301057',b:'222301018',k:'5B',nm:'Ayesya Aghnia Nurul Qonitat'},
+  {n:'222301061',b:'222301019',k:'5B',nm:'Azalea Savina Zareen Mulya'},
+  {n:'222301037',b:'222301024',k:'5B',nm:'Dafa Yusouf Suherman'},
+  {n:'2425010087',b:'242503084',k:'5B',nm:'Dzaqy Miftah Syauqi'},
+  {n:'222301021',b:'222301030',k:'5B',nm:'Gibran Hanan Athaya'},
+  {n:'222301041',b:'222301033',k:'5B',nm:'Hafidza Nurqiana Pradani'},
+  {n:'222301002',b:'222301035',k:'5B',nm:'Hasna Zurmiya Mecca'},
+  {n:'222301049',b:'222301043',k:'5B',nm:'Khanza Putri Tsani'},
+  {n:'222301019',b:'222301044',k:'5B',nm:'Kimi Zia Azahra'},
+  {n:'222301025',b:'222301051',k:'5B',nm:'Muhammad Alfatih Haidar'},
+  {n:'2425010015',b:'242503086',k:'5B',nm:'Muhammad Gemilang Brahmantyo'},
+  {n:'222301063',b:'222301055',k:'5B',nm:'Muhammad Jundi Kaisan'},
+  {n:'222301088',b:'222301057',k:'5B',nm:'Naufal Alfian Febriansyah'},
+  {n:'2425010001',b:'232402072',k:'5B',nm:'Qaisara Hanna Ariefa'},
+  {n:'222301030',b:'222301062',k:'5B',nm:'Qaiser Ataullah Al Hakiim'},
+  {n:'222301011',b:'222301065',k:'5B',nm:'Rafa Araya Partama'},
+  {n:'222301044',b:'222301066',k:'5B',nm:'Razqya Shaynala Elshanum'},
+  {n:'222301035',b:'222301070',k:'5B',nm:'Shakila Arsyfa Purnama'},
+  {n:'222301033',b:'222301074',k:'5B',nm:'Syafira Putri Ramadhanti'},
+  {n:'2324020074',b:'232402066',k:'5B',nm:'Syahdan Abdul Wafar'},
+  {n:'222301084',b:'222301077',k:'5B',nm:'Zaara Ufaira Azka'},
+  {n:'222301012',b:'222301001',k:'5C',nm:'Abdul Abid Putra Ruslan'},
+  {n:'2324010008',b:'232402067',k:'5C',nm:'Abdullah Syamil'},
+  {n:'222301069',b:'222301005',k:'5C',nm:'Adam Azzahidi Damarjati'},
+  {n:'222301015',b:'222301009',k:'5C',nm:'Aisha Zahwa Attahira'},
+  {n:'222301023',b:'222301014',k:'5C',nm:'Anindya Rachma'},
+  {n:'2425010082',b:'242503082',k:'5C',nm:'Athmar Abdillah Avindra Putra'},
+  {n:'232402077',b:'232402069',k:'5C',nm:'Bilqis Siffa Agustin'},
+  {n:'222301065',b:'222301022',k:'5C',nm:'Cleo Agatha Arief Siregar'},
+  {n:'222301048',b:'222301023',k:'5C',nm:'Dafa Abyasa Akram'},
+  {n:'222301009',b:'222301026',k:'5C',nm:'Drew Lathief Malik'},
+  {n:'222301045',b:'222301032',k:'5C',nm:'Hadiyya Gevherhan Rezdia'},
+  {n:'222301068',b:'222301036',k:'5C',nm:'Herjuno Kastara'},
+  {n:'222301077',b:'222301040',k:'5C',nm:'Ishana Maliqa Zhafira'},
+  {n:'222301040',b:'222301041',k:'5C',nm:'Karen Azkiya Pasha'},
+  {n:'222301052',b:'222301042',k:'5C',nm:'Kayyisa Lubna Sakhi'},
+  {n:'222301029',b:'222301046',k:'5C',nm:'Kirana Aleen Anak Hamid'},
+  {n:'222301006',b:'222301049',k:'5C',nm:'Mahreza Abdillah Karim'},
+  {n:'222301078',b:'222301053',k:'5C',nm:'Muhammad Fahlevi Rezqiano'},
+  {n:'2324010009',b:'232402065',k:'5C',nm:'Muhammad Gibran Ghifari'},
+  {n:'222301047',b:'222301054',k:'5C',nm:'Muhammad Ichsan Al Fatih'},
+  {n:'222301058',b:'222301060',k:'5C',nm:'Nazmi Juna'},
+  {n:'222301038',b:'222301061',k:'5C',nm:'Nilna Minnasuke Mayda'},
+  {n:'222301054',b:'222301068',k:'5C',nm:'Shabira Azalia Fauzi'},
+  {n:'222301026',b:'222301075',k:'5C',nm:'Syahquitta Kayla Azzahra'},
+  {n:'222301034',b:'222301078',k:'5C',nm:'Zenith Qori Arasy Isnaini'},
+  {n:'2526010074',b:'252605073',k:'6A',nm:'Davindra Arfino Erwansyah'},
+  {n:'222301043',b:'222302079',k:'6A',nm:'Fayakuun Abdullah Wikrama'},
+  {n:'2324010017',b:'232403064',k:'6A',nm:'Safiya Azzahra Elmeira Kandow'},
+  {n:'2526010073',b:'252605074',k:'6B',nm:'Ibrahim Abbas Al Ukasyah Hasibuan'},
+  {n:'232403076',b:'232403068',k:'6B',nm:'Uwais Al Fatih'}
+  ];
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+    $('jumlahPasangan').textContent = PASANGAN_DUPLIKAT.length;
+
+    if (session.role !== 'admin') {
+      $('btnJalankan').classList.add('hidden');
+      document.querySelector('.warn-box').classList.add('hidden');
+      document.querySelector('.summary-box').classList.add('hidden');
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin.';
+      $('emptyState').classList.remove('hidden');
+    }
+  });
+
+  $('btnJalankan').addEventListener('click', async () => {
+    if (!confirm(`Gabungkan ${PASANGAN_DUPLIKAT.length} pasangan siswa duplikat sekarang? NIS lama akan DIHAPUS setelah riwayatnya dipindah. Proses ini tidak bisa dibatalkan di tengah jalan.`)) return;
+    if (!confirm('Konfirmasi sekali lagi — pastikan Anda sudah membaca peringatan di atas. Lanjutkan?')) return;
+
+    const btn = $('btnJalankan');
+    btn.disabled = true; btn.textContent = 'Memproses… jangan tutup halaman ini';
+    const logBox = $('logBox');
+    logBox.classList.add('show');
+    logBox.textContent = '';
+
+    try {
+      const { digabung, dilewati, gagal } = await jalankanPerbaikanDuplikat(PASANGAN_DUPLIKAT, (msg) => {
+        logBox.textContent += msg + '\n';
+        logBox.scrollTop = logBox.scrollHeight;
+      });
+      showToast(`Selesai — ${digabung} digabung, ${dilewati} dilewati, ${gagal} gagal.`);
+      btn.textContent = 'Selesai';
+    } catch (e) {
+      console.error(e);
+      logBox.textContent += 'GAGAL TOTAL: ' + (e.message || e) + '\n';
+      showToast('Terjadi kesalahan — lihat log.', true);
+      btn.disabled = false; btn.textContent = 'Jalankan Perbaikan Sekarang';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>
