@@ -613,6 +613,184 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
 }
 
 /* ==========================================================================
+   Perbaikan Duplikat Siswa (2026-09-15, sekali-jalan) — impor Dapodik (§13)
+   membuat siswa BARU dengan NIS Dapodik (NIPD) untuk 403 siswa yang
+   SEBENARNYA sudah ada di `siswa` sejak seed-siswa.html (NIS lama, beda
+   skema penomoran) — akibatnya dobel. Lihat antiregresi.md §16 untuk
+   analisis lengkap & cara pencocokan 403 pasangannya (dilakukan OFFLINE
+   oleh Claude, bukan oleh fungsi ini — fungsi ini cuma MENGEKSEKUSI
+   pasangan yang sudah dipastikan).
+   ========================================================================== */
+
+/**
+ * [Admin] Gabungkan dua dokumen siswa yang merujuk ORANG YANG SAMA tapi
+ * ke-duplikat dengan dua NIS berbeda. `nisBaru` yang DIPERTAHANKAN
+ * (dianggap NIS resmi/Dapodik terkini). Riwayat di `nisLama` (8 koleksi +
+ * anakIds — pola SAMA dengan gantiNis(), lihat komentar di sana untuk
+ * detail kenapa setoran/menulis_log pakai copy+delete sementara koleksi
+ * lain pakai updateDoc) dipindahkan ke `nisBaru`; field `jenjang`/
+ * `tamatIqro`/`aktif` dari `nisLama` DIPERTAHANKAN (menimpa default di
+ * `nisBaru` kalau ada) SEBELUM migrasi riwayat, supaya data Tahsin-Tahfizh
+ * yang sudah benar (bukan tebakan heuristik) tidak hilang. `nisLama`
+ * dihapus PALING TERAKHIR, setelah semua sukses.
+ *
+ * BEDA dari gantiNis(): di sini KEDUA NIS SUDAH ADA sebagai dokumen
+ * terpisah — bukan "ganti nama", tapi "gabungkan dua dokumen jadi satu".
+ * `nisBaru` WAJIB sudah ada (kebalikan dari gantiNis() yang mewajibkan
+ * NIS baru BELUM ada).
+ *
+ * Idempoten: kalau `nisLama` sudah tidak ada (proses sebelumnya berhasil,
+ * atau dijalankan dua kali), langsung dilewati tanpa error — aman diulang.
+ *
+ * @param {{nisLama:string, nisBaru:string, kelas:string, onLog?:(msg:string)=>void, mapelList?:Array}} params
+ * @returns {Promise<'digabung'|'dilewati'>}
+ */
+export async function gabungkanSiswaDuplikat({ nisLama, nisBaru, kelas, onLog, mapelList }) {
+  const log = (msg) => { if (onLog) onLog(msg); };
+
+  // Pengaman: kalau NIS lama & baru SAMA (siswa ini ternyata tidak pernah
+  // dobel — cocok dari awal), JANGAN lanjut. Tanpa ini, kode di bawah
+  // akan "memindahkan" data ke dirinya sendiri lalu MENGHAPUS satu-satunya
+  // dokumen yang ada — kehilangan data total. Ditemukan nyata saat
+  // menyiapkan §16 (48 dari 403 pasangan awal ternyata begini, sudah
+  // disaring keluar dari daftar sebelum dikirim ke fungsi ini — tapi
+  // pengaman ini tetap dipasang di level fungsi, bukan cuma di pemanggil).
+  if (nisLama === nisBaru) { log(`  (${nisLama}) NIS lama & baru sama — tidak perlu digabung, dilewati.`); return 'dilewati'; }
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 60));
+    const idxLama = DEMO_SISWA.findIndex(s => s.id === nisLama);
+    if (idxLama < 0) { log(`  (${nisLama}) sudah tidak ada — dilewati.`); return 'dilewati'; }
+    const idxBaru = DEMO_SISWA.findIndex(s => s.id === nisBaru);
+    if (idxBaru < 0) { log(`  (${nisBaru}) TIDAK ditemukan — dilewati, cek manual.`); return 'dilewati'; }
+    const lama = DEMO_SISWA[idxLama];
+    DEMO_SISWA[idxBaru] = {
+      ...DEMO_SISWA[idxBaru], jenjang: lama.jenjang, aktif: lama.aktif,
+      ...(lama.tamatIqro !== undefined ? { tamatIqro: lama.tamatIqro } : {}),
+    };
+    DEMO_SISWA.splice(idxLama, 1);
+    log(`  Mode pratinjau: ${nisLama} digabung ke ${nisBaru} (riwayat lintas koleksi tidak disimulasikan).`);
+    return 'digabung';
+  }
+
+  const { db, fsMod } = window.__fb;
+  const refLama = fsMod.doc(db, 'siswa', nisLama);
+  const dataLamaSnap = await fsMod.getDoc(refLama);
+  if (!dataLamaSnap.exists()) { log(`  (${nisLama}) sudah tidak ada — dilewati.`); return 'dilewati'; }
+  const refBaru = fsMod.doc(db, 'siswa', nisBaru);
+  const dataBaruSnap = await fsMod.getDoc(refBaru);
+  if (!dataBaruSnap.exists()) { log(`  (${nisBaru}) TIDAK DITEMUKAN — dilewati, cek manual.`); return 'dilewati'; }
+
+  const lama = dataLamaSnap.data();
+  const mergeField = {};
+  if (lama.jenjang) mergeField.jenjang = lama.jenjang;
+  if (lama.tamatIqro !== undefined) mergeField.tamatIqro = lama.tamatIqro;
+  if (lama.aktif === false) mergeField.aktif = false;
+  if (Object.keys(mergeField).length) await fsMod.updateDoc(refBaru, mergeField);
+
+  async function migrasiUpdate(namaKoleksi, extraWhere = []) {
+    const q = fsMod.query(
+      fsMod.collection(db, namaKoleksi),
+      fsMod.where('siswaId', '==', nisLama),
+      fsMod.where('kelas', '==', kelas),
+      ...extraWhere
+    );
+    const snap = await fsMod.getDocs(q);
+    if (snap.empty) return 0;
+    let count = 0, opsInBatch = 0;
+    let batch = fsMod.writeBatch(db);
+    for (const d of snap.docs) {
+      batch.update(fsMod.doc(db, namaKoleksi, d.id), { siswaId: nisBaru });
+      opsInBatch++; count++;
+      if (opsInBatch >= 450) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+    }
+    if (opsInBatch > 0) await batch.commit();
+    return count;
+  }
+
+  async function migrasiCopyDelete(namaKoleksi) {
+    const q = fsMod.query(
+      fsMod.collection(db, namaKoleksi),
+      fsMod.where('siswaId', '==', nisLama),
+      fsMod.where('kelas', '==', kelas)
+    );
+    const snap = await fsMod.getDocs(q);
+    if (snap.empty) return 0;
+    let count = 0, opsInBatch = 0;
+    let batch = fsMod.writeBatch(db);
+    for (const d of snap.docs) {
+      const newRef = fsMod.doc(fsMod.collection(db, namaKoleksi));
+      batch.set(newRef, { ...d.data(), siswaId: nisBaru });
+      batch.delete(fsMod.doc(db, namaKoleksi, d.id));
+      opsInBatch += 2; count++;
+      if (opsInBatch >= 440) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+    }
+    if (opsInBatch > 0) await batch.commit();
+    return count;
+  }
+
+  const nSetoran = await migrasiCopyDelete('setoran');
+  const nMenulis = await migrasiCopyDelete('menulis_log');
+
+  const mapel = mapelList || await getMapelList();
+  let nNilaiTp = 0, nSts = 0, nSas = 0;
+  for (const m of mapel) {
+    nNilaiTp += await migrasiUpdate('nilai_tp', [fsMod.where('mapel', '==', m.nama)]);
+    nSts += await migrasiUpdate('nilai_sts', [fsMod.where('mapel', '==', m.nama)]);
+    nSas += await migrasiUpdate('nilai_sas', [fsMod.where('mapel', '==', m.nama)]);
+  }
+  const nAbsensi = await migrasiUpdate('absensi_rapor');
+  const nKokurikuler = await migrasiUpdate('kokurikuler');
+  const nEkskul = await migrasiUpdate('ekstrakurikuler_siswa');
+
+  const qUsers = fsMod.query(fsMod.collection(db, 'users'), fsMod.where('anakIds', 'array-contains', nisLama));
+  const snapUsers = await fsMod.getDocs(qUsers);
+  for (const d of snapUsers.docs) {
+    const anakIds = (d.data().anakIds || []).filter(x => x !== nisLama);
+    if (!anakIds.includes(nisBaru)) anakIds.push(nisBaru);
+    await fsMod.updateDoc(fsMod.doc(db, 'users', d.id), { anakIds });
+  }
+
+  await fsMod.deleteDoc(refLama);
+
+  const rincian = `${nSetoran} setoran, ${nMenulis} menulis, ${nNilaiTp} TP, ${nSts} STS, ${nSas} SAS, ${nAbsensi} absensi, ${nKokurikuler} kokurikuler, ${nEkskul} ekskul, ${snapUsers.size} akun ortu`;
+  log(`  ${nisLama} → ${nisBaru}: ${rincian}.`);
+  return 'digabung';
+}
+
+/**
+ * [Admin] Jalankan gabungkanSiswaDuplikat() untuk daftar pasangan sekaligus,
+ * berurutan (bukan paralel — supaya log terbaca runut dan tidak membebani
+ * Firestore dengan ratusan operasi bersamaan). `mapelList` diambil SEKALI
+ * di sini (bukan per-pasangan) untuk menghindari ratusan pembacaan
+ * berulang yang sama.
+ * @param {Array<{nisLama:string, nisBaru:string, kelas:string, namaLama?:string}>} pasangan
+ * @param {(msg:string)=>void} [onLog]
+ * @returns {Promise<{digabung:number, dilewati:number, gagal:number}>}
+ */
+export async function jalankanPerbaikanDuplikat(pasangan, onLog) {
+  const log = (msg) => { if (onLog) onLog(msg); };
+  const mapelList = DEMO_MODE ? [] : await getMapelList();
+  let digabung = 0, dilewati = 0, gagal = 0, ke = 0;
+
+  for (const p of pasangan) {
+    ke++;
+    try {
+      const hasil = await gabungkanSiswaDuplikat({
+        nisLama: p.nisLama, nisBaru: p.nisBaru, kelas: p.kelas, onLog: log, mapelList,
+      });
+      if (hasil === 'digabung') digabung++; else dilewati++;
+    } catch (e) {
+      gagal++;
+      log(`  GAGAL (${p.namaLama || p.nisLama} → ${p.nisBaru}): ${e.message || e}`);
+    }
+    if (ke % 25 === 0) log(`— Progres: ${ke}/${pasangan.length} pasangan diproses —`);
+  }
+  log(`Selesai. ${digabung} digabung, ${dilewati} dilewati, ${gagal} gagal, dari ${pasangan.length} pasangan.`);
+  return { digabung, dilewati, gagal };
+}
+
+/* ==========================================================================
    Mutasi Siswa — wali kelas MENGUSULKAN siswa baru masuk atau siswa yang
    sudah pindah keluar; ADMIN yang menyetujui/menolak. Disetujui →
    otomatis panggil createSiswa()/updateSiswaData() di atas (bukan
