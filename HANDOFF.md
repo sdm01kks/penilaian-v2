@@ -1,7 +1,20 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), dan 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), dan 2026-09-15 (Perbaikan Duplikat Siswa).
+
+---
+
+## Status per 2026-09-15 (Perbaikan Duplikat Siswa akibat Impor Dapodik)
+
+**BELUM DIJALANKAN — ini yang PALING PENTING untuk sesi berikutnya.** Impor Data Siswa dengan file Dapodik (§13, dijalankan pemilik proyek setelah sesi sebelumnya) menduplikasi hampir semua 403 siswa karena NIS lama (`seed-siswa.html`) beda dari NIPD Dapodik. Detail akar masalah & cara perbaikan lengkap di `antiregresi.md` §16.
+
+**Yang sudah disiapkan:** `akademik/perbaiki-duplikat-siswa.html` — utilitas sekali-jalan, 355 pasangan NIS lama↔baru sudah tertanam (dicocokkan offline, lihat §16.2), tinggal admin buka halamannya dan tekan tombol. **BELUM DIJALANKAN oleh pemilik proyek** (dan belum bisa diuji end-to-end oleh Claude karena tidak ada akses Firestore dari lingkungan kerja).
+
+**Kalau sesi berikutnya melanjutkan ini:**
+- Cek dulu apakah pemilik proyek sudah menjalankan `perbaiki-duplikat-siswa.html` — kalau sudah, halaman itu boleh dihapus (fungsi `gabungkanSiswaDuplikat()`/`jalankanPerbaikanDuplikat()` di data layer boleh dibiarkan, tidak mengganggu apa pun, reusable kalau situasi serupa terulang).
+- Kalau ada masalah SAAT menjalankan (misalnya berhenti di tengah jalan), halaman ini aman dijalankan ulang — pasangan yang sudah berhasil digabung otomatis dilewati (lihat §16.5 soal idempotensi).
+- **Pelajaran penting untuk impor massal ke depan**: fitur Impor Data Siswa mencocokkan MURNI berdasarkan NIS persis, tidak ada fallback nama. Kalau ada sumber data lain yang mungkin punya siswa dengan NIS berbeda dari yang sudah ada di sistem, risiko duplikasi yang SAMA bisa terulang — lihat antiregresi.md §16.6 untuk pemikiran soal mencegah ini di masa depan (belum diimplementasikan).
 
 ---
 

@@ -17,6 +17,24 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-15 — `[Bersama]` Perbaikan Duplikat Siswa akibat Impor Dapodik
+
+### Latar belakang
+Impor Data Siswa (§13) dengan data Dapodik menduplikasi hampir semua siswa — `siswa` sudah punya 403 dokumen sejak `seed-siswa.html` dengan NIS buatan-manual yang BEDA dari NIPD resmi Dapodik, jadi pencocokan by-NIS di fitur impor menganggap semuanya siswa baru. Lihat `antiregresi.md` §16 untuk analisis akar masalah lengkap.
+
+### Ditambahkan
+- **`assets/firestore-data-akademik.js`**: `gabungkanSiswaDuplikat({nisLama, nisBaru, kelas, onLog, mapelList})` — gabungkan dua dokumen siswa duplikat jadi satu (NIS baru/Dapodik dipertahankan, field `jenjang`/`tamatIqro`/`aktif` dari NIS lama dipertahankan, riwayat 8 koleksi + `anakIds` dipindah — pola sama dengan `gantiNis()` §10). **Ada pengaman WAJIB**: menolak kalau `nisLama===nisBaru` (ditemukan 48 kasus nyata di data — lihat antiregresi.md §16.3, tanpa pengaman ini akan menghapus satu-satunya dokumen siswa yang ada). `jalankanPerbaikanDuplikat(pasangan, onLog)` — jalankan fungsi di atas untuk banyak pasangan berurutan, dengan log progres & ringkasan akhir.
+- **`akademik/perbaiki-duplikat-siswa.html`** (baru, UTILITAS SEKALI-JALAN, tidak ditautkan dari navigasi manapun) — 355 pasangan NIS lama↔baru (dicocokkan OFFLINE dari `seed-siswa.html` vs data Dapodik, lihat antiregresi.md §16.2) tertanam langsung di kode, satu tombol "Jalankan Perbaikan Sekarang" dengan konfirmasi ganda + log progres.
+
+### Verifikasi
+- Pencocokan 403 pasangan (396 nama persis + 7 variasi penulisan, similaritas >95% dikonfirmasi manual) dilakukan lewat script Python offline, membaca `SISWA_SEED` langsung dari `seed-siswa.html` dan `data-siswa-dapodik.json` dari sesi impor sebelumnya.
+- Ditemukan & disaring 48 pasangan yang NIS lama/barunya ternyata SUDAH SAMA (tidak pernah dobel) — SISA 355 yang dieksekusi.
+- Dicek tidak ada `nisBaru` yang dipakai lebih dari satu `nisLama` (tanda pencocokan ambigu) — bersih, 355 pasangan unik di kedua sisi.
+- `node --check` pada `firestore-data-akademik.js` + script module halaman baru, audit brace/paren, audit balance tag `<div>`, verifikasi isi array `PASANGAN_DUPLIKAT` (355 entri, 0 kasus `n===b`) langsung dari file HTML yang akan dikirim.
+- **Belum diuji ke Firestore sungguhan** (tidak ada akses jaringan Firebase dari lingkungan kerja) — jalankan dulu dan pantau lognya baik-baik saat pertama kali dieksekusi; operasi ini MENGHAPUS 355 dokumen siswa lama setelah memindahkan riwayatnya, tidak bisa dibatalkan di tengah jalan.
+
+---
+
 ## 2026-09-14 (lanjutan) — `[Akademik]` Cetak Cover Rapor: centering & Tanggal TTD Identitas terpisah
 
 ### Ditambahkan/Diubah
