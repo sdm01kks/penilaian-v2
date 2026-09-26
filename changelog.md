@@ -17,6 +17,31 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-27 — `[Akademik]` Fitur 7KAIH & Deskripsi Gabungan Kokurikuler
+
+### Latar belakang
+Buku Saku Kokurikuler resmi sekolah (Panduan Kokurikuler BSKAP Kemendikdasmen 2025 + Permendikdasmen 13/2025 & 12/2026) mewajibkan G7KAIH (7 Kebiasaan Anak Indonesia Hebat) ikut dinilai sebagai jalur kokurikuler KEDUA di samping Proyek STEM yang sudah ada, digabung jadi SATU deskripsi per semester di rapor — bukan dua laporan terpisah. Ditemukan juga: cetak Kokurikuler yang ada (tabel per-DPL) sudah bertentangan dengan aturan "satu kolom" ini SEBELUM G7KAIH ditambahkan. Lihat `antiregresi.md` §18.
+
+### Ditambahkan
+- **`assets/firestore-data-akademik.js`**: koleksi `g7kaih` (observasi ringkas sekali per semester per siswa, 7 kebiasaan × {catatan, dplId} — `getG7kaihByKelas()`, `saveG7kaih()`) dan `kokurikuler_rapor` (deskripsi gabungan final per siswa per semester — `getKokurikulerRaporByKelas()`, `getDeskripsiKokurikulerSiswa()`, `saveDeskripsiKokurikulerSiswa()`); `susunDraftDeskripsiKokurikuler()` (fungsi murni, menyusun draf dari bukti STEM+7KAIH mengikuti pola kalimat buku saku, tidak pernah dipanggil otomatis).
+- **`akademik/g7kaih-hub.html`** (pilih kelas) & **`akademik/g7kaih.html`** (isi observasi per siswa, per kebiasaan: catatan + pilih DPL).
+- **`akademik/deskripsi-kokurikuler-hub.html`** (pilih kelas) & **`akademik/deskripsi-kokurikuler.html`** (per siswa: tinjau bukti STEM+7KAIH, susun draf otomatis, edit, simpan deskripsi gabungan).
+- **`firestore.rules`**: rule `g7kaih` & `kokurikuler_rapor`, pola identik `kokurikuler` (khusus wali kelas).
+
+### Diubah
+- **`akademik/rapor-sas-cetak.html`**: bagian "B. Kokurikuler" diganti dari tabel per-DPL jadi satu paragraf (`getDeskripsiKokurikulerSiswa()`), memenuhi aturan "satu kolom" buku saku.
+- **`akademik/kokurikuler-hub.html`**: kartu "7KAIH" (dulu placeholder "Segera") diaktifkan; kartu baru "Deskripsi Kokurikuler"; teks pengantar diperbarui.
+- **`akademik/wali-hub.html`**: teks subjudul menu Kokurikuler diperbarui.
+- **`gantiNis()`/`gabungkanSiswaDuplikat()`**: ikut memigrasi `g7kaih` & `kokurikuler_rapor` (total 10 koleksi mereferensikan `siswaId`, naik dari 8).
+
+### Verifikasi
+- `node --check` pada `firestore-data-akademik.js` dan seluruh script module di 5 halaman baru/diubah (via ekstraksi + modul stub) — semua OK.
+- Balance kurung kurawal semua file HTML terkait — OK. Balance kurung `firestore.rules` — OK.
+- Audit grep: tidak ada halaman lain yang masih memanggil pola cetak tabel kokurikuler lama; `DPL_LEVEL_LABEL`/`getKokurikulerRaporSiswa` di halaman lain (kokurikuler.html, kelola-dpl.html) dipastikan penggunaan yang SAH, bukan sisa kode lama.
+- **Belum diuji ke Firestore sungguhan** (tidak ada akses jaringan Firebase dari lingkungan kerja). Kualitas bahasa draf otomatis `susunDraftDeskripsiKokurikuler()` belum ditinjau manusia terhadap data nyata — sengaja dirancang sebagai titik awal untuk disunting guru, bukan kalimat final.
+
+---
+
 ## 2026-09-26 — `[Akademik]` Perbaikan Kapitalisasi Nama akibat Impor Dapodik
 
 ### Latar belakang

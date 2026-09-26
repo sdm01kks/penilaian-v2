@@ -110,8 +110,8 @@
   import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
   import {
     getConfigAkademik, getSiswaByKelas, getRaporSASSiswa,
-    getKokurikulerRaporSiswa, getEkstrakurikulerRaporSiswa, EKS_LEVEL_LABEL,
-    getAbsensiRaporByKelas, DPL_LEVEL_LABEL,
+    getDeskripsiKokurikulerSiswa, getEkstrakurikulerRaporSiswa, EKS_LEVEL_LABEL,
+    getAbsensiRaporByKelas,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -169,9 +169,9 @@
       const tingkatan = String(kelas).replace(/[^0-9]/g, '');
       const semester = config.semesterAktif, tahunAjaran = config.tahunAjaran;
 
-      const [daftarNilai, kokurikuler, ekstrakurikuler, absensiMap] = await Promise.all([
+      const [daftarNilai, deskripsiKokurikuler, ekstrakurikuler, absensiMap] = await Promise.all([
         getRaporSASSiswa({ siswaId, kelas, tingkatan, semester, tahunAjaran }),
-        getKokurikulerRaporSiswa(siswaId, kelas, semester, tahunAjaran),
+        getDeskripsiKokurikulerSiswa(siswaId, kelas, semester, tahunAjaran),
         getEkstrakurikulerRaporSiswa(siswaId, kelas, semester, tahunAjaran),
         getAbsensiRaporByKelas(kelas, semester, tahunAjaran),
       ]);
@@ -180,7 +180,7 @@
       const semLabel = semester === '2' ? 'Genap' : 'Ganjil';
       const waliNama = session?.nama || '—';
 
-      raporData = { config, siswa, kelas, fase: faseDariKelas(kelas), semLabel, daftarNilai, kokurikuler, ekstrakurikuler, absensi, waliNama };
+      raporData = { config, siswa, kelas, fase: faseDariKelas(kelas), semLabel, daftarNilai, deskripsiKokurikuler, ekstrakurikuler, absensi, waliNama };
 
       $('titleNama').textContent = siswa.nama;
       $('subKelas').textContent = `Kelas ${kelas} · Rapor SAS`;
@@ -214,17 +214,6 @@
         <td class="capaian-text">${capaian.length ? capaian.join('<br>') : '<span style="color:#999;font-style:italic">Belum ada nilai tercatat.</span>'}</td>
       </tr>`;
     }).join('');
-
-    const kokurikulerRows = d.kokurikuler.length
-      ? d.kokurikuler.map((k, i) => `
-        <tr>
-          <td class="td-no">${i + 1}</td>
-          <td>${escapeHtml(k.proyekJudul)}</td>
-          <td>${escapeHtml(k.dplNama)}</td>
-          <td class="td-predikat">${escapeHtml(DPL_LEVEL_LABEL[k.level - 1] || '—')}</td>
-          <td class="capaian-text">${escapeHtml(k.deskripsi) || '<span style="color:#999;font-style:italic">—</span>'}</td>
-        </tr>`).join('')
-      : `<tr><td colspan="5" style="text-align:center;color:#999;font-style:italic">Belum ada data kokurikuler semester ini.</td></tr>`;
 
     const ekskulRows = d.ekstrakurikuler.length
       ? d.ekstrakurikuler.map((e, i) => `
@@ -267,11 +256,9 @@
   <tbody>${nilaiRows || `<tr><td colspan="4" style="text-align:center;color:#999;font-style:italic">Belum ada mata pelajaran terdaftar untuk tingkatan ini.</td></tr>`}</tbody>
 </table>
 
+
 <div class="rpr-section-title">B. Kokurikuler</div>
-<table>
-  <thead><tr><th class="td-no">No.</th><th>Proyek</th><th>Dimensi Profil Lulusan</th><th class="td-predikat">Predikat</th><th>Deskripsi</th></tr></thead>
-  <tbody>${kokurikulerRows}</tbody>
-</table>
+<div class="catatan-box">${d.deskripsiKokurikuler ? escapeHtml(d.deskripsiKokurikuler) : '<span style="color:#999;font-style:italic">Belum ada deskripsi kokurikuler yang disusun semester ini.</span>'}</div>
 
 <div class="rpr-section-title">C. Ekstrakurikuler</div>
 <table>

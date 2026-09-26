@@ -1,7 +1,20 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), dan 2026-09-26 (Perbaikan Kapitalisasi Nama).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), dan 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler).
+
+---
+
+## Status per 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler)
+
+**BELUM DIPUSH/DIDEPLOY, dan BELUM DIUJI ke Firestore sungguhan** (tidak ada akses jaringan Firebase dari lingkungan kerja). Detail lengkap di `antiregresi.md` §18. Ringkasnya: menambah G7KAIH (jalur kokurikuler kedua, observasi ringkas per semester — bukan jurnal harian) + halaman penyusun Deskripsi Gabungan Kokurikuler (STEM+7KAIH jadi satu paragraf, sesuai aturan resmi buku saku sekolah), dan MENGUBAH cetak rapor SAS bagian Kokurikuler dari tabel per-DPL jadi satu paragraf.
+
+**Yang perlu ditinjau Fairel di sesi berikutnya (urutan yang disarankan):**
+1. Isi 7KAIH beberapa siswa dulu lewat `g7kaih.html` (via Kokurikuler > 7KAIH di menu Wali Kelas).
+2. Buka `deskripsi-kokurikuler.html` untuk siswa yang sama — cek bukti STEM & 7KAIH tampil benar, coba tombol "Susun Draf Otomatis", **tinjau kualitas bahasanya** (fungsi penyusun draf ini belum pernah ditinjau manusia terhadap data nyata — dirancang sebagai titik awal untuk disunting, bukan kalimat final).
+3. Cetak rapor SAS siswa itu, pastikan bagian "B. Kokurikuler" sudah berupa satu paragraf (bukan tabel lama).
+
+**Kalau ada bagian ini yang perlu diubah:** logika penyusun draf ada di `susunDraftDeskripsiKokurikuler()` (`assets/firestore-data-akademik.js`) — fungsi murni, aman diubah tanpa menyentuh data yang tersimpan.
 
 ---
 
@@ -16,7 +29,11 @@ Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, da
 - Kalau Fairel melaporkan ada nama yang hasil konversinya kurang tepat (misalnya nama dengan tanda hubung/tanda baca tidak lazim yang tidak ter-title-case dengan benar), itu bisa diperbaiki manual satu-per-satu lewat Kelola Data Siswa — tidak perlu mengubah logika massalnya untuk kasus langka.
 - Halaman ini idempoten secara alami (nama yang sudah campuran huruf besar/kecil tidak terdeteksi lagi) — aman dijalankan berulang kali kalau perlu.
 
-**Yang sudah disiapkan:** `akademik/perbaiki-duplikat-siswa.html` — utilitas sekali-jalan, 355 pasangan NIS lama↔baru sudah tertanam (dicocokkan offline, lihat §16.2), tinggal admin buka halamannya dan tekan tombol. **BELUM DIJALANKAN oleh pemilik proyek** (dan belum bisa diuji end-to-end oleh Claude karena tidak ada akses Firestore dari lingkungan kerja).
+## Status per 2026-09-15 (Perbaikan Duplikat Siswa akibat Impor Dapodik)
+
+*(Catatan: header bagian ini sempat hilang secara tidak sengaja saat pembaruan 2026-09-26 sebelumnya — isinya tidak pernah hilang, cuma headernya. Sudah diperbaiki di sini.)*
+
+**Yang sudah disiapkan:** `akademik/perbaiki-duplikat-siswa.html` — utilitas sekali-jalan, 355 pasangan NIS lama↔baru sudah tertanam (dicocokkan offline, lihat §16.2), tinggal admin buka halamannya dan tekan tombol. **SUDAH DIJALANKAN** (lihat §17 di atas — Perbaikan Kapitalisasi Nama ditemukan justru SETELAH langkah ini dijalankan).
 
 **Kalau sesi berikutnya melanjutkan ini:**
 - Cek dulu apakah pemilik proyek sudah menjalankan `perbaiki-duplikat-siswa.html` — kalau sudah, halaman itu boleh dihapus (fungsi `gabungkanSiswaDuplikat()`/`jalankanPerbaikanDuplikat()` di data layer boleh dibiarkan, tidak mengganggu apa pun, reusable kalau situasi serupa terulang).

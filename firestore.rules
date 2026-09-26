@@ -387,6 +387,34 @@ service cloud.firestore {
       allow delete: if bolehWaliKelas(resource.data.kelas);
     }
 
+    // ---- g7kaih/{id} ---------------------------------------------------------
+    // Observasi ringkas 7KAIH per siswa per semester (2026-09-26, jalur KEDUA
+    // kokurikuler di samping proyek_stem — lihat antiregresi.md §18). Pola
+    // akses IDENTIK kokurikuler/proyek_stem: KHUSUS wali kelas.
+    match /g7kaih/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
+    // ---- kokurikuler_rapor/{id} -----------------------------------------------
+    // Deskripsi gabungan Kokurikuler (STEM + 7KAIH) SATU per siswa per
+    // semester — ini yang dicetak di rapor SAS, bukan data mentah di
+    // kokurikuler/g7kaih (§18). Pola akses IDENTIK kokurikuler.
+    match /kokurikuler_rapor/{id} {
+      allow read: if bolehWaliKelas(resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow update: if bolehWaliKelas(resource.data.kelas)
+                     && bolehWaliKelas(request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- ekstrakurikuler/{id} -----------------------------------------------
     // Daftar MASTER kegiatan Ekstrakurikuler milik sekolah (Basket, English
     // Club, dst) — bukan data siswa, bukan per kelas. Dikelola admin lewat

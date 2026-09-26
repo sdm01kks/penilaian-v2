@@ -463,9 +463,9 @@ export async function createSiswa({ nis, nama, kelas, jenjang, aktif, tempatLahi
 
 /**
  * [Admin] Ganti NIS seorang siswa. NIS adalah Document ID di `siswa` DAN
- * direferensikan sebagai field `siswaId` di 8 koleksi lain — setoran,
+ * direferensikan sebagai field `siswaId` di 10 koleksi lain — setoran,
  * menulis_log, nilai_tp, nilai_sts, nilai_sas, absensi_rapor, kokurikuler,
- * ekstrakurikuler_siswa — plus array `anakIds` milik akun orang tua
+ * ekstrakurikuler_siswa, g7kaih, kokurikuler_rapor — plus array `anakIds` milik akun orang tua
  * (users). Operasi ini TIDAK atomik secara keseluruhan (batch Firestore
  * maksimal 500 operasi; riwayat siswa kelas 5-6 bertahun-tahun bisa lebih
  * dari itu), tapi dirancang IDEMPOTEN: aman dijalankan ulang kalau gagal
@@ -597,6 +597,12 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
   log('Memindahkan nilai ekstrakurikuler…');
   log(`  ${await migrasiUpdate('ekstrakurikuler_siswa')} nilai ekstrakurikuler dipindahkan.`);
 
+  log('Memindahkan observasi 7KAIH…');
+  log(`  ${await migrasiUpdate('g7kaih')} dokumen 7KAIH dipindahkan.`);
+
+  log('Memindahkan deskripsi gabungan kokurikuler…');
+  log(`  ${await migrasiUpdate('kokurikuler_rapor')} dokumen deskripsi kokurikuler dipindahkan.`);
+
   log('Memeriksa tautan akun orang tua…');
   const qUsers = fsMod.query(fsMod.collection(db, 'users'), fsMod.where('anakIds', 'array-contains', oldId));
   const snapUsers = await fsMod.getDocs(qUsers);
@@ -625,7 +631,7 @@ export async function gantiNis({ oldId, newId, kelas, onLog }) {
 /**
  * [Admin] Gabungkan dua dokumen siswa yang merujuk ORANG YANG SAMA tapi
  * ke-duplikat dengan dua NIS berbeda. `nisBaru` yang DIPERTAHANKAN
- * (dianggap NIS resmi/Dapodik terkini). Riwayat di `nisLama` (8 koleksi +
+ * (dianggap NIS resmi/Dapodik terkini). Riwayat di `nisLama` (10 koleksi +
  * anakIds — pola SAMA dengan gantiNis(), lihat komentar di sana untuk
  * detail kenapa setoran/menulis_log pakai copy+delete sementara koleksi
  * lain pakai updateDoc) dipindahkan ke `nisBaru`; field `jenjang`/
@@ -742,6 +748,8 @@ export async function gabungkanSiswaDuplikat({ nisLama, nisBaru, kelas, onLog, m
   const nAbsensi = await migrasiUpdate('absensi_rapor');
   const nKokurikuler = await migrasiUpdate('kokurikuler');
   const nEkskul = await migrasiUpdate('ekstrakurikuler_siswa');
+  const nG7kaih = await migrasiUpdate('g7kaih');
+  const nKokurikulerRapor = await migrasiUpdate('kokurikuler_rapor');
 
   const qUsers = fsMod.query(fsMod.collection(db, 'users'), fsMod.where('anakIds', 'array-contains', nisLama));
   const snapUsers = await fsMod.getDocs(qUsers);
@@ -753,7 +761,7 @@ export async function gabungkanSiswaDuplikat({ nisLama, nisBaru, kelas, onLog, m
 
   await fsMod.deleteDoc(refLama);
 
-  const rincian = `${nSetoran} setoran, ${nMenulis} menulis, ${nNilaiTp} TP, ${nSts} STS, ${nSas} SAS, ${nAbsensi} absensi, ${nKokurikuler} kokurikuler, ${nEkskul} ekskul, ${snapUsers.size} akun ortu`;
+  const rincian = `${nSetoran} setoran, ${nMenulis} menulis, ${nNilaiTp} TP, ${nSts} STS, ${nSas} SAS, ${nAbsensi} absensi, ${nKokurikuler} kokurikuler, ${nEkskul} ekskul, ${nG7kaih} 7KAIH, ${nKokurikulerRapor} deskripsi kokurikuler, ${snapUsers.size} akun ortu`;
   log(`  ${nisLama} → ${nisBaru}: ${rincian}.`);
   return 'digabung';
 }
@@ -2189,6 +2197,219 @@ export async function getKokurikulerRaporSiswa(siswaId, kelas, semester, tahunAj
     }
   }
   return hasil;
+}
+
+/* ==========================================================================
+   7KAIH (Gerakan 7 Kebiasaan Anak Indonesia Hebat, 2026-09-26) — jalur
+   KEDUA Kokurikuler, di samping Proyek STEM di atas. Arsitektur SENGAJA
+   beda dari Proyek STEM/kokurikuler: buku saku panduan sekolah
+   (antiregresi.md §18) menyimpulkan validitas asesmen G7KAIH lemah
+   (banyak dari 7 kebiasaan terjadi di rumah, sulit diverifikasi guru,
+   rawan diisi orang tua) — jadi TIDAK diberi skala level BT/MT/BSH/SB
+   seperti DPL Proyek STEM, cukup OBSERVASI RINGKAS SEKALI PER SEMESTER:
+   satu catatan bebas + satu DPL pilihan per kebiasaan. SATU dokumen per
+   (siswa × semester × tahun ajaran) — bukan per-kebiasaan seperti
+   kokurikuler/ekstrakurikuler_siswa, karena ketujuh kebiasaan memang
+   selalu diisi & dilihat bersamaan per siswa, tidak ada kebutuhan query
+   per-kebiasaan.
+   ========================================================================== */
+
+/** 7 kebiasaan resmi G7KAIH — urutan tetap sesuai Permendikdasmen 12/2026. */
+export const DAFTAR_KEBIASAAN_7KAIH = [
+  { id: 'bangunPagi', label: 'Bangun Pagi' },
+  { id: 'beribadah', label: 'Beribadah' },
+  { id: 'olahraga', label: 'Berolahraga' },
+  { id: 'makanSehat', label: 'Makan Sehat dan Bergizi' },
+  { id: 'gemarBelajar', label: 'Gemar Belajar' },
+  { id: 'bermasyarakat', label: 'Bermasyarakat' },
+  { id: 'tidurCepat', label: 'Tidur Cepat' },
+];
+
+/** Kebiasaan yang SULIT diverifikasi guru secara langsung (Bagian III
+ * buku saku) — dipakai UI sebagai catatan pengingat, dan oleh
+ * susunDraftDeskripsiKokurikuler() untuk memilih bagian "masih perlu"
+ * kalau tidak ada DPL Proyek STEM yang levelnya rendah. */
+export const KEBIASAAN_SULIT_VERIFIKASI_7KAIH = ['bangunPagi', 'tidurCepat', 'makanSehat'];
+
+const DEMO_G7KAIH_KEY = 'akd_demo_g7kaih';
+function readDemoG7kaih() { return JSON.parse(localStorage.getItem(DEMO_G7KAIH_KEY) || '[]'); }
+function writeDemoG7kaih(list) { localStorage.setItem(DEMO_G7KAIH_KEY, JSON.stringify(list)); }
+
+/** Semua observasi 7KAIH satu kelas untuk satu semester.
+ * @returns {Promise<Object<string,{id:string, kebiasaan:Object}>>} siswaId -> dokumen */
+export async function getG7kaihByKelas(kelas, semester, tahunAjaran) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    list = readDemoG7kaih().filter(g => g.kelas === kelas && g.semester === semester && g.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'g7kaih'),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  const map = {};
+  list.forEach(g => { map[g.siswaId] = g; });
+  return map;
+}
+
+/** Simpan (upsert) satu dokumen 7KAIH siswa. `payload.kebiasaan` WAJIB
+ * berisi SEMUA 7 key kebiasaan (kosongkan `catatan`/`dplId` yang tidak
+ * teramati sebagai string kosong, bukan dihilangkan dari objek) — beda
+ * dari saveIdentitasSiswa() yang menghilangkan field kosong, supaya UI
+ * tidak perlu menebak kebiasaan mana yang belum pernah disimpan sama
+ * sekali vs sengaja dikosongkan ulang. `existingId` dari
+ * getG7kaihByKelas() kalau siswa itu sudah punya dokumen semester ini. */
+export async function saveG7kaih(payload, existingId) {
+  const data = {
+    siswaId: payload.siswaId, kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    kebiasaan: payload.kebiasaan,
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoG7kaih();
+    if (existingId) {
+      const idx = list.findIndex(g => g.id === existingId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-g7kaih-' + Date.now() + '-' + payload.siswaId, ...data });
+    }
+    writeDemoG7kaih(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'g7kaih', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'g7kaih'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/* ==========================================================================
+   Deskripsi Gabungan Kokurikuler (2026-09-26) — SATU deskripsi per siswa
+   per semester, digabung dari DUA sumber (nilai DPL Proyek STEM +
+   observasi 7KAIH di atas). WAJIB begini (Bagian V buku saku,
+   antiregresi.md §18): rapor SAS hanya boleh menampilkan SATU
+   kolom/deskripsi Kokurikuler per semester — bukan tabel per-DPL seperti
+   sebelumnya. Data mentah per-DPL (kokurikuler/g7kaih) TETAP tersimpan
+   apa adanya — koleksi ini cuma menyimpan HASIL AKHIR (teks bebas final
+   setelah disunting guru lewat susunDraftDeskripsiKokurikuler()),
+   dipakai LANGSUNG oleh rapor-sas-cetak.html tanpa menyusun ulang saat
+   cetak.
+   ========================================================================== */
+
+const DEMO_KOKURIKULER_RAPOR_KEY = 'akd_demo_kokurikuler_rapor';
+function readDemoKokurikulerRapor() { return JSON.parse(localStorage.getItem(DEMO_KOKURIKULER_RAPOR_KEY) || '[]'); }
+function writeDemoKokurikulerRapor(list) { localStorage.setItem(DEMO_KOKURIKULER_RAPOR_KEY, JSON.stringify(list)); }
+
+/** Semua deskripsi gabungan satu kelas untuk satu semester.
+ * @returns {Promise<Object<string,{id:string, deskripsiGabungan:string}>>} siswaId -> dokumen */
+export async function getKokurikulerRaporByKelas(kelas, semester, tahunAjaran) {
+  let list;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    list = readDemoKokurikulerRapor().filter(k => k.kelas === kelas && k.semester === semester && k.tahunAjaran === tahunAjaran);
+  } else {
+    const { db, fsMod } = window.__fb;
+    const q = fsMod.query(
+      fsMod.collection(db, 'kokurikuler_rapor'),
+      fsMod.where('kelas', '==', kelas),
+      fsMod.where('semester', '==', semester),
+      fsMod.where('tahunAjaran', '==', tahunAjaran)
+    );
+    const snap = await fsMod.getDocs(q);
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  const map = {};
+  list.forEach(k => { map[k.siswaId] = k; });
+  return map;
+}
+
+/** Deskripsi gabungan Kokurikuler SATU siswa untuk SATU semester —
+ * dipakai `rapor-sas-cetak.html` (menggantikan tabel per-DPL lama yang
+ * dibangun dari getKokurikulerRaporSiswa(), lihat antiregresi.md §18).
+ * @returns {Promise<string>} string kosong kalau belum pernah diisi.
+ */
+export async function getDeskripsiKokurikulerSiswa(siswaId, kelas, semester, tahunAjaran) {
+  const map = await getKokurikulerRaporByKelas(kelas, semester, tahunAjaran);
+  return map[siswaId]?.deskripsiGabungan || '';
+}
+
+/** Simpan (upsert) deskripsi gabungan satu siswa. */
+export async function saveDeskripsiKokurikulerSiswa(payload, existingId) {
+  const data = {
+    siswaId: payload.siswaId, kelas: payload.kelas, tingkatan: String(payload.tingkatan),
+    semester: payload.semester, tahunAjaran: payload.tahunAjaran,
+    deskripsiGabungan: payload.deskripsiGabungan || '',
+  };
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 250));
+    const list = readDemoKokurikulerRapor();
+    if (existingId) {
+      const idx = list.findIndex(k => k.id === existingId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...data };
+    } else {
+      list.push({ id: 'demo-kok-rapor-' + Date.now() + '-' + payload.siswaId, ...data });
+    }
+    writeDemoKokurikulerRapor(list);
+    return;
+  }
+  const { db, fsMod, auth } = window.__fb;
+  if (existingId) {
+    await fsMod.updateDoc(fsMod.doc(db, 'kokurikuler_rapor', existingId), { ...data, updatedAt: fsMod.serverTimestamp(), updatedBy: auth.currentUser?.uid || null });
+  } else {
+    await fsMod.addDoc(fsMod.collection(db, 'kokurikuler_rapor'), { ...data, createdAt: fsMod.serverTimestamp(), createdBy: auth.currentUser?.uid || null });
+  }
+}
+
+/**
+ * Susun DRAF deskripsi gabungan Kokurikuler dari bukti STEM (per-DPL) +
+ * 7KAIH (per-kebiasaan), mengikuti pola kalimat Bagian VI buku saku
+ * (antiregresi.md §18): setiap klausa WAJIB menyebut nama DPL secara
+ * eksplisit + bukti konkret, dan draf WAJIB memuat satu bagian "masih
+ * perlu" (diprioritaskan dari DPL Proyek STEM ber-level rendah [BT/MT,
+ * level ≤2] kalau ada; kalau tidak ada, dari kebiasaan 7KAIH yang sulit
+ * diverifikasi — KEBIASAAN_SULIT_VERIFIKASI_7KAIH). HANYA memproduksi
+ * teks AWAL untuk diedit guru — TIDAK PERNAH dipanggil otomatis tanpa
+ * aksi guru menekan tombol, dan tidak menyimpan apa pun sendiri.
+ * @param {Array<{dplNama:string, level:number, deskripsi:string}>} buktiStem dari getKokurikulerRaporSiswa()
+ * @param {Array<{kebiasaanId:string, dplNama:string, catatan:string}>} buktiG7kaih dari dokumen getG7kaihByKelas(), DPL sudah diresolve oleh pemanggil
+ * @returns {string} string kosong kalau tidak ada bukti sama sekali (guru mulai dari kosong).
+ */
+export function susunDraftDeskripsiKokurikuler(buktiStem, buktiG7kaih) {
+  const perDpl = {}; // dplNama -> { bukti: string[], levelMin: number|null, sulit: boolean }
+  const tambah = (dplNama, teks, level, sulit) => {
+    if (!dplNama || !teks) return;
+    if (!perDpl[dplNama]) perDpl[dplNama] = { bukti: [], levelMin: null, sulit: false };
+    perDpl[dplNama].bukti.push(String(teks).trim().replace(/\.$/, ''));
+    if (level) perDpl[dplNama].levelMin = perDpl[dplNama].levelMin === null ? level : Math.min(perDpl[dplNama].levelMin, level);
+    if (sulit) perDpl[dplNama].sulit = true;
+  };
+  (buktiStem || []).forEach(b => tambah(b.dplNama, b.deskripsi, b.level, false));
+  (buktiG7kaih || []).forEach(b => tambah(b.dplNama, b.catatan, null, KEBIASAAN_SULIT_VERIFIKASI_7KAIH.includes(b.kebiasaanId)));
+
+  const namaDpl = Object.keys(perDpl);
+  if (!namaDpl.length) return '';
+
+  let dplPerlu = namaDpl.find(n => perDpl[n].levelMin && perDpl[n].levelMin <= 2) || null;
+  if (!dplPerlu) dplPerlu = namaDpl.find(n => perDpl[n].sulit) || null;
+
+  const kalimatPerlu = dplPerlu
+    ? `Ananda masih perlu dikembangkan dalam ${dplPerlu}, terutama terkait ${perDpl[dplPerlu].bukti[0]}.`
+    : 'Ananda masih perlu pendampingan dalam menjaga konsistensi kebiasaan sehari-hari di luar sekolah.';
+
+  const dplCapaian = namaDpl.filter(n => n !== dplPerlu);
+  const verbaList = ['sudah baik dalam', 'mulai menunjukkan', 'juga menunjukkan'];
+  const klausaCapaian = dplCapaian.map((n, i) => `${verbaList[i % verbaList.length]} ${n}, terlihat dari ${perDpl[n].bukti[0]}`);
+  const kalimatCapaian = klausaCapaian.length ? `Ananda ${klausaCapaian.join(', dan ')}.` : '';
+
+  return [kalimatCapaian, kalimatPerlu].filter(Boolean).join(' ');
 }
 
 /* ==========================================================================
