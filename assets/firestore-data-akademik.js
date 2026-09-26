@@ -790,6 +790,79 @@ export async function jalankanPerbaikanDuplikat(pasangan, onLog) {
   return { digabung, dilewati, gagal };
 }
 
+/**
+ * [Admin] Pindai SELURUH koleksi `siswa` (bukan per-kelas) untuk mencari
+ * nama yang SEMUA HURUF BESAR — indikasi data asli Dapodik salah ketik
+ * oleh operator sekolah asal (bukan bug sistem ini), yang lolos ikut
+ * tertimpa ke field `nama` lewat jalankanImporSiswa()/gabungkanSiswaDuplikat()
+ * (kedua fungsi itu memang menulis ulang `nama` dari sumber Dapodik, lihat
+ * antiregresi.md §17). Deteksi murni berdasar huruf: nama dianggap
+ * "semua kapital" kalau mengandung minimal satu huruf A-Z DAN nama sama
+ * persis dengan versi UPPERCASE-nya (nama campuran/sudah benar tidak ikut
+ * kena, jadi aman dijalankan berulang tanpa merusak nama yang sudah benar).
+ * Konversi ke Title Case per KATA (dipisah spasi, bukan per-huruf-setelah-
+ * tanda-baca) supaya nama dengan apostrof seperti "Syafi'i" tidak ikut
+ * rusak jadi "Syafi'I".
+ * @returns {Promise<Array<{id:string, kelas:string, namaLama:string, namaBaru:string}>>}
+ */
+export async function praLihatKapitalisasiNama() {
+  const semuaKapital = (s) => /[A-Za-z]/.test(s) && s === s.toUpperCase();
+  const keTitleCase = (s) => String(s).trim().split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+
+  let daftar;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    daftar = DEMO_SISWA;
+  } else {
+    const { db, fsMod } = window.__fb;
+    const snap = await fsMod.getDocs(fsMod.collection(db, 'siswa'));
+    daftar = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  return daftar
+    .filter(s => s.nama && semuaKapital(s.nama))
+    .map(s => ({ id: s.id, kelas: s.kelas, namaLama: s.nama, namaBaru: keTitleCase(s.nama) }))
+    .sort((a, b) => (a.kelas || '').localeCompare(b.kelas || '', 'id') || a.namaLama.localeCompare(b.namaLama, 'id'));
+}
+
+/**
+ * [Admin] Terapkan daftar hasil praLihatKapitalisasiNama() (atau subset
+ * yang sudah disaring admin) ke Firestore. Batch per 450 operasi seperti
+ * migrasiUpdate() di atas. HANYA menulis field `nama` — tidak menyentuh
+ * field lain sama sekali.
+ * @param {Array<{id:string, namaBaru:string}>} daftar
+ * @param {(msg:string)=>void} [onLog]
+ * @returns {Promise<{berhasil:number}>}
+ */
+export async function terapkanKapitalisasiNama(daftar, onLog) {
+  const log = (msg) => { if (onLog) onLog(msg); };
+  if (!daftar.length) { log('Tidak ada nama untuk diperbaiki.'); return { berhasil: 0 }; }
+
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 300));
+    for (const x of daftar) {
+      const idx = DEMO_SISWA.findIndex(s => s.id === x.id);
+      if (idx >= 0) DEMO_SISWA[idx] = { ...DEMO_SISWA[idx], nama: x.namaBaru };
+    }
+    log(`Mode pratinjau: ${daftar.length} nama disimulasikan diperbaiki.`);
+    return { berhasil: daftar.length };
+  }
+
+  const { db, fsMod } = window.__fb;
+  let batch = fsMod.writeBatch(db);
+  let opsInBatch = 0, berhasil = 0;
+  for (const x of daftar) {
+    batch.update(fsMod.doc(db, 'siswa', x.id), { nama: x.namaBaru });
+    opsInBatch++; berhasil++;
+    if (opsInBatch >= 450) { await batch.commit(); batch = fsMod.writeBatch(db); opsInBatch = 0; }
+  }
+  if (opsInBatch > 0) await batch.commit();
+  log(`Selesai. ${berhasil} nama diperbaiki.`);
+  return { berhasil };
+}
+
 /* ==========================================================================
    Mutasi Siswa — wali kelas MENGUSULKAN siswa baru masuk atau siswa yang
    sudah pindah keluar; ADMIN yang menyetujui/menolak. Disetujui →

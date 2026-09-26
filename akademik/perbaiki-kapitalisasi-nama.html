@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Perbaikan Kapitalisasi Nama | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .warn-box{
+    background:var(--red-light);border:1.5px solid var(--red);border-radius:14px;padding:14px;margin-bottom:16px;
+  }
+  .warn-title{font-size:13px;font-weight:800;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .warn-text{font-size:11.5px;color:#7a2e26;line-height:1.6}
+  .summary-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center}
+  .summary-num{font-size:32px;font-weight:800;color:var(--green-dark)}
+  .summary-label{font-size:11.5px;color:var(--ink-muted);font-weight:700;margin-top:2px}
+  .toolbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .link-btn{font-size:11.5px;font-weight:700;color:var(--green-dark);background:none;border:none;padding:0;cursor:pointer}
+  .review-list{max-height:440px;overflow-y:auto;margin-bottom:14px}
+  .review-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px}
+  .review-row.excluded{opacity:.45}
+  .review-body{flex:1;min-width:0}
+  .review-sub{font-size:10px;color:var(--ink-muted);margin-bottom:1px}
+  .review-nama-lama{font-size:11.5px;color:var(--ink-muted);text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .review-nama-baru{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .checkbox-row-light{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex-shrink:0}
+  .checkbox-row-light input{position:absolute;opacity:0;width:1px;height:1px}
+  .checkbox-row-light .box{
+    width:20px;height:20px;border-radius:7px;border:1.5px solid var(--border);
+    display:flex;align-items:center;justify-content:center;background:#fff;flex-shrink:0;transition:all .12s ease;
+  }
+  .checkbox-row-light input:checked + .box{background:var(--green-mid);border-color:var(--green-mid)}
+  .checkbox-row-light .box svg{width:11px;height:11px;opacity:0;transform:scale(.6);transition:all .12s ease;color:#fff}
+  .checkbox-row-light input:checked + .box svg{opacity:1;transform:scale(1)}
+  .btn-jalankan{width:100%;padding:14px;border-radius:14px;border:none;background:var(--red);color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+  .btn-jalankan:disabled{opacity:.5}
+  .log-box{background:#111;color:#c9f7d8;font-family:'SF Mono',Consolas,monospace;font-size:10px;line-height:1.7;border-radius:11px;padding:10px 12px;margin-top:14px;max-height:280px;overflow-y:auto;display:none;white-space:pre-wrap}
+  .log-box.show{display:block}
+  .empty-state-small{text-align:center;padding:24px 12px;color:var(--ink-muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Perbaikan Kapitalisasi Nama</div>
+            <div class="app-header-sub">Sekali-jalan, 2026-09-26</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody" style="display:none">
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data disimulasikan di perangkat ini.</span>
+        </div>
+
+        <div class="warn-box">
+          <div class="warn-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+            Nama Semua Kapital dari Data Dapodik
+          </div>
+          <div class="warn-text">Halaman ini memindai SELURUH data siswa untuk mencari nama yang tertulis HURUF BESAR SEMUA (kesalahan input operator di data Dapodik asli, bukan bug sistem ini) dan mengubahnya jadi Title Case (huruf awal tiap kata besar). Nama yang sudah tercampur huruf besar/kecil TIDAK ikut diubah. Hapus centang pada baris tertentu kalau hasil konversinya kurang tepat (misalnya nama dengan tanda baca khusus) sebelum menerapkan.</div>
+        </div>
+
+        <div class="summary-box" id="loadingBox">
+          <div class="empty-state-small">Memindai data siswa…</div>
+        </div>
+
+        <div id="hasilWrap" class="hidden">
+          <div class="summary-box">
+            <div class="summary-num" id="jumlahDitemukan">0</div>
+            <div class="summary-label">NAMA TERDETEKSI SEMUA KAPITAL</div>
+          </div>
+
+          <div class="toolbar-row">
+            <span style="font-size:11px;color:var(--ink-muted);font-weight:700" id="jumlahTerpilih">0 dipilih</span>
+            <button class="link-btn" id="btnToggleSemua">Batalkan semua centang</button>
+          </div>
+
+          <div class="review-list" id="reviewList"></div>
+
+          <button class="btn-jalankan" id="btnJalankan">Terapkan Perbaikan Sekarang</button>
+          <div class="log-box" id="logBox"></div>
+        </div>
+
+        <div id="emptyState" class="summary-box hidden">
+          <div class="empty-state-small" id="emptyStateMsg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange } from '../assets/firebase.js';
+  import { praLihatKapitalisasiNama, terapkanKapitalisasiNama } from '../assets/firestore-data-akademik.js';
+
+  const $ = (id) => document.getElementById(id);
+  let daftar = []; // { id, kelas, namaLama, namaBaru, dipilih }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function renderList() {
+    $('jumlahDitemukan').textContent = daftar.length;
+    const dipilih = daftar.filter(x => x.dipilih).length;
+    $('jumlahTerpilih').textContent = `${dipilih} dari ${daftar.length} dipilih`;
+    $('btnJalankan').textContent = dipilih ? `Terapkan Perbaikan (${dipilih} Nama)` : 'Terapkan Perbaikan Sekarang';
+    $('btnJalankan').disabled = dipilih === 0;
+
+    $('reviewList').innerHTML = daftar.map((x, i) => `
+      <div class="review-row ${x.dipilih ? '' : 'excluded'}">
+        <label class="checkbox-row-light">
+          <input type="checkbox" data-idx="${i}" ${x.dipilih ? 'checked' : ''}>
+          <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
+        </label>
+        <div class="review-body">
+          <div class="review-sub">${escapeHtml(x.kelas || '—')} · NIS ${escapeHtml(x.id)}</div>
+          <div class="review-nama-lama">${escapeHtml(x.namaLama)}</div>
+          <div class="review-nama-baru">${escapeHtml(x.namaBaru)}</div>
+        </div>
+      </div>`).join('');
+
+    $('reviewList').querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        daftar[+e.target.dataset.idx].dipilih = e.target.checked;
+        renderList();
+      });
+    });
+  }
+
+  $('btnToggleSemua').addEventListener('click', () => {
+    const semuaTerpilih = daftar.every(x => x.dipilih);
+    daftar.forEach(x => x.dipilih = !semuaTerpilih);
+    $('btnToggleSemua').textContent = semuaTerpilih ? 'Centang semua' : 'Batalkan semua centang';
+    renderList();
+  });
+
+  onAuthChange(async (session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+    $('appBody').style.display = 'block';
+
+    if (session.role !== 'admin') {
+      $('loadingBox').classList.add('hidden');
+      document.querySelector('.warn-box').classList.add('hidden');
+      $('emptyStateMsg').textContent = 'Halaman ini khusus admin.';
+      $('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const hasil = await praLihatKapitalisasiNama();
+      daftar = hasil.map(x => ({ ...x, dipilih: true }));
+      $('loadingBox').classList.add('hidden');
+      if (!daftar.length) {
+        $('emptyStateMsg').textContent = 'Tidak ada nama semua-kapital yang terdeteksi. Tidak ada yang perlu diperbaiki.';
+        $('emptyState').classList.remove('hidden');
+        return;
+      }
+      $('hasilWrap').classList.remove('hidden');
+      renderList();
+    } catch (e) {
+      console.error(e);
+      $('loadingBox').classList.add('hidden');
+      $('emptyStateMsg').textContent = 'Gagal memindai data siswa: ' + (e.message || e);
+      $('emptyState').classList.remove('hidden');
+    }
+  });
+
+  $('btnJalankan').addEventListener('click', async () => {
+    const dipilih = daftar.filter(x => x.dipilih);
+    if (!dipilih.length) return;
+    if (!confirm(`Terapkan perbaikan kapitalisasi untuk ${dipilih.length} nama siswa sekarang? Hanya field nama yang diubah, field lain tidak disentuh.`)) return;
+
+    const btn = $('btnJalankan');
+    btn.disabled = true; btn.textContent = 'Memproses… jangan tutup halaman ini';
+    const logBox = $('logBox');
+    logBox.classList.add('show');
+    logBox.textContent = '';
+
+    try {
+      const { berhasil } = await terapkanKapitalisasiNama(dipilih, (msg) => {
+        logBox.textContent += msg + '\n';
+        logBox.scrollTop = logBox.scrollHeight;
+      });
+      showToast(`Selesai — ${berhasil} nama diperbaiki.`);
+      btn.textContent = 'Selesai';
+      // Sisihkan yang sudah diterapkan dari daftar supaya kalau admin
+      // menjalankan lagi (misal browser sempat terputus), tidak dobel proses.
+      const idSelesai = new Set(dipilih.map(x => x.id));
+      daftar = daftar.filter(x => !idSelesai.has(x.id));
+      renderList();
+      if (!daftar.length) {
+        $('hasilWrap').classList.add('hidden');
+        $('emptyStateMsg').textContent = 'Semua nama semua-kapital yang terdeteksi sudah diperbaiki.';
+        $('emptyState').classList.remove('hidden');
+      } else {
+        btn.disabled = false;
+      }
+    } catch (e) {
+      console.error(e);
+      logBox.textContent += 'GAGAL TOTAL: ' + (e.message || e) + '\n';
+      showToast('Terjadi kesalahan — lihat log.', true);
+      btn.disabled = false; btn.textContent = 'Terapkan Perbaikan Sekarang';
+    }
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'admin-hub.html'; });
+</script>
+</body>
+</html>

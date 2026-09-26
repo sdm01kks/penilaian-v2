@@ -17,6 +17,22 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-26 — `[Akademik]` Perbaikan Kapitalisasi Nama akibat Impor Dapodik
+
+### Latar belakang
+Setelah Perbaikan Duplikat Siswa (2026-09-15, §16) dijalankan, ditemukan sebagian nama siswa tertulis HURUF BESAR SEMUA — data asli Dapodik memang begitu (kesalahan input operator sekolah asal), dan `jalankanImporSiswa()`/`gabungkanSiswaDuplikat()` selalu menulis field `nama` dari sumber itu tanpa mengubah kapitalisasinya. Lihat `antiregresi.md` §17.
+
+### Ditambahkan
+- **`assets/firestore-data-akademik.js`**: `praLihatKapitalisasiNama()` — pindai SELURUH koleksi `siswa` (bukan per-kelas), deteksi nama yang sama persis dengan versi UPPERCASE-nya, kembalikan daftar `{id, kelas, namaLama, namaBaru}` dengan `namaBaru` hasil konversi Title Case per kata. `terapkanKapitalisasiNama(daftar, onLog)` — terapkan daftar (atau subset yang disaring admin) ke Firestore lewat `writeBatch`, hanya menulis field `nama`.
+- **`akademik/perbaiki-kapitalisasi-nama.html`** (baru, UTILITAS SEKALI-JALAN, tidak ditautkan dari navigasi manapun) — memindai dinamis saat halaman dibuka (bukan daftar tertanam seperti utilitas duplikat), menampilkan daftar sebelum→sesudah dengan checkbox per-baris (default semua tercentang) untuk mengecualikan hasil konversi yang kurang tepat, satu tombol "Terapkan Perbaikan Sekarang" dengan konfirmasi + log progres.
+
+### Verifikasi
+- `node --check` pada `firestore-data-akademik.js` (OK) dan pada script module halaman baru (diekstrak & dicek terpisah dengan modul stub, OK).
+- Logika Title Case per-kata (bukan per-huruf-setelah-tanda-baca) ditinjau manual terhadap beberapa nama dengan apostrof dari data yang ada (mis. "Muhammad Syafi'i") untuk memastikan tidak ikut rusak — lihat antiregresi.md §17.3.
+- **Belum diuji ke Firestore sungguhan** (tidak ada akses jaringan Firebase dari lingkungan kerja) dan **belum bisa dipastikan berapa siswa yang benar-benar terdampak** — jumlah pasti baru terlihat saat Fairel membuka halamannya (pemindaian dinamis, bukan angka tertanam). Sarankan Fairel meninjau daftar sebelum-sesudah dulu sebelum menekan tombol terapkan, terutama untuk nama dengan tanda baca/hubung yang tidak lazim.
+
+---
+
 ## 2026-09-15 — `[Bersama]` Perbaikan Duplikat Siswa akibat Impor Dapodik
 
 ### Latar belakang

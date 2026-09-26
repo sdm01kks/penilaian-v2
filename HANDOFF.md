@@ -1,13 +1,20 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), dan 2026-09-15 (Perbaikan Duplikat Siswa).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), dan 2026-09-26 (Perbaikan Kapitalisasi Nama).
 
 ---
 
-## Status per 2026-09-15 (Perbaikan Duplikat Siswa akibat Impor Dapodik)
+## Status per 2026-09-26 (Perbaikan Kapitalisasi Nama akibat Impor Dapodik)
 
-**BELUM DIJALANKAN — ini yang PALING PENTING untuk sesi berikutnya.** Impor Data Siswa dengan file Dapodik (§13, dijalankan pemilik proyek setelah sesi sebelumnya) menduplikasi hampir semua 403 siswa karena NIS lama (`seed-siswa.html`) beda dari NIPD Dapodik. Detail akar masalah & cara perbaikan lengkap di `antiregresi.md` §16.
+**BELUM DIJALANKAN — ini yang PALING PENTING untuk sesi berikutnya.** Setelah Perbaikan Duplikat Siswa (2026-09-15) dijalankan, ditemukan sebagian nama siswa tertulis HURUF BESAR SEMUA — data asli Dapodik memang begitu (kesalahan input operator sekolah asal), bukan sesuatu yang salah di sistem ini. Detail akar masalah & cara perbaikan lengkap di `antiregresi.md` §17.
+
+**Yang sudah disiapkan:** `akademik/perbaiki-kapitalisasi-nama.html` — beda dari utilitas duplikat (§16, daftar tertanam), halaman ini memindai DINAMIS seluruh koleksi `siswa` saat dibuka, menampilkan daftar sebelum→sesudah dengan checkbox per-baris (default semua tercentang), lalu satu tombol untuk menerapkan Title Case ke nama yang terdeteksi semua-kapital. **BELUM DIJALANKAN oleh pemilik proyek**, dan belum bisa diuji end-to-end oleh Claude (tidak ada akses Firestore dari lingkungan kerja) — jumlah siswa yang benar-benar terdampak baru terlihat saat halaman dibuka.
+
+**Kalau sesi berikutnya melanjutkan ini:**
+- Cek dulu apakah Fairel sudah menjalankan `perbaiki-kapitalisasi-nama.html` — kalau sudah dan hasilnya bersih, halaman boleh dihapus (fungsi `praLihatKapitalisasiNama()`/`terapkanKapitalisasiNama()` di data layer boleh dibiarkan, reusable kalau situasi serupa terulang).
+- Kalau Fairel melaporkan ada nama yang hasil konversinya kurang tepat (misalnya nama dengan tanda hubung/tanda baca tidak lazim yang tidak ter-title-case dengan benar), itu bisa diperbaiki manual satu-per-satu lewat Kelola Data Siswa — tidak perlu mengubah logika massalnya untuk kasus langka.
+- Halaman ini idempoten secara alami (nama yang sudah campuran huruf besar/kecil tidak terdeteksi lagi) — aman dijalankan berulang kali kalau perlu.
 
 **Yang sudah disiapkan:** `akademik/perbaiki-duplikat-siswa.html` — utilitas sekali-jalan, 355 pasangan NIS lama↔baru sudah tertanam (dicocokkan offline, lihat §16.2), tinggal admin buka halamannya dan tekan tombol. **BELUM DIJALANKAN oleh pemilik proyek** (dan belum bisa diuji end-to-end oleh Claude karena tidak ada akses Firestore dari lingkungan kerja).
 
