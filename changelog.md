@@ -17,6 +17,32 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-27 lanjutan — `[Akademik]` Bobot TP dalam Mapel: dari Rasio Bebas jadi Persentase
+
+### Latar belakang
+`tp_kktp.bobotMapel` sebelumnya rasio bebas (bukan persen, tidak wajib total 100) — disengaja sejak awal biar tambah/hapus TP di tengah semester tidak memaksa merapikan ulang. Tapi guru salah paham menganggapnya persen — mengisi 15 (maksud "15%") padahal TP lain masih default 1, hasilnya TP itu malah mendominasi ~83% nilai akhir mapel, kebalikan dari maksud. Diputuskan (permintaan pemilik proyek): ganti jadi persentase sungguhan karena "lebih mudah dipahami". Lihat `antiregresi.md` §19 untuk analisis akar masalah lengkap.
+
+### Ditambahkan
+- **`assets/firestore-data-akademik.js`**: `normalisasiPersenBobotMapel(tpList)` (fungsi murni, largest-remainder/Hare quota supaya total tepat 100 tanpa mengubah rasio antar-TP) + `terapkanNormalisasiBobotMapel(hasil)` (penulis batch, hanya field `bobotMapel`).
+- **`akademik/setup-tp.html`**: banner total bobot TP di atas daftar (✅ kalau 100%, ⚠️ + tombol "Konversi ke Persentase" kalau belum — dengan pratinjau before→after per TP di dialog konfirmasi); indikator live di form saat mengetik persentase ("TP lain totalnya X%, kalau disimpan jadi Y%"); validasi 0-100 (dulu cuma ≥0); peringatan (bukan blokir keras) kalau simpan bikin total ≠100%; default field "Tambah TP Baru" jadi saran dinamis (100 kalau TP pertama, sisa dari 100 kalau sudah ada TP lain) — dulu hardcoded 1.
+
+### Diubah
+- Label & hint field bobot mapel: "Bobot TP Ini dalam Nilai Akhir Mapel" (angka bebas, ×) → "Persentase TP Ini dalam Nilai Akhir Mapel" (%).
+- Pill tampilan `bobotMapel` di `setup-tp.html`, `nilai-slm.html`, `nilai-sas-cakupan.html`, `nilai-sts-cakupan.html`: "Bobot mapel N×" → "N% dari nilai mapel" (read-only, tidak ada perubahan hitung di halaman-halaman ini).
+- Dokumentasi `saveTP()` & `hitungNilaiAkhirMapel()` diperbarui menjelaskan semantik persentase baru — **rumus `hitungNilaiAkhirMapel()` itu sendiri TIDAK berubah** (tetap `Σ(nilai×bobot)/Σ(bobot)`, sudah benar untuk rasio apa pun, tidak butuh total=100 untuk hasil yang benar).
+
+### Sengaja TIDAK dilakukan
+- Tidak ada validasi keras (hard block) yang memaksa total=100 saat simpan satu TP — cuma peringatan, supaya guru tetap bisa menyimpan TP satu-satu di tengah proses merapikan.
+- Tidak ada migrasi batch otomatis untuk semua mapel×tingkatan sekaligus — konversi dipicu manual per mapel lewat tombol, artinya SEMUA mapel yang punya TP akan menunjukkan banner "belum 100%" sampai masing-masing dibuka & dikonversi oleh guru pengampu terkait (lihat antiregresi.md §19.7 untuk pertimbangan kalau ini dirasa terlalu banyak langkah manual).
+
+### Verifikasi
+- `node --check` pada `firestore-data-akademik.js` dan script module `setup-tp.html` (via ekstraksi + modul stub) — OK.
+- Balance kurung kurawal `setup-tp.html`, `nilai-slm.html`, `nilai-sas-cakupan.html`, `nilai-sts-cakupan.html` — OK.
+- Ditinjau manual: rumus `normalisasiPersenBobotMapel()` mempertahankan rasio (dites mental terhadap kasus 15:1:1:1 → 83:6:6:6, jumlah 100 tepat lewat largest-remainder).
+- **Belum diuji ke Firestore sungguhan** (tidak ada akses jaringan Firebase dari lingkungan kerja). Belum dicek langsung apakah nilai akhir mapel siswa yang sudah pernah dihitung benar-benar tidak berubah setelah konversi dijalankan di data nyata.
+
+---
+
 ## 2026-09-27 — `[Akademik]` Fitur 7KAIH & Deskripsi Gabungan Kokurikuler
 
 ### Latar belakang

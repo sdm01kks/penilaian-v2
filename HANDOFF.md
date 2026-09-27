@@ -1,7 +1,19 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), dan 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler), dan 2026-09-27 lanjutan (Bobot TP dalam Mapel: Persentase).
+
+---
+
+## Status per 2026-09-27 lanjutan (Bobot TP dalam Mapel: dari Rasio Bebas jadi Persentase)
+
+**BELUM DIPUSH/DIDEPLOY, BELUM DIUJI ke Firestore sungguhan.** Detail akar masalah lengkap di `antiregresi.md` §19. Ringkasnya: `bobotMapel` (bobot TP dalam nilai akhir mapel) diubah dari "rasio bebas" jadi "persentase sungguhan" (permintaan pemilik proyek, karena guru salah paham menganggapnya persen dan itu bisa membalik makna angka yang diinput — lihat contoh 15 → jadi 83% bukan 15%). Rumus hitung nilai TIDAK berubah dan TIDAK akan mengubah nilai yang sudah pernah dihitung — cuma cara input/tampil/validasinya yang berubah.
+
+**Yang perlu ditinjau Fairel di sesi berikutnya:**
+1. Buka `setup-tp.html` untuk mapel yang jadi pemicu perbaikan ini (yang sebelumnya diisi "15") — cek banner "Total belum 100%" muncul dengan angka yang masuk akal.
+2. Coba tombol "Konversi ke Persentase" — tinjau pratinjau before→after per TP di dialog konfirmasi sebelum benar-benar mengklik lanjut.
+3. **PENTING**: setelah konversi, cek nilai akhir mapel siswa yang terkait TP itu TIDAK berubah dibanding sebelumnya (§19.2 menjamin ini secara matematis, tapi belum pernah dicek langsung ke data nyata).
+4. Catatan: SEMUA mapel×tingkatan lain yang punya TP kemungkinan juga akan menunjukkan banner "belum 100%" (karena default lama bobot=1 per TP) — ini normal, bukan error, tinggal dikonversi satu-satu saat guru pengampu masing-masing membuka halamannya. Kalau ini kerasa kebanyakan langkah manual, bisa dipertimbangkan bikin migrasi batch di sesi mendatang (lihat antiregresi.md §19.7).
 
 ---
 

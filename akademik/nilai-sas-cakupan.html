@@ -151,7 +151,7 @@
         </div>
         <div class="tp-check-body">
           <div class="tp-check-nama">${tp.nomorTp ? tp.nomorTp + '. ' : ''}${escapeHtml(tp.namaTp || '(tanpa nama)')}</div>
-          <div class="tp-check-meta">Bobot mapel ${tp.bobotMapel ?? 1}×</div>
+          <div class="tp-check-meta">${tp.bobotMapel ?? 1}% dari nilai mapel</div>
         </div>
       </div>`).join('');
   }

@@ -200,11 +200,19 @@ export async function saveTP(payload) {
     bobotSlm:  payload.bobotSlm ?? 60,
     bobotSas:  payload.bobotSas ?? 40,
     // Bobot TP ini TERHADAP NILAI AKHIR MAPEL (rapor) — beda dari bobotSlm/
-    // bobotSas di atas (itu bobot SLM vs SAS DI DALAM satu TP). Angka bebas
-    // (bukan wajib 0-100/total 100) — supaya tambah/hapus TP di tengah
-    // semester tidak memaksa guru merapikan ulang bobot TP lain. TP tanpa
-    // field ini (dibuat sebelum fitur ini ada) dianggap bobot 1 (rata
-    // dengan TP lain) saat dihitung — lihat hitungNilaiAkhirMapel().
+    // bobotSas di atas (itu bobot SLM vs SAS DI DALAM satu TP). SEJAK
+    // 2026-09-27 (antiregresi.md §19) ini PERSENTASE SUNGGUHAN — SEMUA TP
+    // dalam satu mapel+tingkatan seharusnya total 100. Sebelumnya "angka
+    // bebas" (rasio relatif, tidak wajib 100) — diganti karena guru
+    // konsisten salah paham menganggapnya persen padahal bukan, dan
+    // salah paham itu bisa mendistorsi nilai akhir mapel drastis (lihat
+    // §19.1 untuk contoh nyata). TIDAK divalidasi wajib 100 saat simpan
+    // (cuma diperingatkan — lihat setup-tp.html) supaya tambah/hapus TP
+    // di tengah semester tetap tidak memblokir simpan; guru diarahkan
+    // pakai tombol "Konversi ke Persentase" (normalisasiPersenBobotMapel())
+    // untuk merapikan ulang ke total 100 kapan saja. TP tanpa field ini
+    // (dibuat sebelum fitur ini ada) dianggap bobot 1 saat dihitung —
+    // lihat hitungNilaiAkhirMapel().
     bobotMapel: payload.bobotMapel ?? 1,
     levels:    payload.levels,
   };
@@ -312,10 +320,16 @@ export function tentukanLevel(nilaiAkhirTP, tp) {
 
 /**
  * Nilai akhir mapel (nilai rapor) = RATA-RATA TERTIMBANG nilai akhir semua
- * TP, sesuai bobotMapel masing-masing TP (lihat saveTP). TP dengan
- * bobotMapel kosong/tidak diketahui dianggap bobot 1 (rata dengan TP lain)
- * — supaya TP lama (dibuat sebelum fitur bobot ini ada) tidak tiba-tiba
- * mengubah nilai akhir mapel begitu fitur ini dipasang.
+ * TP, sesuai bobotMapel (PERSENTASE, lihat saveTP §19) masing-masing TP.
+ * TP dengan bobotMapel kosong/tidak diketahui dianggap bobot 1. SENGAJA
+ * dinormalisasi dengan MEMBAGI totalBobot dari entri yang VALID SAJA
+ * (bukan diasumsikan selalu 100) — supaya (a) TP yang belum ada nilainya
+ * tidak membuat nilai akhir mapel timpang/kosong, sisa TP yang sudah
+ * ternilai otomatis direnormalisasi di antara mereka sendiri, dan (b)
+ * kalau guru belum sempat menekan "Konversi ke Persentase" sehingga total
+ * belum pas 100, hasil rata-rata tertimbang TETAP benar secara
+ * matematis (skala/rasio yang menentukan, bukan totalnya harus 100) —
+ * hanya TAMPILAN persennya yang kurang rapi sampai dikonversi.
  *
  * @param {Array<{nilai:number|string|null, bobot?:number}>} entriesPerTP
  *   Tiap entri = { nilai: hasil hitungNilaiAkhirTP() untuk satu TP,
@@ -329,6 +343,58 @@ export function hitungNilaiAkhirMapel(entriesPerTP) {
   const totalBobot = valid.reduce((a, e) => a + e.bobot, 0);
   const totalNilai = valid.reduce((a, e) => a + parseFloat(e.nilai) * e.bobot, 0);
   return Math.round(totalNilai / totalBobot);
+}
+
+/**
+ * [2026-09-27, antiregresi.md §19] Hitung ulang bobotMapel SEMUA TP dalam
+ * SATU mapel+tingkatan supaya jadi PERSENTASE bulat yang sah (total tepat
+ * 100) — TANPA mengubah RASIO relatif antar TP, jadi nilai akhir mapel
+ * yang sudah pernah dihitung dari bobot lama TIDAK berubah (lihat catatan
+ * hitungNilaiAkhirMapel() di atas — hasilnya cuma bergantung pada rasio,
+ * bukan totalnya harus 100). Pembulatan pakai metode largest-remainder
+ * (Hare quota) supaya total SELALU tepat 100 walau tiap TP dibulatkan ke
+ * bilangan bulat. FUNGSI MURNI — tidak menulis apa pun ke Firestore,
+ * cuma menghitung; penulisannya lewat terapkanNormalisasiBobotMapel().
+ * @param {Array<{id:string, bobotMapel?:number}>} tpList - SEMUA TP dalam satu mapel+tingkatan (dari getTPList()).
+ * @returns {Array<{id:string, bobotBaru:number}>}
+ */
+export function normalisasiPersenBobotMapel(tpList) {
+  if (!tpList.length) return [];
+  const rata = 100 / tpList.length;
+  const nilaiAsal = tpList.map(tp => Math.max(0, tp.bobotMapel ?? 1));
+  const total = nilaiAsal.reduce((a, b) => a + b, 0);
+  const eksak = total > 0 ? nilaiAsal.map(v => (v / total) * 100) : tpList.map(() => rata);
+  const lantai = eksak.map(Math.floor);
+  let sisa = 100 - lantai.reduce((a, b) => a + b, 0);
+  const urutanSisa = eksak
+    .map((v, i) => ({ i, frac: v - lantai[i] }))
+    .sort((a, b) => b.frac - a.frac);
+  const hasil = [...lantai];
+  for (let k = 0; k < sisa && k < urutanSisa.length; k++) hasil[urutanSisa[k].i] += 1;
+  return tpList.map((tp, i) => ({ id: tp.id, bobotBaru: hasil[i] }));
+}
+
+/**
+ * Terapkan hasil normalisasiPersenBobotMapel() ke Firestore — batch,
+ * HANYA menulis field `bobotMapel`, field lain tidak disentuh.
+ * @param {Array<{id:string, bobotBaru:number}>} hasil
+ */
+export async function terapkanNormalisasiBobotMapel(hasil) {
+  if (!hasil.length) return;
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 200));
+    const list = readDemoTp();
+    hasil.forEach(h => {
+      const idx = list.findIndex(tp => tp.id === h.id);
+      if (idx >= 0) list[idx] = { ...list[idx], bobotMapel: h.bobotBaru };
+    });
+    writeDemoTp(list);
+    return;
+  }
+  const { db, fsMod } = window.__fb;
+  const batch = fsMod.writeBatch(db);
+  hasil.forEach(h => batch.update(fsMod.doc(db, 'tp_kktp', h.id), { bobotMapel: h.bobotBaru }));
+  await batch.commit();
 }
 
 /* ==========================================================================
