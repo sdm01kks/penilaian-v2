@@ -102,15 +102,8 @@
   .hint-text{font-size:11px;color:var(--ink-muted);margin:-6px 0 12px;line-height:1.5}
   .form-btns .btn{flex:1}
 
-  .bobot-banner{
-    display:flex;align-items:center;gap:10px;border-radius:14px;padding:11px 13px;margin-bottom:12px;font-size:11.5px;line-height:1.5;
-  }
-  .bobot-banner.ok{background:var(--green-pale);color:var(--green-dark)}
-  .bobot-banner.warn{background:var(--gold-light);color:#8a6416}
-  .bobot-banner b{display:block;font-size:12.5px;margin-bottom:1px}
-  .bobot-banner button{
-    flex-shrink:0;font-family:inherit;font-size:11px;font-weight:800;padding:7px 11px;border-radius:9px;
-    border:none;background:#fff;color:#8a6416;cursor:pointer;
+  .semester-hint{
+    background:var(--blue-light);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--blue);line-height:1.6;font-weight:600;
   }
 
   .fab-add{
@@ -148,7 +141,7 @@
 
         <div class="section-label" style="margin-top:0"><span class="bar"></span>Tujuan Pembelajaran</div>
 
-        <div id="totalBobotBanner"></div>
+        <div class="semester-hint">Penetapan semester &amp; persentase bobot TP untuk nilai akhir mapel sekarang diatur di menu terpisah — <b>Bobot Semester TP</b> (dari menu Nilai &amp; Pembelajaran).</div>
         <div id="tpList"></div>
 
         <div id="formCard" class="form-card hidden">
@@ -182,9 +175,7 @@
           </div>
           <p class="hint-text">Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.</p>
 
-          <div class="field-label">Persentase TP Ini dalam Nilai Akhir Mapel</div>
-          <input type="number" class="select-field" id="fBobotMapel" min="0" max="100" step="1" style="margin-bottom:6px" oninput="updateInfoBobotMapel()">
-          <p class="hint-text" id="infoBobotMapel">Dalam %. Semua TP di mapel &amp; tingkat yang sama seharusnya total 100%.</p>
+
 
           <div class="field-label">4 Level KKTP</div>
           <div id="levelFormWrap"></div>
@@ -220,7 +211,6 @@
   import {
     LEVEL_LABEL, LEVEL_RANGE_DEFAULT, faseDariTingkatan, tingkatanDariKelas,
     getTPList, saveTP, deleteTP, getMapelByNama, mapelBerlakuDiTingkatan,
-    normalisasiPersenBobotMapel, terapkanNormalisasiBobotMapel,
   } from '../assets/firestore-data-akademik.js';
 
   const $ = (id) => document.getElementById(id);
@@ -309,7 +299,6 @@
      --------------------------------------------------------------------- */
   function renderTPList() {
     const wrap = $('tpList');
-    renderTotalBobotBanner();
     if (!allTP.length) {
       wrap.innerHTML = `<div class="card" style="text-align:center;color:var(--ink-muted);font-size:12.5px;padding:24px">
         Belum ada Tujuan Pembelajaran untuk ${escapeHtml(mapelNama)} tingkat ${escapeHtml(tingkatan)}.<br>Mulai dengan tombol di bawah.
@@ -318,58 +307,6 @@
     }
     wrap.innerHTML = allTP.map((tp, i) => renderTPCard(tp, i)).join('');
   }
-
-  /** Total bobotMapel semua TP di scope ini — dipakai banner & indikator
-   * live di form. Ditoleransi ±0.5 (pembulatan) sebelum dianggap "belum 100". */
-  function totalBobotSekarang() {
-    return allTP.reduce((a, tp) => a + (tp.bobotMapel ?? 1), 0);
-  }
-
-  function renderTotalBobotBanner() {
-    const banner = $('totalBobotBanner');
-    if (!allTP.length) { banner.innerHTML = ''; return; }
-    const total = totalBobotSekarang();
-    const pas = Math.abs(total - 100) < 0.5;
-    if (pas) {
-      banner.innerHTML = `<div class="bobot-banner ok">✅ Total persentase TP di mapel ini: <b style="display:inline">100%</b> dari ${allTP.length} TP.</div>`;
-      return;
-    }
-    banner.innerHTML = `
-      <div class="bobot-banner warn">
-        <div style="flex:1"><b>⚠️ Total belum 100%</b>Total persentase TP saat ini ${total}% dari ${allTP.length} TP — rasio antar-TP tetap valid, tapi tampilannya kurang rapi sampai dikonversi.</div>
-        <button onclick="konversiKePersen()">Konversi ke Persentase</button>
-      </div>`;
-  }
-
-  window.konversiKePersen = async () => {
-    const hasil = normalisasiPersenBobotMapel(allTP);
-    const preview = hasil.map(h => {
-      const tp = allTP.find(t => t.id === h.id);
-      return `${tp?.nomorTp ?? '?'}. ${(tp?.namaTp || '').slice(0, 30)}… → ${h.bobotBaru}%`;
-    }).join('\n');
-    if (!confirm(`Konversi ${hasil.length} TP ke persentase (total jadi tepat 100%, rasio antar-TP TIDAK berubah — nilai akhir mapel yang sudah pernah dihitung tetap sama)?\n\n${preview}`)) return;
-    try {
-      await terapkanNormalisasiBobotMapel(hasil);
-      showToast('Bobot TP dikonversi ke persentase.');
-      await muatTP();
-    } catch (e) {
-      console.error(e);
-      showToast('Gagal mengonversi.', true);
-    }
-  };
-
-  /** Indikator live di form saat guru mengetik persentase TP ini —
-   * dihitung terhadap TP LAIN (bukan termasuk TP yang sedang diedit
-   * sendiri) supaya tidak menghitung dobel nilai lama TP itu. */
-  window.updateInfoBobotMapel = () => {
-    const nilaiSekarang = parseFloat($('fBobotMapel').value);
-    const totalLain = allTP
-      .filter(tp => tp.id !== editingId)
-      .reduce((a, tp) => a + (tp.bobotMapel ?? 1), 0);
-    const totalKalauDisimpan = totalLain + (isNaN(nilaiSekarang) ? 0 : nilaiSekarang);
-    const pas = Math.abs(totalKalauDisimpan - 100) < 0.5;
-    $('infoBobotMapel').innerHTML = `Dalam %. TP lain di mapel ini totalnya ${totalLain}%. Kalau disimpan, total jadi <b style="color:${pas ? 'var(--green-dark)' : '#a83a2b'}">${totalKalauDisimpan}%</b>${pas ? ' ✅' : ' — seharusnya 100%'}.`;
-  };
 
   function renderTPCard(tp, i) {
     const labels = LEVEL_LABEL[tp.tipe] || LEVEL_LABEL.pengetahuan;
@@ -388,7 +325,9 @@
           <div class="tp-head-meta">
             <span class="tipe-pill ${tp.tipe}">${tp.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan'}</span>
             <span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">SLM ${tp.bobotSlm ?? 60}% · SAS ${tp.bobotSas ?? 40}%</span>
-            <span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">${tp.bobotMapel ?? 1}% dari nilai mapel</span>
+            ${tp.semester
+              ? `<span class="tipe-pill" style="background:var(--bg-light);color:var(--ink-mid)">Semester ${escapeHtml(tp.semester)} · ${tp.bobotMapel ?? 1}%</span>`
+              : `<span class="tipe-pill" style="background:var(--gold-light);color:#8a6416">Semester &amp; bobot belum diatur</span>`}
           </div>
         </div>
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0"><path d="m6 9 6 6 6-6"/></svg>
@@ -437,17 +376,10 @@
     $('fCp').value = '';
     $('fBobotSlm').value = 60;
     $('fBobotSas').value = 40;
-    // Saran awal: kalau ini TP pertama di mapel+tingkat ini → 100% (satu-
-    // satunya TP, wajar 100%). Kalau sudah ada TP lain → sisa dari 100
-    // dikurangi total TP lain (bisa 0 kalau sudah penuh) — mengarahkan
-    // guru ke total 100%, tapi tetap bebas diubah.
-    const totalTPLain = allTP.reduce((a, tp) => a + (tp.bobotMapel ?? 1), 0);
-    $('fBobotMapel').value = allTP.length ? Math.max(0, 100 - totalTPLain) : 100;
     levelsForm = JSON.parse(JSON.stringify(LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe('pengetahuan');
     $('formCard').classList.remove('hidden');
     $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    updateInfoBobotMapel();
   };
 
   window.bukaFormEdit = (id) => {
@@ -460,12 +392,10 @@
     $('fCp').value    = tp.cp || '';
     $('fBobotSlm').value = tp.bobotSlm ?? 60;
     $('fBobotSas').value = tp.bobotSas ?? 40;
-    $('fBobotMapel').value = tp.bobotMapel ?? 1;
     levelsForm = JSON.parse(JSON.stringify(tp.levels || LEVEL_RANGE_DEFAULT.map(l => ({ ...l, deskripsi: '' }))));
     pilihTipe(tp.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan');
     $('formCard').classList.remove('hidden');
     $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    updateInfoBobotMapel();
   };
 
   window.batalForm = () => {
@@ -484,16 +414,6 @@
       deskripsi: $('lvDesc-' + i).value.trim(),
     }));
 
-    const bobotMapel = parseFloat($('fBobotMapel').value);
-    if (!(bobotMapel >= 0) || bobotMapel > 100) { showToast('Persentase TP dalam mapel harus 0–100.', true); return; }
-
-    const totalLain = allTP.filter(tp => tp.id !== editingId).reduce((a, tp) => a + (tp.bobotMapel ?? 1), 0);
-    const totalKalauDisimpan = totalLain + bobotMapel;
-    if (Math.abs(totalKalauDisimpan - 100) >= 0.5) {
-      const lanjut = confirm(`Total persentase TP di mapel ini akan jadi ${totalKalauDisimpan}%, bukan 100%. Tetap simpan? (Bisa dirapikan nanti lewat tombol "Konversi ke Persentase".)`);
-      if (!lanjut) return;
-    }
-
     const btn = $('btnSimpanForm');
     btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
@@ -507,7 +427,9 @@
         tipe: tipeAktif,
         bobotSlm: parseInt($('fBobotSlm').value, 10) || 60,
         bobotSas: parseInt($('fBobotSas').value, 10) || 40,
-        bobotMapel,
+        // semester & bobotMapel SENGAJA TIDAK dikirim dari sini — lihat
+        // antiregresi.md §20, diatur lewat bobot-semester-tp.html supaya
+        // saveTP() tidak menimpanya balik ke default.
         levels,
       });
       showToast(editingId ? 'TP berhasil diperbarui.' : 'TP baru berhasil ditambahkan.');

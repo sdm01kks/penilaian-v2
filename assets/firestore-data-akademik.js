@@ -199,23 +199,17 @@ export async function saveTP(payload) {
     tipe:      payload.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan',
     bobotSlm:  payload.bobotSlm ?? 60,
     bobotSas:  payload.bobotSas ?? 40,
-    // Bobot TP ini TERHADAP NILAI AKHIR MAPEL (rapor) — beda dari bobotSlm/
-    // bobotSas di atas (itu bobot SLM vs SAS DI DALAM satu TP). SEJAK
-    // 2026-09-27 (antiregresi.md §19) ini PERSENTASE SUNGGUHAN — SEMUA TP
-    // dalam satu mapel+tingkatan seharusnya total 100. Sebelumnya "angka
-    // bebas" (rasio relatif, tidak wajib 100) — diganti karena guru
-    // konsisten salah paham menganggapnya persen padahal bukan, dan
-    // salah paham itu bisa mendistorsi nilai akhir mapel drastis (lihat
-    // §19.1 untuk contoh nyata). TIDAK divalidasi wajib 100 saat simpan
-    // (cuma diperingatkan — lihat setup-tp.html) supaya tambah/hapus TP
-    // di tengah semester tetap tidak memblokir simpan; guru diarahkan
-    // pakai tombol "Konversi ke Persentase" (normalisasiPersenBobotMapel())
-    // untuk merapikan ulang ke total 100 kapan saja. TP tanpa field ini
-    // (dibuat sebelum fitur ini ada) dianggap bobot 1 saat dihitung —
-    // lihat hitungNilaiAkhirMapel().
-    bobotMapel: payload.bobotMapel ?? 1,
     levels:    payload.levels,
   };
+  // `semester` & `bobotMapel` SENGAJA TIDAK ditulis di sini kecuali
+  // eksplisit dikirim (lihat antiregresi.md §20) — keduanya sekarang
+  // dikelola LEWAT HALAMAN TERPISAH `bobot-semester-tp.html`, bukan
+  // Setup TP. Kalau selalu ditulis dengan default di sini (perilaku
+  // LAMA, sebelum §20), setiap kali guru edit TP lewat Setup TP (ganti
+  // CP/KKTP/dll) akan MENIMPA BALIK semester+bobot yang sudah diatur di
+  // halaman terpisah itu ke default — regresi silent yang harus dihindari.
+  if (payload.semester !== undefined) data.semester = payload.semester;
+  if (payload.bobotMapel !== undefined) data.bobotMapel = payload.bobotMapel;
 
   if (DEMO_MODE) {
     await new Promise(r => setTimeout(r, 300));
@@ -320,16 +314,22 @@ export function tentukanLevel(nilaiAkhirTP, tp) {
 
 /**
  * Nilai akhir mapel (nilai rapor) = RATA-RATA TERTIMBANG nilai akhir semua
- * TP, sesuai bobotMapel (PERSENTASE, lihat saveTP §19) masing-masing TP.
- * TP dengan bobotMapel kosong/tidak diketahui dianggap bobot 1. SENGAJA
- * dinormalisasi dengan MEMBAGI totalBobot dari entri yang VALID SAJA
- * (bukan diasumsikan selalu 100) — supaya (a) TP yang belum ada nilainya
- * tidak membuat nilai akhir mapel timpang/kosong, sisa TP yang sudah
- * ternilai otomatis direnormalisasi di antara mereka sendiri, dan (b)
- * kalau guru belum sempat menekan "Konversi ke Persentase" sehingga total
- * belum pas 100, hasil rata-rata tertimbang TETAP benar secara
- * matematis (skala/rasio yang menentukan, bukan totalnya harus 100) —
- * hanya TAMPILAN persennya yang kurang rapi sampai dikonversi.
+ * TP, sesuai bobotMapel (PERSENTASE — lihat antiregresi.md §19 untuk
+ * kenapa persen, §20 untuk kenapa dikelompokkan per SEMESTER, bukan per
+ * seluruh tingkatan) masing-masing TP. TP dengan bobotMapel kosong/tidak
+ * diketahui dianggap bobot 1. SENGAJA dinormalisasi dengan MEMBAGI
+ * totalBobot dari entri yang VALID SAJA (bukan diasumsikan selalu 100) —
+ * supaya (a) TP yang belum ada nilainya tidak membuat nilai akhir mapel
+ * timpang/kosong, sisa TP yang sudah ternilai otomatis direnormalisasi
+ * di antara mereka sendiri, dan (b) kalau bobotMapel yang tersimpan
+ * belum pas total 100 (guru belum menekan "Ratakan ke 100%" di
+ * `bobot-semester-tp.html`), hasil rata-rata tertimbang TETAP benar
+ * secara matematis (skala/rasio yang menentukan, bukan totalnya harus
+ * 100) — hanya TAMPILAN persennya yang kurang rapi sampai diratakan.
+ * Fungsi ini SENDIRI TIDAK PEDULI soal semester — dipanggil dengan
+ * entri TP mana pun yang relevan (pemanggil, getRaporSASSiswa() dkk,
+ * yang menentukan cakupannya, lewat cakupan eksplisit atau lewat nilai
+ * yang memang cuma ada untuk TP semester berjalan).
  *
  * @param {Array<{nilai:number|string|null, bobot?:number}>} entriesPerTP
  *   Tiap entri = { nilai: hasil hitungNilaiAkhirTP() untuk satu TP,
@@ -346,16 +346,23 @@ export function hitungNilaiAkhirMapel(entriesPerTP) {
 }
 
 /**
- * [2026-09-27, antiregresi.md §19] Hitung ulang bobotMapel SEMUA TP dalam
- * SATU mapel+tingkatan supaya jadi PERSENTASE bulat yang sah (total tepat
- * 100) — TANPA mengubah RASIO relatif antar TP, jadi nilai akhir mapel
- * yang sudah pernah dihitung dari bobot lama TIDAK berubah (lihat catatan
- * hitungNilaiAkhirMapel() di atas — hasilnya cuma bergantung pada rasio,
- * bukan totalnya harus 100). Pembulatan pakai metode largest-remainder
- * (Hare quota) supaya total SELALU tepat 100 walau tiap TP dibulatkan ke
- * bilangan bulat. FUNGSI MURNI — tidak menulis apa pun ke Firestore,
- * cuma menghitung; penulisannya lewat terapkanNormalisasiBobotMapel().
- * @param {Array<{id:string, bobotMapel?:number}>} tpList - SEMUA TP dalam satu mapel+tingkatan (dari getTPList()).
+ * [2026-09-27, antiregresi.md §19, dikoreksi §20] Hitung ulang bobotMapel
+ * SEBUAH KELOMPOK TP (SATU SEMESTER — bukan lagi seluruh TP mapel+
+ * tingkatan sejak §20, lihat bobot-semester-tp.html) supaya jadi
+ * PERSENTASE bulat yang sah (total tepat 100 DI DALAM kelompok itu) —
+ * TANPA mengubah RASIO relatif antar TP dalam kelompok yang sama, jadi
+ * nilai akhir mapel yang sudah pernah dihitung dari bobot lama TIDAK
+ * berubah (lihat catatan hitungNilaiAkhirMapel() di atas — hasilnya
+ * cuma bergantung pada rasio, bukan totalnya harus 100). Pembulatan
+ * pakai metode largest-remainder (Hare quota) supaya total SELALU tepat
+ * 100 walau tiap TP dibulatkan ke bilangan bulat. FUNGSI MURNI — tidak
+ * menulis apa pun ke Firestore, cuma menghitung ULANG NILAI DI MEMORI;
+ * `bobot-semester-tp.html` yang menampilkan hasilnya di form untuk
+ * ditinjau, dan penulisan sungguhan baru terjadi saat guru menekan
+ * "Simpan Semua" (lewat saveBobotSemesterBatch()). PEMANGGIL WAJIB sudah menyaring
+ * tpList ke SATU semester saja SEBELUM memanggil ini — fungsi ini
+ * sendiri tidak tahu/tidak peduli field `semester`.
+ * @param {Array<{id:string, bobotMapel?:number}>} tpList - TP dalam SATU kelompok semester (sudah difilter pemanggil).
  * @returns {Array<{id:string, bobotBaru:number}>}
  */
 export function normalisasiPersenBobotMapel(tpList) {
@@ -375,25 +382,28 @@ export function normalisasiPersenBobotMapel(tpList) {
 }
 
 /**
- * Terapkan hasil normalisasiPersenBobotMapel() ke Firestore — batch,
- * HANYA menulis field `bobotMapel`, field lain tidak disentuh.
- * @param {Array<{id:string, bobotBaru:number}>} hasil
+ * [2026-09-27, antiregresi.md §20] Simpan penetapan `semester` + `bobotMapel`
+ * banyak TP sekaligus — dipakai tombol "Simpan Semua" di
+ * `bobot-semester-tp.html`. HANYA menulis dua field ini, field lain
+ * (nama, CP, KKTP, bobotSlm/bobotSas, dst — domain Setup TP) tidak
+ * disentuh, mengikuti pemisahan tanggung jawab §20.
+ * @param {Array<{id:string, semester:string, bobotMapel:number}>} daftar
  */
-export async function terapkanNormalisasiBobotMapel(hasil) {
-  if (!hasil.length) return;
+export async function saveBobotSemesterBatch(daftar) {
+  if (!daftar.length) return;
   if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 300));
     const list = readDemoTp();
-    hasil.forEach(h => {
-      const idx = list.findIndex(tp => tp.id === h.id);
-      if (idx >= 0) list[idx] = { ...list[idx], bobotMapel: h.bobotBaru };
+    daftar.forEach(d => {
+      const idx = list.findIndex(tp => tp.id === d.id);
+      if (idx >= 0) list[idx] = { ...list[idx], semester: d.semester, bobotMapel: d.bobotMapel };
     });
     writeDemoTp(list);
     return;
   }
   const { db, fsMod } = window.__fb;
   const batch = fsMod.writeBatch(db);
-  hasil.forEach(h => batch.update(fsMod.doc(db, 'tp_kktp', h.id), { bobotMapel: h.bobotBaru }));
+  daftar.forEach(d => batch.update(fsMod.doc(db, 'tp_kktp', d.id), { semester: d.semester, bobotMapel: d.bobotMapel }));
   await batch.commit();
 }
 

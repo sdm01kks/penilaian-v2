@@ -17,6 +17,31 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-09-27 lanjutan 2 — `[Akademik]` Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP
+
+### Latar belakang
+Fitur bobot-persentase TP (entri changelog di bawah, sesi yang sama) ternyata salah level pengelompokan: dihitung total 100% untuk SELURUH TP satu tingkatan, padahal satu tingkatan = 2 semester dengan set TP berbeda — seharusnya 100% DI DALAM masing-masing semester. Pemilik proyek juga meminta fitur ini dipisah total dari Setup TP, konsisten dengan pola `asesmen_cakupan` (Cakupan STS/SAS) yang juga sudah terpisah dari Setup TP sejak awal. Lihat `antiregresi.md` §20 (mengoreksi sebagian §19).
+
+### Ditambahkan
+- **`assets/firestore-data-akademik.js`**: field baru `tp_kktp.semester` ('1'|'2'); `saveBobotSemesterBatch(daftar)` (batch, menulis `semester`+`bobotMapel` sekaligus, dipakai tombol "Simpan Semua").
+- **`akademik/bobot-semester-hub.html`** (pilih mapel+tingkatan, chip status "X/Y belum diatur") & **`akademik/bobot-semester-tp.html`** (halaman utama — 3 kelompok tampil sekaligus: Belum Dikelompokkan / Semester 1 / Semester 2, masing-masing kelompok semester punya chip total & tombol "Ratakan ke 100%" sendiri, TP bisa dipindah antar-semester, semua perubahan cuma di memori sampai "Simpan Semua" ditekan).
+- Kartu baru "Bobot Semester TP" di `nilai-hub.html`.
+
+### Diubah
+- **`saveTP()` DIPERBAIKI (regresi laten yang nyaris lolos)**: sebelumnya SELALU menulis `bobotMapel` dengan default, artinya begitu field itu dihapus dari form Setup TP, setiap edit TP akan menimpa balik nilai yang sudah diatur guru lewat halaman baru ke default. Sekarang `semester`/`bobotMapel` HANYA ditulis kalau eksplisit dikirim di payload.
+- **`akademik/setup-tp.html`**: field, banner, live-indicator, dan tombol "Konversi ke Persentase" (semua dari sesi bobot-persentase sebelumnya) DIHAPUS TOTAL dari halaman ini. Diganti info baca-saja per kartu TP (pill "Semester X · Y%" atau pill kuning "belum diatur") + catatan yang mengarahkan ke menu baru.
+- Dihapus: `terapkanNormalisasiBobotMapel()` (tidak dipakai lagi di mana pun, digantikan `saveBobotSemesterBatch()`). `normalisasiPersenBobotMapel()` (fungsi murni penghitung) TETAP dipakai ulang apa adanya, cuma sekarang dipanggil per-subset-semester bukan per-tingkatan.
+
+### Sengaja TIDAK dilakukan
+- `getRaporSASSiswa()`/`getRaporSTSSiswa()` TIDAK diubah untuk memfilter TP berdasarkan `semester` secara eksplisit — keduanya sudah benar secara implisit (TP yang tidak relevan semester ini otomatis tidak punya nilai, jadi otomatis tidak terhitung). Field `semester` baru ini belum dipakai sebagai filter tambahan di sana; lihat antiregresi.md §20.8 kalau suatu saat ingin diperkuat.
+
+### Verifikasi
+- `node --check` pada `firestore-data-akademik.js`, `setup-tp.html`, `bobot-semester-hub.html`, `bobot-semester-tp.html` (via ekstraksi + modul stub) — semua OK.
+- Balance kurung kurawal semua file terkait — OK.
+- **Belum diuji ke Firestore sungguhan.** Yang paling penting diverifikasi: edit TP lewat Setup TP TIDAK menimpa balik semester/bobot yang sudah diatur lewat halaman baru (lihat antiregresi.md §20.9 untuk urutan pengujian yang disarankan).
+
+---
+
 ## 2026-09-27 lanjutan — `[Akademik]` Bobot TP dalam Mapel: dari Rasio Bebas jadi Persentase
 
 ### Latar belakang

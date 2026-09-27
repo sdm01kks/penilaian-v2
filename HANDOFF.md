@@ -1,18 +1,21 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler), dan 2026-09-27 lanjutan (Bobot TP dalam Mapel: Persentase).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler), 2026-09-27 lanjutan (Bobot TP dalam Mapel: Persentase — SEBAGIAN DIKOREKSI, lihat entri berikutnya), dan 2026-09-27 lanjutan 2 (Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP).
 
 ---
 
-## Status per 2026-09-27 lanjutan (Bobot TP dalam Mapel: dari Rasio Bebas jadi Persentase)
+## Status per 2026-09-27 lanjutan 2 (Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP)
 
-**BELUM DIPUSH/DIDEPLOY, BELUM DIUJI ke Firestore sungguhan.** Detail akar masalah lengkap di `antiregresi.md` §19. Ringkasnya: `bobotMapel` (bobot TP dalam nilai akhir mapel) diubah dari "rasio bebas" jadi "persentase sungguhan" (permintaan pemilik proyek, karena guru salah paham menganggapnya persen dan itu bisa membalik makna angka yang diinput — lihat contoh 15 → jadi 83% bukan 15%). Rumus hitung nilai TIDAK berubah dan TIDAK akan mengubah nilai yang sudah pernah dihitung — cuma cara input/tampil/validasinya yang berubah.
+**BELUM DIPUSH/DIDEPLOY, BELUM DIUJI ke Firestore sungguhan.** Ini KOREKSI atas entri "2026-09-27 lanjutan" di bawah — sebagian isinya (banner/tombol "Konversi ke Persentase" di dalam `setup-tp.html`) sudah DIHAPUS lagi, jadi jangan ikuti langkah pengujian di entri lama itu. Detail lengkap di `antiregresi.md` §20 (mengoreksi §19).
 
-**Yang perlu ditinjau Fairel di sesi berikutnya:**
-1. Buka `setup-tp.html` untuk mapel yang jadi pemicu perbaikan ini (yang sebelumnya diisi "15") — cek banner "Total belum 100%" muncul dengan angka yang masuk akal.
-2. Coba tombol "Konversi ke Persentase" — tinjau pratinjau before→after per TP di dialog konfirmasi sebelum benar-benar mengklik lanjut.
-3. **PENTING**: setelah konversi, cek nilai akhir mapel siswa yang terkait TP itu TIDAK berubah dibanding sebelumnya (§19.2 menjamin ini secara matematis, tapi belum pernah dicek langsung ke data nyata).
+**Ringkasnya:** bobot TP sekarang dikelompokkan PER SEMESTER (bukan digabung seluruh tingkatan seperti versi sebelumnya — itu ternyata salah level pengelompokan), dan seluruh fitur "kelompokkan ke semester + atur persen" dipindah KELUAR dari Setup TP ke halaman baru: menu **"Bobot Semester TP"** (dari Nilai & Pembelajaran) → pilih mapel → `bobot-semester-tp.html`.
+
+**Yang perlu ditinjau Fairel di sesi berikutnya (urutan disarankan):**
+1. Buka menu **Bobot Semester TP** untuk mapel yang jadi pemicu perbaikan awal ("15" yang salah paham persen) — SEMUA TP-nya akan tampil di "Belum Dikelompokkan" (field semester memang baru, belum pernah terisi untuk TP manapun).
+2. Kelompokkan TP-TP itu ke Semester 1/2 sesuai kurikulum sebenarnya, atur persennya (atau pakai tombol "Ratakan ke 100%" per semester), tekan "Simpan Semua".
+3. **PENTING — ini yang paling perlu dipastikan**: buka `setup-tp.html` untuk mapel yang sama, edit salah satu TP (misalnya ubah teks CP-nya) dan simpan, lalu balik lagi ke Bobot Semester TP — pastikan semester & persen yang baru diatur di langkah 2 TIDAK tertimpa balik ke default. Ini regresi laten yang sempat nyaris lolos (lihat antiregresi.md §20.3) — `saveTP()` sudah diperbaiki supaya ini tidak terjadi, tapi belum pernah dicek langsung ke Firestore sungguhan.
+4. Setelah itu, cek nilai akhir mapel siswa terkait TIDAK berubah dibanding sebelum pengelompokan (rumus hitungnya tidak diubah sama sekali, jadi seharusnya aman).
 4. Catatan: SEMUA mapel×tingkatan lain yang punya TP kemungkinan juga akan menunjukkan banner "belum 100%" (karena default lama bobot=1 per TP) — ini normal, bukan error, tinggal dikonversi satu-satu saat guru pengampu masing-masing membuka halamannya. Kalau ini kerasa kebanyakan langkah manual, bisa dipertimbangkan bikin migrasi batch di sesi mendatang (lihat antiregresi.md §19.7).
 
 ---
