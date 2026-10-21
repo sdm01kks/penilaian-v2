@@ -1,7 +1,20 @@
 # HANDOFF — Sistem Penilaian v2
 **SD Muhammadiyah 01 Kukusan**
 
-Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler), 2026-09-27 lanjutan (Bobot TP dalam Mapel: Persentase — SEBAGIAN DIKOREKSI, lihat entri berikutnya), dan 2026-09-27 lanjutan 2 (Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP).
+Catatan kontinuitas sesi singkat: status terkini, apa yang sedang dikerjakan, dan langkah lanjutan yang sudah disepakati. Untuk detail teknis lengkap, lihat `changelog.md` (kronologis) dan `antiregresi.md` (aturan & jebakan). Dokumen ini pertama kali dibuat 2026-09-04, diperbarui 2026-09-06 (Ekstrakurikuler + Rapor SAS), 2026-09-10 (Kelola Data Siswa + Ganti NIS), 2026-09-10 lanjutan (Mutasi Siswa), 2026-09-12 (Kelengkapan Rapor), 2026-09-12 revisi (format cetak dibangun ulang), 2026-09-13 (Impor Data Siswa massal), 2026-09-14 (perombakan cakupan fungsi Admin), 2026-09-14 lanjutan (Cover Rapor centering + Tanggal TTD Identitas), 2026-09-15 (Perbaikan Duplikat Siswa), 2026-09-26 (Perbaikan Kapitalisasi Nama), 2026-09-27 (Fitur 7KAIH & Deskripsi Gabungan Kokurikuler), 2026-09-27 lanjutan (Bobot TP dalam Mapel: Persentase — SEBAGIAN DIKOREKSI, lihat entri berikutnya), 2026-09-27 lanjutan 2 (Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP), dan 2026-10-21 (Ekspor Nilai Tahsin-Tahfizh untuk guru & admin).
+
+---
+
+## Status per 2026-10-21 (Ekspor Nilai Tahsin-Tahfizh untuk guru & admin)
+
+**BELUM DIPUSH/DIDEPLOY, BELUM DIUJI ke Firestore sungguhan.** Detail lengkap di `changelog.md` (entri 2026-10-21) dan `antiregresi.md` §21.
+
+**Yang baru selesai:** `tahsin-tahfizh/ekspor-nilai.html` — ekspor semua nilai Tahsin-Tahfizh ke satu berkas `.xlsx` (sheet Rekap, Detail Setoran, Detail Menulis, Keterangan). Guru: kelas yang diampu (+ chip "Semua Kelas Saya" kalau >1 kelas). Admin: pilih SATU kelas per ekspor. Periode opsional (kosong = semua sejak awal). Pintu masuk: ikon unduh baru di header `riwayat-siswa.html`. Tidak ada perubahan `firestore.rules` maupun file bersama lain.
+
+**Yang perlu ditinjau Fairel di sesi berikutnya:**
+1. Uji sebagai guru dan sebagai admin (daftar cek lengkap di `antiregresi.md` §21.8) — terutama bandingkan satu siswa di sheet Rekap dengan Laporan Cetak untuk rentang tanggal yang sama.
+2. Kalau Fairel ingin ekspor lintas tahun ajaran (catatan kelas lama setelah naik kelas), itu keterbatasan yang diketahui (§21.8) — perlu dibahas dulu sebelum dibangun.
+3. Kalau rumus akurasi/predikat di `cetak-laporan.html` diubah di masa depan, ubah juga di `ekspor-nilai.html` (§21.4).
 
 ---
 
