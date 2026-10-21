@@ -16,7 +16,7 @@ paling mendesak dikerjakan lebih dulu.
 
 | Modul | Status | Keterangan |
 |---|---|---|
-| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Catat Menulis ✅ · Riwayat Siswa ✅ · Cetak Laporan ✅ · Target Hafalan ✅ |
+| **Tahsin-Tahfizh** | 🟢 Dalam pengerjaan (prioritas saat ini) | Login ✅ · Input Setoran ✅ · Catat Menulis ✅ · Riwayat Siswa ✅ · Cetak Laporan ✅ · Target Hafalan ✅ · Ekspor Nilai (Excel) ✅ |
 | **Akademik & Rapor** | 🟡 Mulai diujicobakan ke guru | Login ✅ · Setup TP & KKTP ✅ · Input Nilai Mapel ⏳ (menyusul) |
 | Ujian Sekolah | ⚪ Belum dimulai | |
 | Presensi Siswa | ⚪ Belum dimulai | |

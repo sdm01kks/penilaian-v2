@@ -17,6 +17,28 @@ Dokumen ini bukan versioning rilis formal (tidak ada proses build/deploy bertaha
 
 ---
 
+## 2026-10-21 — `[Tahsin-Tahfizh]` Ekspor Nilai ke Excel (guru & admin)
+
+### Latar belakang
+Pemilik proyek meminta fitur ekspor SELURUH nilai Tahsin-Tahfizh, bisa dipakai dari akun guru maupun akun admin. Untuk admin, ekspor dipisah per kelas — admin memilih kelas yang nilainya akan diekspor. Lihat `antiregresi.md` §21.
+
+### Ditambahkan
+- **`tahsin-tahfizh/ekspor-nilai.html`** (halaman baru) — pilih kelas lewat chip, periode opsional (kosong = semua nilai sejak awal), lalu unduh satu berkas `.xlsx` berisi 4 sheet: **Rekap** (1 baris per siswa: membaca, menghapal, target, menulis), **Detail Setoran** (semua catatan setoran), **Detail Menulis** (semua pemeriksaan menulis + skor 4 aspek), **Keterangan** (cakupan, periode, pengekspor, cara membaca angka, daftar siswa yang gagal dimuat kalau ada).
+  - **Admin**: semua kelas muncul sebagai chip, dipilih SATU kelas per ekspor.
+  - **Guru Tahsin-Tahfizh**: hanya kelas yang diampu (`kelasAmpu`); kalau mengampu lebih dari satu kelas, ada chip tambahan "Semua Kelas Saya".
+  - Nama berkas: `Nilai-Tahsin-Tahfizh_Kelas-3A_2026-10-21.xlsx` (atau `..._Semua-Kelas-Saya_...`).
+- Ikon unduh baru di header **`tahsin-tahfizh/riwayat-siswa.html`** (di antara Cetak Laporan dan Kelola Akun Ortu) sebagai pintu masuk ke halaman ekspor.
+
+### Sengaja TIDAK diubah
+- `firestore.rules`, `assets/firestore-data.js`, `assets/firebase.js`, `assets/style.css`, `index.html` — TIDAK disentuh. Halaman baru hanya memakai fungsi data layer yang sudah ada (`getSiswaList`, `getRiwayatSetoran`, `getMenulisLog`, `getTargetHafalan`, `hitungProgresSurah`) dan rule baca yang sudah mengizinkan admin + guru kelas bersangkutan.
+
+### Verifikasi
+- `node --check` pada script modul `ekspor-nilai.html` — OK. Balance `{}`/`()`/`[]` dan tag `<div>` pada kedua file yang berubah — OK.
+- Logika pembentukan baris & berkas `.xlsx` diuji di Node dengan data tiruan (siswa Al-Qur'an & Iqro, skema menulis lama & baru, satu siswa sengaja dibuat gagal dimuat, filter periode, mode "Semua Kelas Saya") — angka Rekap cocok dengan hitungan manual (mis. akurasi 77%/Baik dan 30%/Perlu Bimbingan).
+- **BELUM diuji ke Firestore sungguhan** dan belum dibuka di browser/Excel nyata (tidak ada akses jaringan Firebase dari lingkungan kerja). Lihat `antiregresi.md` §21.8 untuk daftar yang perlu dicek.
+
+---
+
 ## 2026-09-27 lanjutan 2 — `[Akademik]` Bobot TP Dikelompokkan per Semester, Dipisah dari Setup TP
 
 ### Latar belakang

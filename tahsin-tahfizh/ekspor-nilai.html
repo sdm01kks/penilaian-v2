@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ekspor Nilai — Tahsin-Tahfizh | SD Muhammadiyah 01 Kukusan</title>
+<link rel="icon" type="image/png" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  body{background:#000}
+  .app-header-title-wrap{flex:1;min-width:0}
+  .demo-strip{
+    background:var(--gold-light);border:1px solid rgba(201,136,42,.28);color:#7a5416;
+    font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:11px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px;line-height:1.5;
+  }
+  .demo-strip svg{flex-shrink:0;width:14px;height:14px}
+  .eks-note{font-size:12px;color:var(--ink-muted);line-height:1.6;margin:0}
+  .eks-isi{margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--ink-muted);line-height:1.65}
+  .eks-hasil{font-size:12.5px;line-height:1.65;color:var(--ink)}
+  .eks-hasil .ok{color:#2d7055;font-weight:800}
+  .eks-hasil .warn{color:#a8651a;font-weight:700;margin-top:8px}
+  .eks-hasil ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+
+<div class="phone-viewport">
+  <div class="phone-shell">
+    <div style="display:flex;flex-direction:column;height:100%;min-height:844px">
+
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="app-header-back" id="btnBack" aria-label="Kembali">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="app-header-title-wrap">
+            <div class="app-header-title">Ekspor Nilai</div>
+            <button class="app-header-sub-btn" id="guruLabel" title="Ketuk untuk keluar">
+              <span id="guruLabelText">Memuat…</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
+          </div>
+          <a href="../index.html" class="app-header-back" style="text-decoration:none" aria-label="Ke Halaman Utama" title="Ke Halaman Utama">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M9 22V12h6v10"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="app-body" id="appBody">
+
+        <div id="demoStrip" class="demo-strip hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Mode pratinjau — data masih tiruan.</span>
+        </div>
+
+        <div class="section-label" style="margin-top:0"><span class="bar"></span>Kelas</div>
+        <div class="card">
+          <div class="kelas-chip-row" id="kelasChipRow"></div>
+          <div id="kelasHint" class="siswa-empty-note">Memuat daftar kelas…</div>
+        </div>
+
+        <div class="section-label">Periode (opsional)</div>
+        <div class="card">
+          <div class="date-row">
+            <div>
+              <div class="field-label">Tanggal Mulai</div>
+              <input type="date" class="select-field" id="tglMulai">
+            </div>
+            <div>
+              <div class="field-label">Tanggal Akhir</div>
+              <input type="date" class="select-field" id="tglAkhir">
+            </div>
+          </div>
+          <p class="eks-note">Kosongkan kedua tanggal untuk mengekspor <strong>semua nilai sejak awal</strong>. Isi salah satunya saja kalau hanya ingin membatasi dari/sampai tanggal tertentu.</p>
+        </div>
+
+        <div class="section-label">Isi Berkas Excel</div>
+        <div class="card">
+          <ul class="eks-isi" style="margin-top:0">
+            <li><strong>Rekap</strong> — satu baris per siswa: membaca, menghapal, target, dan menulis.</li>
+            <li><strong>Detail Setoran</strong> — seluruh catatan setoran (Ziyadah, Muroja'ah, Tahsin).</li>
+            <li><strong>Detail Menulis</strong> — seluruh pemeriksaan menulis beserta skor 4 aspek.</li>
+            <li><strong>Keterangan</strong> — cakupan ekspor &amp; cara membaca angka.</li>
+          </ul>
+        </div>
+
+        <div class="section-label">&nbsp;</div>
+        <button class="btn btn-primary-light" id="btnEkspor" disabled>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          <span id="btnEksporLabel">Ekspor ke Excel (.xlsx)</span>
+        </button>
+
+        <div id="hasilArea" style="margin-top:14px"></div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="dot-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script type="module">
+  import { DEMO_MODE, onAuthChange, logout } from '../assets/firebase.js';
+  import { getSiswaList, getRiwayatSetoran, getMenulisLog, getTargetHafalan, hitungProgresSurah } from '../assets/firestore-data.js';
+  import { surahByNo } from '../assets/quran-surah.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  const SEMUA = '__semua__'; // nilai khusus chip "Semua Kelas Saya" (hanya untuk guru dengan >1 kelas)
+
+  let currentUser = null;
+  let siswaCache = [];
+  let kelasTerpilih = null;
+
+  function showToast(msg, isError = false) {
+    $('toastMsg').textContent = msg;
+    const t = $('toast');
+    t.classList.toggle('error', isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s == null ? '' : String(s);
+    return div.innerHTML;
+  }
+
+  if (DEMO_MODE) $('demoStrip').classList.remove('hidden');
+
+  /* ---- Sesi & akses ----
+     Guru Tahsin-Tahfizh -> hanya kelas yang diampu (kelasAmpu).
+     Admin               -> semua kelas, dipilih satu per satu.
+     Role lain (orang tua, guru akademik) tidak punya akses halaman ini. */
+  onAuthChange((session) => {
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (session.role === 'orangtua') { window.location.href = 'riwayat-anak.html'; return; }
+    currentUser = session;
+    $('guruLabelText').textContent = session.nama;
+    if (session.role !== 'admin' && session.role !== 'guru_tahsin_tahfizh') {
+      $('kelasHint').textContent = 'Akun ini tidak memiliki akses ekspor nilai Tahsin-Tahfizh.';
+      return;
+    }
+    loadKelas();
+  });
+
+  $('guruLabel').addEventListener('click', async () => {
+    if (!confirm('Keluar dari akun ini?')) return;
+    try { await logout(); } catch (err) { console.error(err); }
+    window.location.href = 'login.html';
+  });
+
+  $('btnBack').addEventListener('click', () => { window.location.href = 'riwayat-siswa.html'; });
+
+  /* ---- Pilih kelas ---- */
+  async function loadKelas() {
+    try {
+      siswaCache = await getSiswaList(undefined, currentUser);
+    } catch (err) {
+      console.error(err);
+      $('kelasHint').textContent = 'Gagal memuat daftar siswa. Muat ulang halaman.';
+      return;
+    }
+    const kelasList = [...new Set(siswaCache.map(s => s.kelas))]
+      .sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+    if (!kelasList.length) {
+      $('kelasHint').textContent = 'Belum ada siswa pada kelas yang Anda ampu.';
+      return;
+    }
+
+    const chips = kelasList.map(k => `<button type="button" class="kelas-chip" data-kelas="${escapeHtml(k)}">${escapeHtml(k)}</button>`);
+    if (currentUser.role !== 'admin' && kelasList.length > 1) {
+      chips.push(`<button type="button" class="kelas-chip" data-kelas="${SEMUA}">Semua Kelas Saya</button>`);
+    }
+    $('kelasChipRow').innerHTML = chips.join('');
+    $('kelasHint').textContent = currentUser.role === 'admin'
+      ? 'Pilih satu kelas yang nilainya akan diekspor.'
+      : 'Pilih kelas yang nilainya akan diekspor.';
+
+    $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        kelasTerpilih = chip.dataset.kelas;
+        $('kelasChipRow').querySelectorAll('.kelas-chip').forEach(c => c.classList.toggle('active', c === chip));
+        const jumlah = siswaDalamPilihan().length;
+        $('kelasHint').textContent = kelasTerpilih === SEMUA
+          ? `Semua kelas yang Anda ampu — ${jumlah} siswa akan diekspor.`
+          : `Kelas ${kelasTerpilih} — ${jumlah} siswa akan diekspor.`;
+        $('btnEkspor').disabled = false;
+      });
+    });
+  }
+
+  function siswaDalamPilihan() {
+    const list = kelasTerpilih === SEMUA ? siswaCache : siswaCache.filter(s => s.kelas === kelasTerpilih);
+    return [...list].sort((a, b) =>
+      a.kelas.localeCompare(b.kelas, 'id', { numeric: true }) || a.nama.localeCompare(b.nama, 'id'));
+  }
+
+  /* ---- Helper tanggal ----
+     Semua perbandingan periode memakai string "YYYY-MM-DD" (tanggal lokal),
+     bukan objek Date, supaya tanggal pemeriksaan menulis (string dari
+     <input type="date">) dan createdAt setoran (Timestamp Firestore)
+     dibandingkan dengan cara yang sama dan tidak geser sehari karena zona waktu. */
+  const pad2 = (n) => String(n).padStart(2, '0');
+  function toDate(ts) {
+    if (!ts) return null;
+    if (typeof ts?.toDate === 'function') return ts.toDate();
+    const d = new Date(ts);
+    return isNaN(d) ? null : d;
+  }
+  function tglStr(ts) {
+    if (typeof ts === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ts)) return ts.slice(0, 10);
+    const d = toDate(ts);
+    return d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : '';
+  }
+  function jamStr(ts) {
+    const d = toDate(ts);
+    return d ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : '';
+  }
+  function dalamPeriode(ts, mulai, akhir) {
+    if (!mulai && !akhir) return true;
+    const s = tglStr(ts);
+    if (!s) return false;
+    if (mulai && s < mulai) return false;
+    if (akhir && s > akhir) return false;
+    return true;
+  }
+  function millis(ts) {
+    const d = toDate(ts);
+    return d ? d.getTime() : 0;
+  }
+
+  /* ---- Logika penilaian (SAMA dengan cetak-laporan.html supaya angka konsisten) ---- */
+  function menulisPosisiLabel(r) {
+    if (!r) return '-';
+    if (r.materi?.tipe === 'quran') return r.materi.label;
+    if (r.materi?.tipe === 'iqro') return `Iqro ${r.materi.jilidIqro} — Hal. ${r.materi.halamanMulai}${r.materi.halamanAkhir !== r.materi.halamanMulai ? '–' + r.materi.halamanAkhir : ''}`;
+    // Skema lama (flat) — lihat antiregresi.md §4
+    return `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${r.halamanMulai}${r.halamanAkhir !== r.halamanMulai ? '–' + r.halamanAkhir : ''}`;
+  }
+
+  const ASPEK_MENULIS = ['hurufSambungan', 'harakat', 'keutuhanTeks', 'kerapian'];
+  function menulisRataRata(r) {
+    const p = r?.penilaian;
+    if (!p) return null;
+    const vals = ASPEK_MENULIS.map(k => p[k]).filter(v => typeof v === 'number');
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  }
+
+  function hitungKesalahan(r) {
+    let dinilai = 0, tajwid = 0, makhroj = 0;
+    const hitung = (list) => (list || []).forEach(k => {
+      if (k.jenis === 'tajwid') tajwid++;
+      else if (k.jenis === 'makhroj') makhroj++;
+    });
+    if (r.detailAyat?.length) {
+      r.detailAyat.forEach(a => { dinilai++; hitung(a.kataSalah); });
+    } else if (r.detailBacaanIqro) {
+      dinilai = 1;
+      hitung(r.detailBacaanIqro.kataSalah);
+    }
+    return { dinilai, tajwid, makhroj };
+  }
+
+  function hitungAkurasiBacaan(tajwid, makhroj, dinilai) {
+    if (!dinilai) return null;
+    const errPerAyat = (tajwid + makhroj) / dinilai;
+    const pct = Math.max(5, Math.min(100, Math.round(100 - errPerAyat * 35)));
+    let label;
+    if (errPerAyat <= 0.3) label = 'Istimewa';
+    else if (errPerAyat <= 0.7) label = 'Baik';
+    else if (errPerAyat <= 1.5) label = 'Cukup';
+    else label = 'Perlu Bimbingan';
+    return { pct, label };
+  }
+
+  const JENIS_LABEL = { ziyadah: 'Ziyadah', murojaah: "Muroja'ah", tahsin: 'Tahsin' };
+  function statusLabel(r) {
+    if (r.jenis === 'tahsin' || r.statusHafalan == null) return '';
+    if (r.statusHafalan === 'lulus') return 'Lulus';
+    if (r.statusHafalan === 'ulang') return 'Perlu Diulang';
+    return String(r.statusHafalan);
+  }
+  function jenjangLabel(s) {
+    if (s.jenjang === 'iqro') return s.tamatIqro ? 'Iqro (sudah tamat)' : 'Iqro';
+    return "Al-Qur'an";
+  }
+  const bulat1 = (x) => (x == null ? '' : Math.round(x * 10) / 10);
+
+  /* ---- Target hafalan (logika sama dengan renderTargetSection di cetak-laporan.html) ---- */
+  function ringkasTarget(siswa, targetKelas, setoranFull) {
+    const kosong = { semester: '', target: '', capaian: '', status: '', rincian: '' };
+    if (!targetKelas) return { ...kosong, status: 'Target belum diatur' };
+    const semester = targetKelas.labelSemester || '';
+
+    if (siswa.jenjang === 'iqro') {
+      // Target kelas yang hanya berisi target surah (belum ada target jilid Iqro) = target Iqro belum diatur
+      if (targetKelas.targetJilid == null) return { ...kosong, semester, status: 'Target belum diatur' };
+      const entriIqro = setoranFull.filter(r => r.materi?.tipe === 'iqro');
+      const posisiJilid = entriIqro[0]?.materi?.buku || 1;
+      const posisiHalaman = entriIqro[0]?.materi?.halamanAkhir || 0;
+      const tercapai = (posisiJilid > targetKelas.targetJilid) ||
+        (posisiJilid === targetKelas.targetJilid && posisiHalaman >= targetKelas.targetHalaman);
+      return {
+        semester,
+        target: `Iqro ${targetKelas.targetJilid}:${targetKelas.targetHalaman}`,
+        capaian: `Iqro ${posisiJilid}:${posisiHalaman || '-'}`,
+        status: tercapai ? 'Tercapai' : 'Belum Tercapai',
+        rincian: '',
+      };
+    }
+
+    const progres = hitungProgresSurah(targetKelas.targetSurah, setoranFull);
+    if (!progres.length) return { ...kosong, semester, status: 'Target belum diatur' };
+    let tercapaiCount = 0;
+    const rincian = [];
+    const namaTarget = [];
+    progres.forEach(p => {
+      const surah = surahByNo(p.surahNo);
+      if (!surah) return;
+      namaTarget.push(surah.nama);
+      const pct = Math.min(100, Math.round((p.maxAyatAkhir / surah.ayat) * 100));
+      if (p.maxAyatAkhir >= surah.ayat) tercapaiCount++;
+      rincian.push(`${surah.nama} ${pct}%`);
+    });
+    return {
+      semester,
+      target: namaTarget.join(', '),
+      capaian: `${tercapaiCount}/${namaTarget.length} surah`,
+      status: namaTarget.length && tercapaiCount === namaTarget.length ? 'Tercapai' : 'Belum Tercapai',
+      rincian: rincian.join('; '),
+    };
+  }
+
+  /* ---- Bangun baris-baris sheet ---- */
+  const HEADER_REKAP = [
+    'No', 'Kelas', 'NIS', 'Nama Siswa', 'Jenjang',
+    'Membaca — Ayat/Bacaan Dinilai', 'Membaca — Catatan Tajwid', 'Membaca — Catatan Makhraj', 'Membaca — Akurasi (%)', 'Membaca — Predikat',
+    'Menghapal — Total Sesi Setoran', 'Menghapal — Ziyadah Lulus', 'Menghapal — Ziyadah Perlu Diulang', "Menghapal — Sesi Muroja'ah", 'Menghapal — Sesi Tahsin', 'Menghapal — Posisi Terakhir',
+    'Target — Semester', 'Target — Target', 'Target — Capaian', 'Target — Status', 'Target — Rincian per Surah',
+    'Menulis — Jumlah Pemeriksaan', 'Menulis — Posisi Terakhir', 'Menulis — Tgl Periksa Terakhir',
+    'Menulis — Huruf & Sambungan (rata-rata)', 'Menulis — Harakat (rata-rata)', 'Menulis — Keutuhan Teks (rata-rata)', 'Menulis — Kerapian (rata-rata)', 'Menulis — Rata-rata Skor (1–4)',
+  ];
+  const HEADER_SETORAN = [
+    'Kelas', 'NIS', 'Nama Siswa', 'Tanggal', 'Jam', 'Jenis Setoran', 'Materi', 'Status Hafalan',
+    'Ayat/Bacaan Dinilai', 'Catatan Tajwid', 'Catatan Makhraj', 'Catatan Guru', 'Dicatat Oleh',
+  ];
+  const HEADER_MENULIS = [
+    'Kelas', 'NIS', 'Nama Siswa', 'Tanggal Periksa', 'Materi',
+    'Huruf & Sambungan (1–4)', 'Harakat (1–4)', 'Keutuhan Teks (1–4)', 'Kerapian (1–4)', 'Rata-rata (1–4)', 'Catatan', 'Dicatat Oleh',
+  ];
+
+  function barisRekap(no, s, setoranPeriode, menulisPeriode, setoranFull, targetKelas) {
+    let dinilai = 0, tajwid = 0, makhroj = 0;
+    setoranPeriode.forEach(r => {
+      const k = hitungKesalahan(r);
+      dinilai += k.dinilai; tajwid += k.tajwid; makhroj += k.makhroj;
+    });
+    const akurasi = hitungAkurasiBacaan(tajwid, makhroj, dinilai);
+
+    const ziyadahLulus = setoranPeriode.filter(r => r.jenis === 'ziyadah' && r.statusHafalan === 'lulus').length;
+    const ziyadahUlang = setoranPeriode.filter(r => r.jenis === 'ziyadah' && r.statusHafalan !== 'lulus').length;
+    const murojaah = setoranPeriode.filter(r => r.jenis === 'murojaah').length;
+    const tahsin = setoranPeriode.filter(r => r.jenis === 'tahsin').length;
+    const posisiTerakhir = setoranPeriode.length ? (setoranPeriode[0].materi?.label || '-') : '';
+
+    const t = ringkasTarget(s, targetKelas, setoranFull);
+
+    const menulisTerakhir = menulisPeriode[0];
+    const rataAspek = ASPEK_MENULIS.map(k => {
+      const v = menulisPeriode.map(r => r.penilaian?.[k]).filter(x => typeof x === 'number');
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    });
+    const rataSemua = menulisPeriode.map(menulisRataRata).filter(x => x != null);
+    const rataTotal = rataSemua.length ? rataSemua.reduce((a, b) => a + b, 0) / rataSemua.length : null;
+
+    return [
+      no, s.kelas, s.nis, s.nama, jenjangLabel(s),
+      dinilai, tajwid, makhroj, akurasi ? akurasi.pct : '', akurasi ? akurasi.label : '',
+      setoranPeriode.length, ziyadahLulus, ziyadahUlang, murojaah, tahsin, posisiTerakhir,
+      t.semester, t.target, t.capaian, t.status, t.rincian,
+      menulisPeriode.length, menulisTerakhir ? menulisPosisiLabel(menulisTerakhir) : '', menulisTerakhir ? tglStr(menulisTerakhir.tanggalPeriksa) : '',
+      bulat1(rataAspek[0]), bulat1(rataAspek[1]), bulat1(rataAspek[2]), bulat1(rataAspek[3]), bulat1(rataTotal),
+    ];
+  }
+
+  function barisDetailSetoran(s, setoranPeriode) {
+    return [...setoranPeriode]
+      .sort((a, b) => millis(a.createdAt) - millis(b.createdAt))
+      .map(r => {
+        const k = hitungKesalahan(r);
+        const adaDetail = k.dinilai > 0;
+        return [
+          s.kelas, s.nis, s.nama, tglStr(r.createdAt), jamStr(r.createdAt),
+          JENIS_LABEL[r.jenis] || r.jenis || '', r.materi?.label || '', statusLabel(r),
+          adaDetail ? k.dinilai : '', adaDetail ? k.tajwid : '', adaDetail ? k.makhroj : '',
+          r.catatan || '', r.createdByNama || '',
+        ];
+      });
+  }
+
+  function barisDetailMenulis(s, menulisPeriode) {
+    return [...menulisPeriode]
+      .sort((a, b) => (tglStr(a.tanggalPeriksa) || '').localeCompare(tglStr(b.tanggalPeriksa) || '') || millis(a.createdAt) - millis(b.createdAt))
+      .map(r => {
+        const p = r.penilaian || {};
+        const skor = (k) => (typeof p[k] === 'number' ? p[k] : '');
+        return [
+          s.kelas, s.nis, s.nama, tglStr(r.tanggalPeriksa), menulisPosisiLabel(r),
+          skor('hurufSambungan'), skor('harakat'), skor('keutuhanTeks'), skor('kerapian'),
+          bulat1(menulisRataRata(r)), r.catatan || '', r.createdByNama || '',
+        ];
+      });
+  }
+
+  function lebarKolom(header, rows, maks = 60) {
+    return header.map((h, i) => {
+      let w = String(h).length;
+      rows.forEach(r => { const v = r[i]; if (v != null) w = Math.max(w, String(v).length); });
+      return { wch: Math.min(maks, Math.max(8, w + 2)) };
+    });
+  }
+
+  /* ---- Aksi utama ---- */
+  $('btnEkspor').addEventListener('click', async () => {
+    if (!kelasTerpilih) { showToast('Pilih kelas terlebih dahulu.', true); return; }
+    const mulai = $('tglMulai').value;
+    const akhir = $('tglAkhir').value;
+    if (mulai && akhir && mulai > akhir) { showToast('Rentang tanggal tidak valid.', true); return; }
+
+    const daftarSiswa = siswaDalamPilihan();
+    if (!daftarSiswa.length) { showToast('Tidak ada siswa pada pilihan ini.', true); return; }
+
+    const btn = $('btnEkspor');
+    btn.disabled = true;
+    $('hasilArea').innerHTML = '';
+    const labelDefault = 'Ekspor ke Excel (.xlsx)';
+
+    try {
+      // Pustaka XLSX dimuat saat dibutuhkan saja (pola sama dengan import-siswa.html)
+      $('btnEksporLabel').textContent = 'Menyiapkan…';
+      const mod = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+      const XLSX = mod.default || mod;
+
+      const rekap = [], detailSetoran = [], detailMenulis = [];
+      const gagal = [];
+      const targetCache = {};
+      let no = 0, selesai = 0;
+
+      // Tiap siswa = 2 query (setoran + menulis_log), keduanya memakai fungsi data
+      // layer yang sudah ada (filter siswaId + kelas wajib, lihat antiregresi.md §1).
+      // Diproses per kelompok kecil supaya tidak menembak Firestore sekaligus.
+      const UKURAN_KELOMPOK = 5;
+      for (let i = 0; i < daftarSiswa.length; i += UKURAN_KELOMPOK) {
+        const kelompok = daftarSiswa.slice(i, i + UKURAN_KELOMPOK);
+        const hasil = await Promise.all(kelompok.map(async (s) => {
+          try {
+            const [setoran, menulis] = await Promise.all([getRiwayatSetoran(s.id, s.kelas), getMenulisLog(s.id, s.kelas)]);
+            return { s, setoran, menulis };
+          } catch (err) {
+            console.error(`Gagal memuat data ${s.nama}:`, err);
+            return { s, error: true };
+          }
+        }));
+
+        for (const h of hasil) {
+          selesai++;
+          $('btnEksporLabel').textContent = `Memproses ${Math.min(selesai, daftarSiswa.length)}/${daftarSiswa.length}…`;
+          if (h.error) { gagal.push(`${h.s.nama} (${h.s.kelas})`); continue; }
+
+          const { s } = h;
+          if (!(s.kelas in targetCache)) targetCache[s.kelas] = await getTargetHafalan(s.kelas).catch(() => null);
+
+          const setoranFull = [...h.setoran].sort((a, b) => millis(b.createdAt) - millis(a.createdAt));
+          const setoranPeriode = setoranFull.filter(r => dalamPeriode(r.createdAt, mulai, akhir));
+          const menulisPeriode = [...h.menulis]
+            .filter(r => dalamPeriode(r.tanggalPeriksa, mulai, akhir))
+            .sort((a, b) => (tglStr(b.tanggalPeriksa) || '').localeCompare(tglStr(a.tanggalPeriksa) || '') || millis(b.createdAt) - millis(a.createdAt));
+
+          no++;
+          rekap.push(barisRekap(no, s, setoranPeriode, menulisPeriode, setoranFull, targetCache[s.kelas]));
+          detailSetoran.push(...barisDetailSetoran(s, setoranPeriode));
+          detailMenulis.push(...barisDetailMenulis(s, menulisPeriode));
+        }
+      }
+
+      if (!rekap.length) { showToast('Semua data siswa gagal dimuat. Coba lagi.', true); return; }
+
+      const labelKelas = kelasTerpilih === SEMUA ? 'Semua Kelas Saya' : `Kelas ${kelasTerpilih}`;
+      const labelPeriode = (!mulai && !akhir) ? 'Semua periode (sejak awal)'
+        : `${mulai || 'awal'} s/d ${akhir || 'sekarang'}`;
+      const hariIni = new Date();
+      const tglEkspor = `${hariIni.getFullYear()}-${pad2(hariIni.getMonth() + 1)}-${pad2(hariIni.getDate())}`;
+
+      const infoRows = [
+        ['Ekspor Nilai Tahsin-Tahfizh'],
+        ['SD Muhammadiyah 01 Kukusan'],
+        [],
+        ['Cakupan', labelKelas],
+        ['Periode', labelPeriode],
+        ['Jumlah siswa dalam berkas', rekap.length],
+        ['Diekspor oleh', `${currentUser.nama} (${currentUser.role === 'admin' ? 'Admin' : 'Guru Tahsin-Tahfizh'})`],
+        ['Tanggal ekspor', tglEkspor],
+      ];
+      if (gagal.length) {
+        infoRows.push([], ['PERHATIAN — data siswa berikut GAGAL dimuat dan TIDAK ada di berkas ini', gagal.join('; ')]);
+      }
+      infoRows.push(
+        [],
+        ['Cara membaca angka'],
+        ['Akurasi membaca (%)', 'Dihitung dari catatan Baca & Tandai: 100 − (rata-rata catatan tajwid+makhraj per ayat × 35), dibatasi 5–100. Rumus yang sama dengan Laporan Cetak.'],
+        ['Predikat membaca', 'Istimewa (≤0,3 catatan/ayat), Baik (≤0,7), Cukup (≤1,5), Perlu Bimbingan (>1,5).'],
+        ['Ayat/Bacaan Dinilai', 'Jumlah ayat (Al-Qur\'an) atau bacaan teks (Iqro) yang ditandai pada sesi setoran.'],
+        ['Skor menulis', 'Skala 1–4 untuk empat aspek: Huruf & Sambungan, Harakat, Keutuhan Teks, Kerapian. Kolom rata-rata di Rekap = rata-rata seluruh pemeriksaan pada periode. Siswa jenjang Iqro (belum tamat) hanya dicatat posisinya, tanpa skor.'],
+        ['Target hafalan', 'Dihitung dari seluruh riwayat setoran siswa (bukan hanya periode terpilih), sama seperti Laporan Cetak.'],
+        ['Catatan data', 'Hanya mencakup catatan yang tersimpan atas kelas siswa saat ini. Catatan dari kelas sebelumnya (sebelum naik kelas) tidak ikut terekspor.'],
+      );
+
+      const wb = XLSX.utils.book_new();
+      const tambahSheet = (nama, header, rows) => {
+        const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+        ws['!cols'] = lebarKolom(header, rows);
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length, 1), c: header.length - 1 } }) };
+        XLSX.utils.book_append_sheet(wb, ws, nama);
+      };
+      tambahSheet('Rekap', HEADER_REKAP, rekap);
+      tambahSheet('Detail Setoran', HEADER_SETORAN, detailSetoran);
+      tambahSheet('Detail Menulis', HEADER_MENULIS, detailMenulis);
+      const wsInfo = XLSX.utils.aoa_to_sheet(infoRows);
+      wsInfo['!cols'] = [{ wch: 30 }, { wch: 110 }];
+      XLSX.utils.book_append_sheet(wb, wsInfo, 'Keterangan');
+
+      const slugKelas = kelasTerpilih === SEMUA ? 'Semua-Kelas-Saya' : `Kelas-${kelasTerpilih}`;
+      const namaFile = `Nilai-Tahsin-Tahfizh_${slugKelas}_${tglEkspor}.xlsx`;
+      XLSX.writeFile(wb, namaFile);
+
+      $('hasilArea').innerHTML = `
+        <div class="card"><div class="eks-hasil">
+          <div class="ok">✓ Berkas diunduh: ${escapeHtml(namaFile)}</div>
+          <ul>
+            <li>${rekap.length} siswa pada sheet Rekap</li>
+            <li>${detailSetoran.length} catatan setoran</li>
+            <li>${detailMenulis.length} pemeriksaan menulis</li>
+          </ul>
+          ${gagal.length ? `<div class="warn">⚠ ${gagal.length} siswa gagal dimuat dan tidak ada di berkas: ${escapeHtml(gagal.join(', '))}. Coba ekspor ulang.</div>` : ''}
+        </div></div>`;
+      showToast(gagal.length ? 'Berkas diunduh, tetapi ada siswa yang gagal dimuat.' : 'Berkas Excel berhasil diunduh.', !!gagal.length);
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal membuat berkas Excel. Periksa koneksi lalu coba lagi.', true);
+    } finally {
+      btn.disabled = false;
+      $('btnEksporLabel').textContent = labelDefault;
+    }
+  });
+</script>
+</body>
+</html>
